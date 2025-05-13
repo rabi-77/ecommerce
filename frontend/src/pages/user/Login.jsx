@@ -1,0 +1,131 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useDispatch,useSelector } from "react-redux";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { setAuthToken,login,resetAuthState } from "../../features/authSlice";
+
+const Login = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  });
+
+  const { loading, error, errormessage, token } = useSelector(
+    (state) => state.auth
+  );
+
+
+  useEffect(() => {
+    resetAuthState()
+    const token = searchParams.get("token");
+    const error = searchParams.get("error");
+
+    if (token) {
+      dispatch(setAuthToken(token));
+      toast.success("Logged in with Google");
+      navigate("/");
+    } else if (error) {
+      toast.error(decodeURIComponent(error));
+    }
+  }, [searchParams, dispatch, navigate]);
+
+
+  useEffect(() => {
+    // Handle errors from Redux
+    if (error && errormessage) {
+      toast.error(errormessage);
+    }
+
+    // Handle successful login
+    if (token && !loading) {
+      navigate("/");
+    }
+  }, [error, errormessage, token, loading, navigate]);
+
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:5000/user/google";
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    dispatch(login(formData));
+  };
+
+  if (searchParams.get("token") && loading) {
+    return <div className="h-screen flex justify-center items-center">Verifying Google login...</div>;
+  }
+
+  return (
+    <div className="max-w-md mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Login</h2>
+      
+      <form onSubmit={handleSubmit} className="mb-4">
+        <div className="mb-4">
+          <label htmlFor="email" className="block mb-2">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
+        
+        <div className="mb-4">
+          <label htmlFor="password" className="block mb-2">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
+        
+        <button
+          type="submit"
+          className="w-full p-2 bg-blue-500 text-white rounded mb-4"
+          disabled={loading}
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+      
+      <div className="flex items-center mb-4">
+        <div className="flex-grow border-t border-gray-300"></div>
+        <span className="mx-4 text-gray-500">OR</span>
+        <div className="flex-grow border-t border-gray-300"></div>
+      </div>
+      
+      <button
+        onClick={handleGoogleLogin}
+        className="w-full p-2 bg-red-500 text-white rounded"
+      >
+        Sign in with Google
+      </button>
+      
+      <p className="mt-2 text-center">
+        Don't have an account? <a href="/register" className="text-blue-500">Register</a>
+      </p>
+      <ToastContainer />
+    </div>
+  );
+};
+
+export default Login;

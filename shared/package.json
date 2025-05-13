@@ -1,0 +1,9 @@
+{
+    "name": "ecommerce-shared",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "validation.js",
+    "dependencies": {
+        "zod": "^3.24.3"
+    }
+}

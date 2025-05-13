@@ -1,0 +1,16 @@
+{
+    "name": "ecommerce",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+      "frontend",
+      "backend",
+      "shared"
+    ],
+    "scripts": {
+      "frontend": "npm start --workspace=frontend",
+      "backend": "npm start --workspace=backend",
+      "install-all": "npm install",
+      "start": "npm run frontend & npm run backend"
+    }
+  }
