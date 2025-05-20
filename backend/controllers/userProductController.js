@@ -132,7 +132,7 @@ const getProductById = async (req, res) => {
     
     res.status(500).json({ message: "Server error" });
   }
-};
+}
 
 const getRelatedProducts = async (req, res) => {
     try {

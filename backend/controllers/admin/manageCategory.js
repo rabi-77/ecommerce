@@ -186,8 +186,8 @@ const softDeleteCategory = async (req, res) => {
   console.log(req.params);
   
   try {
-    const category = await categoryModel.findOne({_id:id,isDeleted:true});
-    if (category) {
+    const category = await categoryModel.findOne({_id:id});
+    if (!category) {
         console.log('hey',category);
         
       return res
@@ -195,10 +195,9 @@ const softDeleteCategory = async (req, res) => {
         .json({ message: "this category doesnt exist no more" });
     }
     console.log('soft');
-    const softDelete = await categoryModel.findByIdAndUpdate(
+    const softDelete = await categoryModel.findByIdAndDelete(
       id,
-      { isDeleted: true },
-      { new: true }
+     
     );
     if (!softDelete) {
       return res.status(500).json({ message: "couldnt found this category" });
@@ -215,4 +214,29 @@ const softDeleteCategory = async (req, res) => {
   }
 };
 
-export { getCategories, editCategory, addCategory, softDeleteCategory };
+// Toggle category listing status
+const toggleCategoryListing = async (req, res) => {
+  const { categoryId } = req.params;
+
+  try {
+    const category = await categoryModel.findById(categoryId);
+    
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+    
+    // Toggle the isListed status
+    category.isListed = !category.isListed;
+    await category.save();
+    
+    res.json({ 
+      message: `Category ${category.isListed ? 'listed' : 'unlisted'} successfully`, 
+      category 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export { getCategories, editCategory, addCategory, softDeleteCategory, toggleCategoryListing };

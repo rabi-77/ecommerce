@@ -3,7 +3,7 @@ import {
   createAsyncThunk,
   buildCreateSlice,
 } from "@reduxjs/toolkit";
-import { registerUser, verifyUser, resendOtp,loginUser } from "../services/authServices";
+import { registerUser, verifyUser, resendOtp, loginUser, requestPasswordReset, resendPasswordResetOtp, resetPassword } from "../services/authServices";
 // import { build } from "vite";
 
 export const login = createAsyncThunk(
@@ -55,7 +55,44 @@ export const resend = createAsyncThunk(
       const data = await resendOtp({ email, token });
       return data;
     } catch (err) {
-      rejectWithValue(err.message || "resed otp failed");
+      return rejectWithValue(err.message || "resed otp failed");
+    }
+  }
+);
+
+// Forgot password thunks
+export const forgotPassword = createAsyncThunk(
+  "auth/forgotPassword",
+  async (email, { rejectWithValue }) => {
+    try {
+      const data = await requestPasswordReset(email);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to request password reset");
+    }
+  }
+);
+
+export const resendPasswordOtp = createAsyncThunk(
+  "auth/resendPasswordOtp",
+  async (email, { rejectWithValue }) => {
+    try {
+      const data = await resendPasswordResetOtp(email);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to resend password reset OTP");
+    }
+  }
+);
+
+export const resetPasswordWithOtp = createAsyncThunk(
+  "auth/resetPassword",
+  async (resetData, { rejectWithValue }) => {
+    try {
+      const data = await resetPassword(resetData);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to reset password");
     }
   }
 );
@@ -67,8 +104,18 @@ const initialState = {
   success: false,
   error: false,
   errormessage: null,
+  successMessage: null, // Added proper field for success messages
   showOtpModal: false,
   token: null,
+  // Separate loading states for different actions
+  verifyLoading: false,
+  resendLoading: false,
+  // Password reset states
+  passwordResetEmail: null,
+  passwordResetLoading: false,
+  passwordResetSuccess: false,
+  passwordResetError: false,
+  passwordResetMessage: null,
 };
 
 const authSlice = createSlice({
@@ -80,6 +127,7 @@ const authSlice = createSlice({
       state.success = false;
       state.error = false;
       state.errormessage = null;
+      state.successMessage = null; // Clear success message
       state.token = null;
       state.isVerified = false;
       state.showOtpModal = false;
@@ -105,6 +153,31 @@ const authSlice = createSlice({
       localStorage.removeItem('tokenAccess');
       localStorage.removeItem('tokenRefresh');
     },
+    setPasswordResetEmail: (state, action) => {
+      state.passwordResetEmail = action.payload;
+    },
+    clearPasswordResetErrors: (state) => {
+      // Clear only error states, preserve the email
+      state.passwordResetLoading = false;
+      state.passwordResetSuccess = false;
+      state.passwordResetError = false;
+      state.passwordResetMessage = null;
+    },
+    resetPasswordState: (state) => {
+      state.passwordResetEmail = null;
+      state.passwordResetLoading = false;
+      state.passwordResetSuccess = false;
+      state.passwordResetError = false;
+      state.passwordResetMessage = null;
+    },
+    clearError: (state) => {
+      // Clear only error states, preserve other states like showOtpModal
+      state.loading = false;
+      state.verifyLoading = false;
+      state.resendLoading = false;
+      state.error = false;
+      state.errormessage = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -119,9 +192,20 @@ const authSlice = createSlice({
         state.success = true;
         state.error = false;
         state.errormessage = null;
-        state.token = action.payload.token;
-        state.showOtpModal = true;
-        state.email = action.payload.email;
+        
+        if (action.payload.isPasswordAddedToGoogleAccount) {
+          // Special case: password added to Google account
+          // Don't show OTP modal, just show success message
+          state.showOtpModal = false;
+          state.isVerified = true; // User is already verified through Google
+          state.email = action.payload.email;
+          state.successMessage = action.payload.message; // Store custom message in proper field
+        } else {
+          // Normal registration flow
+          state.token = action.payload.token;
+          state.showOtpModal = true;
+          state.email = action.payload.email;
+        }
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false;
@@ -131,26 +215,24 @@ const authSlice = createSlice({
 
     builder
       .addCase(verifyOtp.pending, (state) => {
-        state.loading = true;
+        state.verifyLoading = true;
         state.success = false;
         state.error = false;
         state.errormessage = null;
       })
       .addCase(verifyOtp.fulfilled, (state) => {
-        state.loading = false;
+        state.verifyLoading = false;
         state.success = true;
         state.isVerified = true;
         state.email = null;
         state.showOtpModal = false;
       })
       .addCase(verifyOtp.rejected, (state, action) => {
-        state.loading = false;
+        state.verifyLoading = false;
         state.error = true;
         state.errormessage = action.payload;
-        if (
-          action.payload === "Registration session expired" ||
-          action.payload === "Invalid OTP"
-        ) {
+        // Only close the modal for session expiration, not for invalid OTP
+        if (action.payload === "Registration session expired") {
           state.showOtpModal = false;
           state.email = null;
           state.token = null;
@@ -159,19 +241,17 @@ const authSlice = createSlice({
 
     builder
       .addCase(resend.pending, (state) => {
-        state.loading = true;
+        state.resendLoading = true;
         state.success = false;
         state.error = false;
         state.errormessage = null;
       })
-      .addCase(resend.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(resend.fulfilled, (state) => {
+        state.resendLoading = false;
         state.success = true;
-        state.token = action.payload.token;
-        state.showOtpModal = true;
       })
       .addCase(resend.rejected, (state, action) => {
-        state.loading = false;
+        state.resendLoading = false;
         state.error = true;
         state.errormessage = action.payload;
         if (action.payload === "Registration session expired") {
@@ -206,8 +286,70 @@ const authSlice = createSlice({
         state.error = true;
         state.errormessage = action.payload;
       });
+      
+    // Forgot password reducers
+    builder
+      .addCase(forgotPassword.pending, (state) => {
+        state.passwordResetLoading = true;
+        state.passwordResetSuccess = false;
+        state.passwordResetError = false;
+        state.passwordResetMessage = null;
+      })
+      .addCase(forgotPassword.fulfilled, (state, action) => {
+        state.passwordResetLoading = false;
+        state.passwordResetSuccess = true;
+        state.passwordResetError = false;
+        state.passwordResetMessage = action.payload.message;
+      })
+      .addCase(forgotPassword.rejected, (state, action) => {
+        state.passwordResetLoading = false;
+        state.passwordResetSuccess = false;
+        state.passwordResetError = true;
+        state.passwordResetMessage = action.payload;
+      });
+      
+    builder
+      .addCase(resendPasswordOtp.pending, (state) => {
+        state.passwordResetLoading = true;
+        state.passwordResetSuccess = false;
+        state.passwordResetError = false;
+        state.passwordResetMessage = null;
+      })
+      .addCase(resendPasswordOtp.fulfilled, (state, action) => {
+        state.passwordResetLoading = false;
+        state.passwordResetSuccess = true;
+        state.passwordResetError = false;
+        state.passwordResetMessage = action.payload.message;
+      })
+      .addCase(resendPasswordOtp.rejected, (state, action) => {
+        state.passwordResetLoading = false;
+        state.passwordResetSuccess = false;
+        state.passwordResetError = true;
+        state.passwordResetMessage = action.payload;
+      });
+      
+    builder
+      .addCase(resetPasswordWithOtp.pending, (state) => {
+        state.passwordResetLoading = true;
+        state.passwordResetSuccess = false;
+        state.passwordResetError = false;
+        state.passwordResetMessage = null;
+      })
+      .addCase(resetPasswordWithOtp.fulfilled, (state, action) => {
+        state.passwordResetLoading = false;
+        state.passwordResetSuccess = true;
+        state.passwordResetError = false;
+        state.passwordResetMessage = action.payload.message;
+        state.passwordResetEmail = null; // Clear email after successful reset
+      })
+      .addCase(resetPasswordWithOtp.rejected, (state, action) => {
+        state.passwordResetLoading = false;
+        state.passwordResetSuccess = false;
+        state.passwordResetError = true;
+        state.passwordResetMessage = action.payload;
+      });
   },
 });
 
-export const { resetAuthState, setShowOtpModal, setAuthToken, logout } = authSlice.actions;
+export const { resetAuthState, setShowOtpModal, setAuthToken, logout, setPasswordResetEmail, clearPasswordResetErrors, resetPasswordState, clearError } = authSlice.actions;
 export default authSlice.reducer;

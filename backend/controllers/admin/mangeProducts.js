@@ -41,9 +41,12 @@ const addProduct = async (req, res) => {
   console.log(files, req.files, "gopu");
 
   if (!files || files.length < 3) {
-    console.log("koko");
-
-    return res.status(400).json({ message: "minimum 3 images sss required" });
+    return res.status(400).json({ message: "Minimum 3 images required" });
+  }
+  
+  // Ensure we don't exceed the maximum of 5 images
+  if (files.length > 5) {
+    return res.status(400).json({ message: "Maximum 5 images allowed" });
   }
   const parsedVariants = JSON.parse(variants || "[]");
   if (parsedVariants.length === 0) {
@@ -145,9 +148,13 @@ const editProduct = async (req, res) => {
 
     const calculateTotalStock= variantsSet.reduce((acc,curr)=>curr.stock+acc,0)
 
-    const updatedImages = product.images.filter((img) =>
-      existImgs.includes(img)
-    );
+    // const updatedImages = product.images.filter((img) =>
+    //   existImgs.includes(img)
+    // );
+
+    let updatedImages= product.images.filter((img)=>{
+      return existImgs.includes(img)
+    })
 
     if (files?.length) {
       const newImages = await uploadImagesToCloudinary(files, "products");
@@ -155,7 +162,12 @@ const editProduct = async (req, res) => {
     }
 
     if (updatedImages.length < 3) {
-      res.status(400).json({ message: "Minimum three images required" });
+      return res.status(400).json({ message: "Minimum three images required" });
+    }
+    
+    // Ensure we don't exceed the maximum of 5 images
+    if (updatedImages.length > 5) {
+      return res.status(400).json({ message: "Maximum 5 images allowed" });
     }
 
     product.images = updatedImages;

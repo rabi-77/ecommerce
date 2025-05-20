@@ -5,14 +5,14 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { register,verifyOtp,resend,resetAuthState,setShowOtpModal } from '../../features/authSlice';
+import { register, verifyOtp, resend, resetAuthState, setShowOtpModal, clearError } from '../../features/authSlice';
 import { registerSchema, verifyOtpSchema } from '../../../../shared/validation';
 
 
 const Register = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading, success, error, errormessage, email, token, showOtpModal, isVerified } = useSelector((state) => state.auth);
+  const { loading, verifyLoading, resendLoading, success, error, errormessage, successMessage, email, token, showOtpModal, isVerified } = useSelector((state) => state.auth);
   useEffect(() => {
     dispatch(resetAuthState()); 
   }, []);
@@ -30,53 +30,68 @@ const Register = () => {
   const [timeLeft, setTimeLeft] = useState(30);
   const [resendDisabled, setResendDisabled] = useState(true);
 
+  // Effect for success toast and resetting form
   useEffect(() => {
     if (success && showOtpModal) {
       toast.success('OTP sent to your email');
-      setTimeLeft(30)
-      setResendDisabled(true)
-      resetOtpForm()
+      setTimeLeft(30);
+      setResendDisabled(true);
+      resetOtpForm();
+    }
+  }, [success, showOtpModal, resetOtpForm]);
+  
+  // Separate effect for the timer that depends only on showOtpModal
+  useEffect(() => {
+    if (showOtpModal) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            setResendDisabled(false)
+            setResendDisabled(false);
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
 
-      // const resendTimer = setTimeout(() => {
-      //   setResendDisabled(false);
-      // }, 30000);
-
       return () => {
         clearInterval(timer);
-        // clearTimeout(resendTimer);
       };
     }
+  }, [showOtpModal]);
+  
+  // Effect for handling errors and verification
+  useEffect(() => {
     if (error) {
       toast.error(errormessage);
       if (errormessage === 'Registration session expired') {
         resetForm();
-        resetOtpForm()
-        setTimeLeft(30)
-        setResendDisabled(true)
-        dispatch(resetAuthState())
+        resetOtpForm();
+        setTimeLeft(30);
+        setResendDisabled(true);
+        dispatch(resetAuthState());
+      } else {
+        // Only clear the error state, not the entire auth state
+        // This keeps the modal open for invalid OTP errors
+        dispatch(clearError());
       }
-      dispatch(resetAuthState());
     }
+    
     if (isVerified) {
-      toast.success('Account verified, please log in');
+      // Check if we have a custom success message (for Google account password addition)
+      if (successMessage && successMessage.includes('Google account')) {
+        toast.success(successMessage);
+      } else {
+        toast.success('Account verified, please log in');
+      }
       resetForm();
-      resetOtpForm()
-      setTimeLeft(30)
-      setResendDisabled(true)
+      resetOtpForm();
+      setTimeLeft(30);
+      setResendDisabled(true);
       navigate('/login');
       dispatch(resetAuthState());
     }
-  }, [success, error, errormessage, showOtpModal, isVerified, navigate, dispatch, resetForm,resetOtpForm]);
+  }, [error, errormessage, isVerified, navigate, dispatch, resetForm, resetOtpForm]);
 
   const onRegisterSubmit = async (data) => {
     dispatch(register(data));
@@ -174,17 +189,17 @@ const Register = () => {
                   placeholder="Enter 6-digit OTP"
                   className="w-full p-2 border rounded"
                   maxLength="6"
-                  disabled={loading}
+                  disabled={verifyLoading || resendLoading}
                 />
                 {otpErrors.otp && <p className="text-red-500 text-sm">{otpErrors.otp.message}</p>}
               </div>
               <div className="flex space-x-2">
                 <button
                   type="submit"
-                  className={`flex-1 p-2 rounded ${loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 text-white'}`}
-                  disabled={loading}
+                  className={`flex-1 p-2 rounded ${verifyLoading ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 text-white'}`}
+                  disabled={verifyLoading || resendLoading}
                 >
-                  {loading ? 'Verifying...' : 'Verify OTP'}
+                  {verifyLoading ? 'Verifying...' : 'Verify OTP'}
                 </button>
                 <button
                   type="button"
@@ -196,11 +211,12 @@ const Register = () => {
               </div>
             </form>
             <button
+              type="button"
               onClick={handleResend}
-              disabled={resendDisabled || loading}
-              className={`w-full p-2 mt-4 rounded ${(resendDisabled || loading) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-500 text-white'}`}
+              disabled={resendDisabled || resendLoading || verifyLoading}
+              className={`w-full p-2 mt-4 rounded ${(resendDisabled || resendLoading || verifyLoading) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-500 text-white'}`}
             >
-              {loading ? 'Resending...' : 'Resend OTP'}
+              {resendLoading ? 'Resending...' : 'Resend OTP'}
             </button>
           </div>
         </div>

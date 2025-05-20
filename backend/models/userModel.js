@@ -66,7 +66,8 @@ userSchema.pre("save", async function (next) {
   if (this.isModified("password") && this.password) {
     this.password = await bcrypt.hash(this.password, 10);
   }
-  if (this.isModified("otp.code") && this.otp?.code) {
+  // Hash OTP code if it's modified
+  if (this.isModified("otp.code") && this.otp && this.otp.code) {
     this.otp.code = await bcrypt.hash(this.otp.code, 10);
   }
   next();

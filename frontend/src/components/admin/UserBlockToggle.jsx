@@ -1,29 +1,25 @@
 import React from 'react';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
+import { toggleUserBlockThunk } from '../../features/admin/adminUsers/userSlice';
 
 const UserBlockToggle = ({ user, onToggleSuccess }) => {
+  const dispatch = useDispatch();
+  
   const handleToggleBlock = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.patch(
-        `http://localhost:5000/admin/toggle-user-block/${user._id}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const resultAction = await dispatch(toggleUserBlockThunk(user._id));
       
-      if (response.data) {
-        toast.success(response.data.message);
+      if (toggleUserBlockThunk.fulfilled.match(resultAction)) {
+        toast.success(resultAction.payload.message);
         if (onToggleSuccess) {
-          onToggleSuccess(response.data.user);
+          onToggleSuccess(resultAction.payload.user);
         }
+      } else if (toggleUserBlockThunk.rejected.match(resultAction)) {
+        throw new Error(resultAction.payload || 'Failed to toggle user block status');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to toggle user block status');
+      toast.error(error.message || 'Failed to toggle user block status');
       console.error(error);
     }
   };

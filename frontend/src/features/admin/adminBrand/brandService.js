@@ -25,4 +25,9 @@ const deleteBrand= async (id)=>{
     return response.data
 }
 
-export {getBrands,addBrand,editBrand,deleteBrand}
+const toggleBrandListing = async (id) => {
+    const response = await api.patch(`/toggle-brand-listing/${id}`)
+    return response.data
+}
+
+export {getBrands,addBrand,editBrand,deleteBrand,toggleBrandListing}

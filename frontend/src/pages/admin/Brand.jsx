@@ -3,8 +3,7 @@ import {useDispatch, useSelector} from 'react-redux'
 import ReactPaginate from 'react-paginate'
 import {toast} from 'react-toastify'
 import { useState, useEffect } from "react";
-import { addBrandThunk, editBrandThunk,getBrandsThunk,deleteBrandThunk } from "../../features/admin/adminBrand/brandSlice";
-import BrandListingToggle from '../../components/admin/BrandListingToggle';
+import { addBrandThunk, editBrandThunk, getBrandsThunk, deleteBrandThunk, toggleBrandListingThunk } from "../../features/admin/adminBrand/brandSlice";
 
 const Brand = () => {
     const dispatch = useDispatch();
@@ -51,6 +50,15 @@ const Brand = () => {
         dispatch(deleteBrandThunk(id)).then(() => toast.success("Brand deleted"));
       }
     };
+    
+  const handleToggleListing = async (id, isListed) => {
+    try {
+      await dispatch(toggleBrandListingThunk(id));
+      toast.success(`Brand ${isListed ? 'unlisted' : 'listed'} successfully`);
+    } catch (error) {
+      toast.error('Failed to toggle brand listing');
+    }
+  };
   
     const handlePageChange = ({ selected }) => {
       dispatch(getBrandsThunk({ pages: selected + 1, sizes, search }));
@@ -128,12 +136,12 @@ const Brand = () => {
                       >
                         Delete
                       </button>
-                      <BrandListingToggle 
-                        brand={brand} 
-                        onToggleSuccess={() => {
-                          dispatch(getBrandsThunk({ pages, sizes, search }));
-                        }}
-                      />
+                      <button
+                        onClick={() => handleToggleListing(brand._id, brand.isListed)}
+                        className={`p-1 rounded text-white ${brand.isListed ? 'bg-red-500' : 'bg-green-500'}`}
+                      >
+                        {brand.isListed ? 'Unlist' : 'List'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -144,12 +152,14 @@ const Brand = () => {
               nextLabel="Next"
               pageCount={Math.ceil(total / sizes)}
               onPageChange={handlePageChange}
-              containerClassName="flex space-x-2 justify-center mt-4"
-              pageClassName="p-2 border rounded"
-              activeClassName="bg-blue-500 text-white"
-              previousClassName="p-2 border rounded"
-              nextClassName="p-2 border rounded"
-              disabledClassName="opacity-50"
+              containerClassName="flex items-center justify-center mt-6 gap-2"
+              pageClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+              activeClassName="!bg-gray-800 text-white border-gray-800"
+              previousClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+              nextClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+              disabledClassName="opacity-50 cursor-not-allowed hover:bg-white"
+              breakClassName="px-3 py-2"
+              forcePage={pages-1}
             />
           </>
         )}

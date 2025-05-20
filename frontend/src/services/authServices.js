@@ -52,6 +52,36 @@ export const loginUser = async (loginData) => {
     }
 };
 
+// Forgot password services
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await axios.post(`${API_URL}/user/forgot-password`, { email });
+    return response.data;
+  } catch (er) {
+    throw new Error(er.response?.data?.message || 'Failed to request password reset');
+  }
+}
+
+export const resendPasswordResetOtp = async (email) => {
+  try {
+    const response = await axios.post(`${API_URL}/user/resend-password-reset-otp`, { email });
+    return response.data;
+  } catch (er) {
+    throw new Error(er.response?.data?.message || 'Failed to resend OTP');
+  }
+}
+
+export const resetPassword = async (resetData) => {
+  try {
+    // If validateOnly is true, we're just checking if the OTP is valid
+    // without actually resetting the password
+    const response = await axios.post(`${API_URL}/user/reset-password`, resetData);
+    return response.data;
+  } catch (er) {
+    throw new Error(er.response?.data?.message || 'Failed to reset password');
+  }
+}
+
 export const checkUserStatus = async () => {
     try {
       const token = localStorage.getItem('tokenAccess');

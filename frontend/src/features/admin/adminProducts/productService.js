@@ -17,7 +17,9 @@ const addProduct = async (productData) => {
 };
 
 const editProduct = async ({ id, productData }) => {
-  const response = await api.put(`/edit-product/${id}`, productData);
+  const response = await api.put(`/edit-product/${id}`, productData,{
+    headers:{"Content-Type":"multipart/form-data"}
+  });
   return response.data;
 };
 

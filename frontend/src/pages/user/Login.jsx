@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useDispatch,useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { setAuthToken,login,resetAuthState } from "../../features/authSlice";
+import { setAuthToken, login, resetAuthState, resetPasswordState, clearPasswordResetErrors } from "../../features/authSlice";
+import ForgotPasswordModal from "../../components/auth/ForgotPasswordModal";
+import OtpVerificationModal from "../../components/auth/OtpVerificationModal";
+import ResetPasswordModal from "../../components/auth/ResetPasswordModal";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,6 +16,12 @@ const Login = () => {
     email: "",
     password: ""
   });
+
+  // Modal states for forgot password flow
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
 
   const { loading, error, errormessage, token } = useSelector(
     (state) => state.auth
@@ -52,15 +61,52 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     dispatch(login(formData));
+  };
+
+  // State to track the email for password reset flow
+  const [resetEmail, setResetEmail] = useState("");
+
+  // Forgot password handlers
+  const handleForgotPasswordClick = () => {
+    // Reset all states before showing the modal
+    dispatch(resetPasswordState());
+    setResetEmail("");
+    setShowForgotPasswordModal(true);
+  };
+
+  const handleOtpSent = (email) => {
+    console.log('Email received in handleOtpSent:', email);
+    // Store the email in component state
+    setResetEmail(email);
+    setShowForgotPasswordModal(false);
+    setShowOtpModal(true);
+  };
+
+  const handleOtpVerify = (otp) => {
+    console.log('OTP received in handleOtpVerify:', otp);
+    setOtpCode(otp);
+    setShowOtpModal(false);
+    setShowResetPasswordModal(true);
+  };
+
+  const handleCloseAllModals = () => {
+    setShowForgotPasswordModal(false);
+    setShowOtpModal(false);
+    setShowResetPasswordModal(false);
+    setOtpCode("");
+    // Reset auth state
+    dispatch(resetAuthState());
+    // Only reset password state when completely closing the flow
+    dispatch(resetPasswordState());
   };
 
   if (searchParams.get("token") && loading) {
@@ -105,6 +151,16 @@ const Login = () => {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        
+        <div className="text-right mb-4">
+          <button 
+            type="button" 
+            onClick={handleForgotPasswordClick}
+            className="text-blue-500 text-sm"
+          >
+            Forgot Password?
+          </button>
+        </div>
       </form>
       
       <div className="flex items-center mb-4">
@@ -123,6 +179,27 @@ const Login = () => {
       <p className="mt-2 text-center">
         Don't have an account? <a href="/register" className="text-blue-500">Register</a>
       </p>
+      
+      {/* Forgot Password Modals */}
+      <ForgotPasswordModal 
+        isOpen={showForgotPasswordModal} 
+        onClose={handleCloseAllModals} 
+        onOtpSent={handleOtpSent} 
+      />
+      
+      <OtpVerificationModal 
+        isOpen={showOtpModal} 
+        onClose={handleCloseAllModals} 
+        onVerify={handleOtpVerify} 
+      />
+      
+      <ResetPasswordModal 
+        isOpen={showResetPasswordModal} 
+        onClose={handleCloseAllModals} 
+        otp={otpCode}
+        email={resetEmail} // Pass email directly as prop
+      />
+      
       <ToastContainer />
     </div>
   );

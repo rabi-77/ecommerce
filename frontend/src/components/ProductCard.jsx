@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, ShoppingCart, Heart } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Award } from 'lucide-react';
 
 export const ProductCard = ({ product }) => {
   return (
@@ -17,6 +17,12 @@ export const ProductCard = ({ product }) => {
             }}
           />
         </Link>
+        {product.isFeatured && (
+          <div className="absolute top-0 left-0 bg-gradient-to-r from-amber-500 to-yellow-400 text-white px-3 py-1 rounded-br-lg shadow-md flex items-center">
+            <Award className="w-4 h-4 mr-1" />
+            <span className="text-xs font-medium">Featured</span>
+          </div>
+        )}
         <button className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100">
           <Heart className="w-5 h-5 text-gray-600" />
         </button>

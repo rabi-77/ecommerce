@@ -43,4 +43,9 @@ const deleteCategory= async (id)=>{
     return response.data
 }
 
-export {getCategories,addCategory,editCategory,deleteCategory}
+const toggleCategoryListing = async (id) => {
+    const response = await api.patch(`/toggle-category-listing/${id}`)
+    return response.data
+}
+
+export {getCategories,addCategory,editCategory,deleteCategory,toggleCategoryListing}

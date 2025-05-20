@@ -14,7 +14,7 @@ export const adminLogin = async (req, res) => {
   if (!isMatch) return res.status(400).json({ message: "invalid credentials" });
 
   const tokenAccess = jwt.sign({ adminId: admin._id }, process.env.JWT_SECRET, {
-    expiresIn: "20m",
+    expiresIn: "15m",
   });
 
   const tokenRefresh = jwt.sign(
@@ -30,6 +30,7 @@ export const adminLogin = async (req, res) => {
 };
 
 export const refreshAccessToken = async (req, res) => {
+  console.log("refresh");
   const { refreshToken } = req.body;
   if (!refreshToken) {
     return res.status(401).json({ message: "Refresh token required" });
@@ -57,11 +58,11 @@ export const refreshAccessToken = async (req, res) => {
 export const adminLogout = async (req, res) => {
   console.log("hey");
 
-  const { admin } = req.body;
-  console.log(admin, "hey");
+  const { adminId } = req.admin;
+  console.log(adminId, "hey");
 
   try {
-    await adminModel.findByIdAndUpdate(admin, { refreshToken: null });
+    await adminModel.findByIdAndUpdate(adminId, { refreshToken: null });
     res.json({ message: "Admin logged out" });
   } catch (err) {
     console.log(err.message);

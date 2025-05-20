@@ -234,12 +234,14 @@ const Products = () => {
             nextLabel="Next"
             pageCount={Math.ceil(total / size)}
             onPageChange={handlePageChange}
-            containerClassName="flex space-x-2 justify-center mt-4"
-            pageClassName="p-2 border rounded"
-            activeClassName="bg-blue-500 text-white"
-            previousClassName="p-2 border rounded"
-            nextClassName="p-2 border rounded"
-            disabledClassName="opacity-50"
+            containerClassName="flex items-center justify-center mt-6 gap-2"
+            pageClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+            activeClassName="!bg-gray-800 text-white border-gray-800"
+            previousClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+            nextClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+            disabledClassName="opacity-50 cursor-not-allowed hover:bg-white"
+            breakClassName="px-3 py-2"
+            forcePage={page - 1}
           />
         </>
       )}

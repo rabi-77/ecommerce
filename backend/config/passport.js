@@ -18,7 +18,10 @@ configDotenv()
           user = await userModel.findOne({ email: profile.emails[0].value });
           if (user) {
             user.googleId = profile.id;
-            user.authProvider = "google";
+            // Don't change authProvider if they have a password
+            if (!user.password) {
+              user.authProvider = "google";
+            }
             user.isVerified = true;
             await user.save();
           } else {

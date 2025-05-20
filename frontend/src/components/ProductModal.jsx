@@ -11,6 +11,7 @@ const ProductModal = ({ product, onClose }) => {
   const dispatch = useDispatch();
   const isEdit = !!product;
   const fileInputRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { categories, brands } = useSelector((state) => state.product);
 //   console.log(categories,brands);
@@ -65,8 +66,8 @@ const ProductModal = ({ product, onClose }) => {
     const totalImages = imagePreviews.length + 1;
     console.log("Total images after adding:", totalImages);
 
-    if (totalImages > 10) {
-      toast.error("You can only upload a maximum of 10 images");
+    if (totalImages > 5) {
+      toast.error("You can only upload a maximum of 5 images");
       e.target.value = "";
       return;
     }
@@ -220,25 +221,30 @@ const ProductModal = ({ product, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
 
     if (imagePreviews.length < 3) {
       toast.error("Please upload at least 3 images");
+      setIsLoading(false);
       return;
     }
 
     if (!formData.category) {
       toast.error("Please select a category");
+      setIsLoading(false);
       return;
     }
 
     if (!formData.brand) {
       toast.error("Please select a brand");
+      setIsLoading(false);
       return;
     }
 
     const filledVariants = formData.variants.filter((v) => v.stock > 0);
     if (filledVariants.length === 0) {
       toast.error("At least one variant must have stock greater than 0");
+      setIsLoading(false);
       return;
     }
 
@@ -280,28 +286,26 @@ const ProductModal = ({ product, onClose }) => {
 
     try {
       if (isEdit) {
-        console.log(product._id,'is it wat');
-        
         await dispatch(
           editProductThunk({ id: product._id, productData: data })
         ).unwrap();
         toast.success("Product updated");
       } else {
-        console.log('sending from front');
-        
         await dispatch(addProductThunk(data)).unwrap();
         toast.success("Product added");
       }
       onClose();
     } catch (err) {
       toast.error(err || "Operation failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[80vh] overflow-y-auto">
-        <h3 className="text-xl font-bold mb-4">
+      <div className="bg-[#FFF8E1] p-6 rounded-lg w-full max-w-lg max-h-[80vh] overflow-y-auto border border-[#E6D7B2]">
+        <h3 className="text-xl font-bold mb-4 text-[#8B4513]">
           {isEdit ? "Edit Product" : "Add Product"}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -326,7 +330,7 @@ const ProductModal = ({ product, onClose }) => {
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              className="mt-1 w-full p-2 border rounded-md"
+              className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
               rows="3"
             />
           </div>
@@ -339,7 +343,7 @@ const ProductModal = ({ product, onClose }) => {
               name="price"
               value={formData.price}
               onChange={handleInputChange}
-              className="mt-1 w-full p-2 border rounded-md"
+              className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
               min="0"
               step="0.01"
               required
@@ -354,7 +358,7 @@ const ProductModal = ({ product, onClose }) => {
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="mt-1 w-full p-2 border rounded-md"
+                className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
                 required
               >
                 <option value="">-- Select a category --</option>
@@ -538,19 +542,26 @@ const ProductModal = ({ product, onClose }) => {
           <div className="flex space-x-2">
             <button
               type="submit"
-              className={`p-2 text-white rounded-md ${
-                categories?.length === 0 || brands?.length === 0
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-500'
-              }`}
-              disabled={categories?.length === 0 || brands?.length === 0}
+              disabled={isLoading}
+              className={`p-2 ${isLoading ? 'bg-[#D2B48C] opacity-70' : 'bg-[#D2B48C]'} text-white rounded-md flex items-center justify-center hover:bg-[#BC8F8F] transition-colors`}
             >
-              {isEdit ? "Update" : "Add"}
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {isEdit ? "Updating Product..." : "Adding Product..."}
+                </>
+              ) : (
+                isEdit ? "Update Product" : "Add Product"
+              )}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 bg-gray-500 text-white rounded-md"
+              disabled={isLoading}
+              className={`p-2 ${isLoading ? 'bg-[#BC8F8F] opacity-70' : 'bg-[#BC8F8F]'} text-white rounded-md hover:bg-[#A67B5B] transition-colors`}
             >
               Cancel
             </button>

@@ -2,9 +2,8 @@ import CategoryModal from "../../components/categoryModal";
 import {useDispatch,useSelector} from 'react-redux'
 import ReactPaginate from 'react-paginate'
 import {toast} from 'react-toastify'
-import {getCategoryThunk,deleteCategoryThunk} from '../../features/admin/adminCategory/adminCategoryslice'
+import {getCategoryThunk,deleteCategoryThunk,toggleCategoryListingThunk} from '../../features/admin/adminCategory/adminCategoryslice'
 import { useState,useEffect } from "react";
-import CategoryListingToggle from '../../components/admin/CategoryListingToggle';
 
 const Category = () => {
     const dispatch = useDispatch();
@@ -48,6 +47,15 @@ const Category = () => {
         setDelete(true)
         dispatch(deleteCategoryThunk(id)).then(() => toast.success("Category deleted"));
         
+      }
+    };
+    
+    const handleToggleListing = async (id, isListed) => {
+      try {
+        await dispatch(toggleCategoryListingThunk(id));
+        toast.success(`Category ${isListed ? 'unlisted' : 'listed'} successfully`);
+      } catch (error) {
+        toast.error('Failed to toggle category listing');
       }
     };
   
@@ -127,12 +135,12 @@ const Category = () => {
                       >
                         Delete
                       </button>
-                      <CategoryListingToggle 
-                        category={category} 
-                        onToggleSuccess={() => {
-                          dispatch(getCategoryThunk({ pages, size, search }));
-                        }}
-                      />
+                      <button
+                        onClick={() => handleToggleListing(category._id, category.isListed)}
+                        className={`p-1 rounded text-white ${category.isListed ? 'bg-red-500' : 'bg-green-500'}`}
+                      >
+                        {category.isListed ? 'Unlist' : 'List'}
+                      </button>
                     </td>
                   </tr>
                 ))}

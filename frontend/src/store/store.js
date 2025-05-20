@@ -6,13 +6,14 @@ import adminAuth from  '../features/admin/adminAuth/adminAuthSlice'
 import  categoryReducer from '../features/admin/adminCategory/adminCategoryslice'
 import brandSlice from '../features/admin/adminBrand/brandSlice'
 import productSlice from '../features/admin/adminProducts/productSlice'
+import adminUsersReducer from '../features/admin/adminUsers/userSlice'
 
 import userProduct from '../features/userHomeSlice'
 // storage.removeItem('persist:root');
 const persistConfig = {
   key: 'root',
   storage,
-  blacklist:['auth',"category","brand","product",'userProduct']
+  whitelist:['auth','adminAuth']
 };
 
 const rootReducer=combineReducers({
@@ -21,7 +22,8 @@ const rootReducer=combineReducers({
   category:categoryReducer,
   brand:brandSlice,
   product:productSlice,
-  userProduct:userProduct
+  userProduct:userProduct,
+  adminUsers:adminUsersReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

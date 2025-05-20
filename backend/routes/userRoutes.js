@@ -1,7 +1,7 @@
 // const express=require("express")
 import express from 'express'
 const user=express.Router()
-import {register,resend,verify,googleAuth,googleAuthCallback, userLogin, userLogout,refreshAccessToken, checkUserStatus} from '../controllers/userController.js'
+import {register,resend,verify,googleAuth,googleAuthCallback, userLogin, userLogout,refreshAccessToken, checkUserStatus, forgotPassword, resetPassword, resendPasswordResetOtp} from '../controllers/userController.js'
 import {validate} from '../middlewares/validate.js'
 import passport from 'passport'
 import { getProducts,getProductById,getRelatedProducts } from '../controllers/userProductController.js'
@@ -15,6 +15,11 @@ user.post('/logout',userLogout)
 // user.post('/register')
 user.post('/register/verify-otp',verify)
 user.post('/register/resend-otp',resend)
+
+// Forgot Password Routes
+user.post('/forgot-password', forgotPassword)
+user.post('/reset-password', resetPassword)
+user.post('/resend-password-reset-otp', resendPasswordResetOtp)
 
 // Check if user is blocked
 user.get('/check-status', verifyToken, checkUserStatus)

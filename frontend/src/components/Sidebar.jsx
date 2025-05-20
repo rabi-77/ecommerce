@@ -15,16 +15,16 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 min-h-screen bg-white border-r border-gray-200 p-6">
-      <h1 className="text-xl font-bold mb-6">Vercetti</h1>
-      <nav className="space-y-3">
+    <div className="w-64 min-h-screen bg-gray-800 text-white p-6">
+      <h1 className="text-xl font-bold mb-8 text-white border-b border-gray-700 pb-4">Vercetti</h1>
+      <nav className="space-y-2">
         {navItems.map(item => (
           <NavLink
             key={item.name}
             to={item.path}
             className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-sm font-medium ${
-                isActive ? 'bg-black text-white' : 'text-gray-800 hover:bg-gray-100'
+              `block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive ? 'bg-gray-700 text-white border-l-4 border-gray-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`
             }
           >

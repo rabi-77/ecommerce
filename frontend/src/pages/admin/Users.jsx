@@ -2,62 +2,51 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import ReactPaginate from 'react-paginate';
-import axios from 'axios';
-import UserBlockToggle from '../../components/admin/UserBlockToggle';
+import { fetchUsersThunk, toggleUserBlockThunk } from '../../features/admin/adminUsers/userSlice';
 
 const Users = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const { users, loading, error, total, page, size } = useSelector(state => state.adminUsers);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [size, setSize] = useState(10);
-  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetchUsers();
-  }, [page, size, search]);
+    dispatch(fetchUsersThunk({ page, size, search }));
+  }, [dispatch, page, size, search]);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.get(
-        `http://localhost:5000/admin/users?page=${page}&size=${size}&search=${search}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      
-      setUsers(response.data.users);
-      setTotal(response.data.total);
-      setError(null);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch users');
-      toast.error(err.response?.data?.message || 'Failed to fetch users');
-    } finally {
-      setLoading(false);
-    }
+  const refreshUsers = () => {
+    dispatch(fetchUsersThunk({ page, size, search }));
   };
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
-    setPage(1); // Reset to first page on new search
+    // Reset to first page and fetch with new search
+    dispatch(fetchUsersThunk({ page: 1, size, search: e.target.value }));
   };
 
   const clearSearch = () => {
     setSearch('');
-    setPage(1);
+    // Reset to first page and fetch with empty search
+    dispatch(fetchUsersThunk({ page: 1, size, search: '' }));
   };
 
   const handlePageChange = ({ selected }) => {
-    setPage(selected + 1);
+    dispatch(fetchUsersThunk({ page: selected + 1, size, search }));
   };
 
-  const handleToggleSuccess = () => {
-    fetchUsers(); // Refresh the user list after toggling
+  const handleToggleBlock = async (userId) => {
+    try {
+      const resultAction = await dispatch(toggleUserBlockThunk(userId));
+      
+      if (toggleUserBlockThunk.fulfilled.match(resultAction)) {
+        toast.success(resultAction.payload.message);
+        refreshUsers(); // Refresh the user list after toggling
+      } else if (toggleUserBlockThunk.rejected.match(resultAction)) {
+        throw new Error(resultAction.payload || 'Failed to toggle user block status');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to toggle user block status');
+      console.error(error);
+    }
   };
 
   return (
@@ -111,10 +100,16 @@ const Users = () => {
                     </td>
                     <td className="p-3">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="p-3">
-                      <UserBlockToggle 
-                        user={user} 
-                        onToggleSuccess={handleToggleSuccess} 
-                      />
+                      <button
+                        onClick={() => handleToggleBlock(user._id)}
+                        className={`px-3 py-1 rounded text-sm font-medium ${
+                          !user.isBlocked
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        }`}
+                      >
+                        {!user.isBlocked ? 'Active' : 'Blocked'}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -135,12 +130,13 @@ const Users = () => {
                 nextLabel="Next"
                 pageCount={Math.ceil(total / size)}
                 onPageChange={handlePageChange}
-                containerClassName="flex space-x-2"
-                pageClassName="px-3 py-1 rounded border hover:bg-gray-100"
-                previousClassName="px-3 py-1 rounded border hover:bg-gray-100"
-                nextClassName="px-3 py-1 rounded border hover:bg-gray-100"
-                activeClassName="bg-blue-500 text-white border-blue-500"
-                disabledClassName="text-gray-300 cursor-not-allowed"
+                containerClassName="flex items-center justify-center gap-2"
+                pageClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+                previousClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+                nextClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
+                activeClassName="!bg-gray-800 text-white border-gray-800"
+                disabledClassName="opacity-50 cursor-not-allowed hover:bg-white"
+                breakClassName="px-3 py-2"
                 forcePage={page - 1}
               />
             </div>

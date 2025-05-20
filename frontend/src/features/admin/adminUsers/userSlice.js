@@ -1,21 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { getUsers, toggleUserBlock } from './userService';
 
 // Thunks
 export const fetchUsersThunk = createAsyncThunk(
   'adminUsers/fetchUsers',
   async ({ page = 1, size = 10, search = '' }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.get(
-        `http://localhost:5000/admin/users?page=${page}&size=${size}&search=${search}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      return response.data;
+      return await getUsers(page, size, search);
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch users');
     }
@@ -26,17 +17,7 @@ export const toggleUserBlockThunk = createAsyncThunk(
   'adminUsers/toggleUserBlock',
   async (userId, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.patch(
-        `http://localhost:5000/admin/toggle-user-block/${userId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      return response.data;
+      return await toggleUserBlock(userId);
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to toggle user block status');
     }
@@ -54,17 +35,7 @@ const userSlice = createSlice({
     loading: false,
     error: null
   },
-  reducers: {
-    setPage: (state, action) => {
-      state.page = action.payload;
-    },
-    setSize: (state, action) => {
-      state.size = action.payload;
-    },
-    setSearch: (state, action) => {
-      state.search = action.payload;
-    }
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       // Fetch users
@@ -105,5 +76,4 @@ const userSlice = createSlice({
   }
 });
 
-export const { setPage, setSize, setSearch } = userSlice.actions;
 export default userSlice.reducer;

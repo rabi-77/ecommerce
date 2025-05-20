@@ -11,29 +11,32 @@ import Settings from "../pages/admin/Settings";
 import Banner from "../pages/admin/Banner";
 import Coupons from "../pages/admin/Coupons";
 import Category from "../pages/admin/Category";
+import AdminNotFound from "../pages/admin/NotFound";
 import ProtectedRoute from "./ProtectedRoutes";
 
 const AdminRoutes = () => {
   return (
     <Routes>
-      <Route path="/admin/login" element={<AdminLogin />} />
-
+      <Route path="login" element={<AdminLogin />} />
 
       <Route element={<ProtectedRoute/>} >
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="product" element={<Products />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="users" element={<Users />} />
-        <Route path="brands" element={<Brand />} />
-        <Route path="offers" element={<Offers />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="banner" element={<Banner />} />
-        <Route path="coupons" element={<Coupons />} />
-        <Route path="category" element={<Category />} />
+        <Route path="/" element={<AdminLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="product" element={<Products />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="users" element={<Users />} />
+          <Route path="brands" element={<Brand />} />
+          <Route path="offers" element={<Offers />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="banner" element={<Banner />} />
+          <Route path="coupons" element={<Coupons />} />
+          <Route path="category" element={<Category />} />
+        </Route>
       </Route>
-      </Route >
+      
+      {/* Catch-all route for admin 404 Not Found */}
+      <Route path="*" element={<AdminNotFound />} />
     </Routes>
   );
 };

@@ -252,6 +252,7 @@ const Home = () => {
                   className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 >
                   <option value="newest">Newest</option>
+                  <option value="featured">Featured</option>
                   <option value="price-low-to-high">Price: Low to High</option>
                   <option value="price-high-to-low">Price: High to Low</option>
                   <option value="a-z">Name: A to Z</option>

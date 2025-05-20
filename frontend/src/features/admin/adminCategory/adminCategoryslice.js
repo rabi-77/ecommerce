@@ -1,5 +1,5 @@
 import {createSlice,createAsyncThunk} from '@reduxjs/toolkit'
-import {getCategories,addCategory,editCategory,deleteCategory} from './adminCategoryService'
+import {getCategories,addCategory,editCategory,deleteCategory,toggleCategoryListing} from './adminCategoryService'
 
 export const getCategoryThunk=createAsyncThunk(
     'category/getCategories',
@@ -47,6 +47,20 @@ export const deleteCategoryThunk=createAsyncThunk(
         return id
         }catch(err){
             return rejectWithValue(err.response?.data.message || 'deletion failed for some reason, please check it')
+        }
+    }
+)
+
+export const toggleCategoryListingThunk = createAsyncThunk(
+    "category/toggleListing",
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await toggleCategoryListing(id);
+            return response.category;
+        } catch (err) {
+            return rejectWithValue(
+                err.response?.data.message || "Failed to toggle category listing"
+            );
         }
     }
 )
@@ -118,6 +132,22 @@ const categorySlice= createSlice({
             state.total -= 1;
           })
           .addCase(deleteCategoryThunk.rejected, (state, action) => {
+            state.loading = false;
+            state.error = action.payload;
+          })
+          .addCase(toggleCategoryListingThunk.pending, (state) => {
+            state.loading = true;
+            state.error = false;
+          })
+          .addCase(toggleCategoryListingThunk.fulfilled, (state, action) => {
+            state.loading = false;
+            state.error = null;
+            // Update the category in the state
+            state.categories = state.categories.map(category => 
+              category._id === action.payload._id ? action.payload : category
+            );
+          })
+          .addCase(toggleCategoryListingThunk.rejected, (state, action) => {
             state.loading = false;
             state.error = action.payload;
           });

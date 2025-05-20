@@ -24,7 +24,8 @@ const HomePage = () => {
 
   useEffect(() => {
     if (products.length > 0) {
-      setFeaturedProducts(products.slice(0, 4));
+      const featuredProducts = products.filter(product => product.isFeatured);
+      setFeaturedProducts(featuredProducts.slice(0, 4));
     }
   }, [products]);
 
@@ -123,20 +124,70 @@ const HomePage = () => {
             </Link>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {brands.slice(0, 6).map((brand) => (
-              <Link 
-                key={brand._id} 
-                to={`/brand/${brand._id}`}
-                className="bg-white rounded-lg shadow p-6 flex items-center justify-center hover:shadow-md transition-shadow"
+          <div className="relative">
+            {/* Add custom CSS to hide scrollbar but keep functionality */}
+            <style jsx>{`
+              .hide-scrollbar::-webkit-scrollbar {
+                display: none;
+              }
+              .hide-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+              }
+            `}</style>
+            
+            <div className="overflow-x-auto pb-4 hide-scrollbar">
+              <div className="flex space-x-6">
+                {brands.map((brand) => (
+                  <Link 
+                    key={brand._id} 
+                    to={`/brand/${brand._id}`}
+                    className="bg-white rounded-lg shadow overflow-hidden flex flex-col hover:shadow-lg transition-all min-w-[180px] h-[180px] flex-shrink-0 relative group"
+                  >
+                    <div className="h-full w-full overflow-hidden">
+                      {brand.imageUrl ? (
+                        <img 
+                          src={brand.imageUrl} 
+                          alt={brand.name} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <span className="text-gray-400 text-5xl">📦</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm py-2 px-3 transition-all">
+                      <h3 className="text-sm font-semibold text-gray-800 text-center truncate">{brand.name}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+            
+            {/* Navigation buttons */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 hidden md:block">
+              <button 
+                className="bg-white rounded-full p-2 shadow-md hover:bg-gray-100" 
+                onClick={() => document.querySelector('.overflow-x-auto').scrollBy({left: -300, behavior: 'smooth'})}
+                aria-label="Scroll left"
               >
-                {brand.logo ? (
-                  <img src={brand.logo} alt={brand.name} className="h-12 object-contain" />
-                ) : (
-                  <h3 className="text-xl font-bold text-gray-800">{brand.name}</h3>
-                )}
-              </Link>
-            ))}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 hidden md:block">
+              <button 
+                className="bg-white rounded-full p-2 shadow-md hover:bg-gray-100"
+                onClick={() => document.querySelector('.overflow-x-auto').scrollBy({left: 300, behavior: 'smooth'})}
+                aria-label="Scroll right"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </section>

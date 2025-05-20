@@ -12,7 +12,7 @@ export const uploadProduct = multer({
       cb(new Error("Only image files are allowed (JPEG, PNG, GIF)"), false); // Reject the file
     }
   },
-}).array("images", 10);
+}).array("images", 5);
 
 // storage,
 // fileFilter: (req, file, cb) => {

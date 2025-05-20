@@ -174,8 +174,8 @@ const softDeleteBrand = async (req, res) => {
   console.log(req.params);
   
   try {
-    const brand = await brandModel.findOne({_id:id,isDeleted:true});
-    if (brand) {
+    const brand = await brandModel.findOne({_id:id});
+    if (!brand) {
         console.log('hey',brand);
         
       return res
@@ -183,10 +183,8 @@ const softDeleteBrand = async (req, res) => {
         .json({ message: "this brand doesnt exist no more" });
     }
     console.log('soft');
-    const softDelete = await brandModel.findByIdAndUpdate(
+    const softDelete = await brandModel.findByIdAndDelete(
       id,
-      { isDeleted: true },
-      { new: true }
     );
     if (!softDelete) {
       return res.status(500).json({ message: "couldnt found this brand" });
@@ -203,4 +201,29 @@ const softDeleteBrand = async (req, res) => {
   }
 };
 
-export {getBrands,addBrand,editBrand,softDeleteBrand}
+// Toggle brand listing status
+const toggleBrandListing = async (req, res) => {
+  const { brandId } = req.params;
+
+  try {
+    const brand = await brandModel.findById(brandId);
+    
+    if (!brand) {
+      return res.status(404).json({ message: "Brand not found" });
+    }
+    
+    // Toggle the isListed status
+    brand.isListed = !brand.isListed;
+    await brand.save();
+    
+    res.json({ 
+      message: `Brand ${brand.isListed ? 'listed' : 'unlisted'} successfully`, 
+      brand 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export {getBrands,addBrand,editBrand,softDeleteBrand,toggleBrandListing}

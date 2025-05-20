@@ -9,6 +9,7 @@ import {
   addCategory,
   editCategory,
   softDeleteCategory,
+  toggleCategoryListing
 } from "../controllers/admin/manageCategory.js";
 import { uploadCategory } from "../middlewares/multerCheck.js";
 import {uploadProduct} from '../middlewares/multerCheckmultiple.js'
@@ -17,60 +18,58 @@ import {
   addBrand,
   editBrand,
   softDeleteBrand,
+  toggleBrandListing
 } from "../controllers/admin/mangeBrands.js";
 import { addProduct, editProduct, getProducts, softDelete, toggleFeatured, toggleList,fetchBrands,fetchCategories } from "../controllers/admin/mangeProducts.js";
 import { getUsers, blockUser, unblockUser, toggleUserBlock } from "../controllers/admin/manageUsers.js";
+import { authenticateAdmin,checkAdminAuth } from "../middlewares/authenticateAdmin.js";
+import { validateRequest } from "../middlewares/validateRequest.js";
+import { adminLoginSchema, categorySchema, brandSchema, productSchema } from "../../shared/validation.js";
+import { validate } from "../middlewares/validate.js";
 
 const admin = express.Router();
 
 //authentication
-admin.post("/login", adminLogin);
+admin.post("/login", validate(adminLoginSchema), adminLogin);
+admin.post('/refresh', refreshAccessToken);
+
+// Apply authenticateAdmin middleware to all routes below
+admin.use(authenticateAdmin,checkAdminAuth);
 admin.post("/logout", adminLogout);
-admin.post('/refresh',refreshAccessToken)
+
 //category management
 admin.get("/categories", getCategories);
 
-admin.post("/add-category", uploadCategory, addCategory);
+admin.post("/add-category", uploadCategory, validate(categorySchema), addCategory);
 
 admin.patch(
   "/edit-category/:id",
-  async (req, res, next) => {
-    console.log("reaching here");
-    next();
-  },
   uploadCategory,
+  validate(categorySchema),
   editCategory
 );
 admin.delete("/delete-category/:id", softDeleteCategory);
-admin.patch("/toggle-category-listing/:categoryId", (await import("../controllers/admin/toggleCategoryListing.js")).default);
+admin.patch("/toggle-category-listing/:categoryId", toggleCategoryListing);
 
 //brandmanagement
 
 admin.get("/brands", getBrands);
-admin.post("/add-brand", uploadCategory, addBrand);
-admin.patch("/edit-brand/:id", uploadCategory, editBrand);
+admin.post("/add-brand", uploadCategory, validate(brandSchema), addBrand);
+admin.patch("/edit-brand/:id", uploadCategory, validate(brandSchema), editBrand);
 admin.delete("/delete-brand/:id", softDeleteBrand);
-admin.patch("/toggle-brand-listing/:brandId", (await import("../controllers/admin/toggleBrandListing.js")).default);
+admin.patch("/toggle-brand-listing/:brandId", toggleBrandListing);
 
 //product management
 admin.get('/products',getProducts)
-admin.post('/add-product',(req,res,next)=>{
-  console.log('heyyyy file:',req.header,'and files:',req.headers,'fff',req.body);
-  next()
-},uploadProduct,(req,res,next)=>{
-  console.log(req.body,'and' ,req.files,'signle file',req.file);
-  next();
-},addProduct)
+admin.post('/add-product', uploadProduct, validate(productSchema), addProduct)
 
-admin.put('/edit-product/:id',uploadProduct,editProduct)
+admin.put('/edit-product/:id', uploadProduct, validate(productSchema), editProduct)
 admin.delete('/delete-product/:id',softDelete)
 
-admin.patch('/products/:id/list-product',(req,res,next)=>{
-  console.log('reaching or qhat');
-  next()
-},toggleList)
+admin.patch('/products/:id/list-product', toggleList)
 admin.patch('/products/:id/feature-product',toggleFeatured)
 
+//for dropdowns
 admin.get('/get-brands',fetchBrands)
 admin.get('/get-categories',fetchCategories)
 
