@@ -29,14 +29,59 @@ const Login = () => {
 
 
   useEffect(() => {
-    resetAuthState()
+    dispatch(resetAuthState());
+    // Check for both old and new token parameter names for backward compatibility
     const token = searchParams.get("token");
+    const tokenAccess = searchParams.get("tokenAccess");
+    const refreshToken = searchParams.get("refreshToken");
+    const tokenRefresh = searchParams.get("tokenRefresh");
+    const userDataParam = searchParams.get("userData");
     const error = searchParams.get("error");
 
-    if (token) {
-      dispatch(setAuthToken(token));
-      toast.success("Logged in with Google");
-      navigate("/");
+    // Use either token format (supporting both old and new parameter names)
+    const accessToken = tokenAccess || token;
+    const refreshTokenValue = tokenRefresh || refreshToken;
+
+    if (accessToken) {
+      console.log('Login detected with token');
+      
+      // Process user data if available
+      if (userDataParam) {
+        try {
+          const userData = JSON.parse(decodeURIComponent(userDataParam));
+          console.log('Google login user data:', userData);
+          
+          // Dispatch login success action directly to update Redux state
+          // This mimics the exact same action that happens during regular login
+          dispatch({
+            type: 'auth/login/fulfilled',
+            payload: {
+              user: userData,
+              tokenAccess: accessToken,
+              tokenRefresh: refreshTokenValue
+            }
+          });
+          
+          // The login/fulfilled reducer will handle storing in localStorage
+          
+          toast.success("Logged in with Google");
+          
+          // Add a slight delay before navigating to ensure Redux state is updated
+          setTimeout(() => {
+            navigate("/");
+          }, 100);
+          
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          toast.error("Error processing login data");
+        }
+      } else {
+        // If no user data but we have a token, try to use it
+        console.warn('No user data found in redirect, but token is present');
+        dispatch(setAuthToken(accessToken));
+        toast.success("Logged in with Google");
+        navigate("/");
+      }
     } else if (error) {
       toast.error(decodeURIComponent(error));
     }

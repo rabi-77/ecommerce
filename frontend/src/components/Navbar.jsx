@@ -1,11 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { ShoppingCart, Heart, User } from "lucide-react";
-import { logout } from "../features/authSlice";
+import { ShoppingCart, Heart, User, ChevronDown, LogOut, Settings } from "lucide-react";
+import { logoutThunk } from "../features/authSlice";
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -42,17 +44,47 @@ export default function Navbar() {
     // Create an interval to check user status periodically
     const intervalId = setInterval(checkUserStatus, 1000); // Check every second
 
+    // Handle clicks outside of dropdown to close it
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
     // Cleanup function
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(intervalId);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
-  const handleUserClick = () => {
+  const handleUserClick = (e) => {
+    // Prevent event from bubbling up
+    e.stopPropagation();
+    
     if (!user) {
       navigate("/login"); // or "/register"
+    } else {
+      console.log('Toggle dropdown');
+      setDropdownOpen(!dropdownOpen);
     }
+  };
+
+  const handleLogout = () => {
+    dispatch(logoutThunk());
+    setUser(null);
+    setDropdownOpen(false);
+    navigate('/');
+  };
+
+  const handleProfileNavigation = (e, path) => {
+    e.stopPropagation();
+    console.log('Navigating to:', path);
+    setDropdownOpen(false);
+    navigate(path);
   };
 
   return (
@@ -82,25 +114,68 @@ export default function Navbar() {
             <ShoppingCart />
           </Link>
           <Heart className="cursor-pointer" />
-          {user ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{user.username || user.email || 'User'}</span>
-              <button 
-                onClick={() => {
-                  dispatch(logout());
-                  setUser(null);
-                  navigate('/');
-                }}
-                className="text-xs text-gray-500 hover:text-red-500"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <button onClick={handleUserClick}>
-              <User />
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={handleUserClick}
+              className="flex items-center gap-1 cursor-pointer"
+              type="button"
+            >
+              {user ? (
+                <>
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+                    {user.profileImage ? (
+                      <img 
+                        src={user.profileImage.url || user.profileImage} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={16} />
+                    )}
+                  </div>
+                  <ChevronDown size={16} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </>
+              ) : (
+                <User />
+              )}
             </button>
-          )}
+            
+            {user && dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 pointer-events-auto">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <p className="text-sm font-medium truncate">{user.username || user.name || user.email || 'User'}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+                
+                <button 
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left cursor-pointer"
+                  onClick={(e) => handleProfileNavigation(e, '/profile')}
+                  type="button"
+                >
+                  <User size={16} className="mr-2" />
+                  My Profile
+                </button>
+                
+                <button 
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left cursor-pointer"
+                  onClick={(e) => handleProfileNavigation(e, '/profile/edit')}
+                  type="button"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Edit Profile
+                </button>
+                
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left cursor-pointer"
+                  type="button"
+                >
+                  <LogOut size={16} className="mr-2" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

@@ -70,6 +70,8 @@ export const fetchRelatedProductsThunk = createAsyncThunk(
   "product/fetchRelatedProducts",
   async (id, { rejectWithValue }) => {
     try {
+      console.log(id,'id','relatedProducts');
+      
       const response = await getRelatedProducts(id);
       return response;
     } catch (err) {

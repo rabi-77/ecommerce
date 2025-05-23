@@ -7,6 +7,9 @@ import  categoryReducer from '../features/admin/adminCategory/adminCategoryslice
 import brandSlice from '../features/admin/adminBrand/brandSlice'
 import productSlice from '../features/admin/adminProducts/productSlice'
 import adminUsersReducer from '../features/admin/adminUsers/userSlice'
+import profileReducer from '../features/userprofile/profileSlice'
+import addressReducer from '../features/userAddress/addressSlice'
+
 
 import userProduct from '../features/userHomeSlice'
 // storage.removeItem('persist:root');
@@ -23,7 +26,9 @@ const rootReducer=combineReducers({
   brand:brandSlice,
   product:productSlice,
   userProduct:userProduct,
-  adminUsers:adminUsersReducer
+  adminUsers:adminUsersReducer,
+  profile:profileReducer,
+  address:addressReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

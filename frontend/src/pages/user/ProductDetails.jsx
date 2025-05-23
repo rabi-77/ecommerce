@@ -13,7 +13,7 @@ const ProductDetails = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { product, relatedProducts, loading, error } = useSelector((state) => state.userProduct);
-  
+  console.log(relatedProducts,'relatedProducts')
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');

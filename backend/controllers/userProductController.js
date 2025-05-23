@@ -152,13 +152,14 @@ const getRelatedProducts = async (req, res) => {
         category: product.category,
         _id: { $ne: product._id },
         isListed: true,
-        brand: { $in: listedBrandIds },
-        category: { $in: listedCategoryIds }
+        // brand: { $in: listedBrandIds },
+        // category: { $in: listedCategoryIds }
       })
-        .populate("category")
-        .populate("brand")
+        .populate("category", "name")
+        .populate("brand", "name")
         .limit(4);
-  
+      console.log(relatedProducts,'relatedProducts');
+      
       res.status(200).json(relatedProducts);
     } catch (err) {
       res.status(500).json({ message: "Server error" });

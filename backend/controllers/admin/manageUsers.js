@@ -25,43 +25,7 @@ try{
 }
 };
 
-const blockUser = async (req, res) => {
-  const { id } = req.params;
 
-  try {
-    const user = await userModel.findByIdAndUpdate(
-      id,
-      { isBlocked: true },
-      { new: true }
-    );
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.json({ message: "User blocked successfully", user });
-  } catch (err) {
-
-   console.log(err.message); 
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-const unblockUser = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const user = await userModel.findByIdAndUpdate(
-      id,
-      { isBlocked: false },
-      { new: true }
-    );
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.json({ message: "User unblocked successfully", user });
-  } catch (err) {
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
 
 const toggleUserBlock = async (req, res) => {
   const { id } = req.params;
@@ -87,4 +51,4 @@ const toggleUserBlock = async (req, res) => {
   }
 };
 
-export {getUsers,blockUser,unblockUser,toggleUserBlock}
+export {getUsers,toggleUserBlock}

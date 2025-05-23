@@ -8,7 +8,7 @@
         "shared"
     ],
     "scripts": {
-        "frontend": "npm start --workspace=frontend",
+        "frontend": "npm run dev --workspace=frontend",
         "backend": "npm start --workspace=backend",
         "install-all": "npm install",
         "start": "npm run frontend & npm run backend"

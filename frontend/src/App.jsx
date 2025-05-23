@@ -6,6 +6,7 @@ import { PersistGate } from "redux-persist/integration/react";
 import { ToastContainer } from "react-toastify";
 import { useEffect } from "react";
 import { initTokenRefresh } from "./utils/tokenRefresh";
+import { checkForGoogleRedirect } from "./utils/handleGoogleRedirect";
 
 // Import route components
 import UserRoutes from "./routes/UserRoutes";
@@ -13,10 +14,16 @@ import AdminRoutes from "./routes/AdminRoutes";
 function App() {
   // persistor.purge(); // Wipes persisted state
 
-  // Initialize token refresh mechanism for admin authentication
+  // Check for Google authentication on mount
   useEffect(() => {
-    // Only initialize if there's an access token
-    if (localStorage.getItem('accessToken')) {
+    // Try to handle Google auth if we're on the homepage with auth parameters
+    checkForGoogleRedirect();
+  }, []);
+
+  // Initialize token refresh mechanism for both admin and user authentication
+  useEffect(() => {
+    // Initialize if there's either an admin token or a user token
+    if (localStorage.getItem('accessToken') || localStorage.getItem('tokenAccess')) {
       const cancelRefresh = initTokenRefresh();
       
       // Clean up function to cancel the refresh timer when component unmounts

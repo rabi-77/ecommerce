@@ -1,17 +1,24 @@
 // const express=require("express")
 import express from 'express'
 const user=express.Router()
-import {register,resend,verify,googleAuth,googleAuthCallback, userLogin, userLogout,refreshAccessToken, checkUserStatus, forgotPassword, resetPassword, resendPasswordResetOtp} from '../controllers/userController.js'
+import {register,resend,verify,googleAuth,googleAuthCallback, userLogin, userLogout,refreshAccessToken, checkUserStatus, forgotPassword, resetPassword, resendPasswordResetOtp,} from '../controllers/userController.js'
 import {validate} from '../middlewares/validate.js'
 import passport from 'passport'
 import { getProducts,getProductById,getRelatedProducts } from '../controllers/userProductController.js'
 import { getBrands,getCategories } from '../controllers/brandCategory.js'
 import { verifyToken } from '../middlewares/auth.js'
+import {authenticateUser,userAuthorization} from '../middlewares/user/authenticateUser.js'
+import {getUserinfo,editUserDetails} from '../controllers/userProfile.js'
+import {uploadCategory} from '../middlewares/multerCheck.js'
+import { getUserAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../controllers/userAddressController.js'
 
 
 user.post('/register',register)
 user.post('/login',userLogin)
-user.post('/logout',userLogout)
+user.post('/logout',authenticateUser,userAuthorization,userLogout)
+
+user.post('/refresh',refreshAccessToken)
+
 // user.post('/register')
 user.post('/register/verify-otp',verify)
 user.post('/register/resend-otp',resend)
@@ -36,5 +43,28 @@ user.get("/products/:id/related", getRelatedProducts);
 
 user.get("/categories", getCategories);
 user.get("/brands", getBrands);
+
+
+//user profile
+user.get('/profile',(req,res,next)=>{
+    console.log('reach lpleeSE');
+    next()
+},getUserinfo)
+user.put('/profile',(req,res,next)=>{
+    console.log('is it coming');
+    next();
+},uploadCategory,editUserDetails)
+
+// Address management routes
+user.get('/addresses', verifyToken, getUserAddresses)
+user.post('/address', verifyToken, addAddress)
+user.put('/address/:addressId', verifyToken, updateAddress)
+user.delete('/address/:addressId', verifyToken, deleteAddress)
+user.put('/address/:addressId/default', verifyToken, setDefaultAddress)
+
+
+//change password setup
+
+
 
 export default user

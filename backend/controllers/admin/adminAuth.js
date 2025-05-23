@@ -58,14 +58,15 @@ export const refreshAccessToken = async (req, res) => {
 export const adminLogout = async (req, res) => {
   console.log("hey");
 
-  const { adminId } = req.admin;
-  console.log(adminId, "hey");
+  const { _id:adminId } = req.admin;
+  console.log(adminId, "adminId from middleware?");
 
   try {
-    await adminModel.findByIdAndUpdate(adminId, { refreshToken: null });
+  const check=  await adminModel.findByIdAndUpdate(adminId, { refreshToken: null },{new:true});
+    console.log(check,"success");
     res.json({ message: "Admin logged out" });
   } catch (err) {
-    console.log(err.message);
+    console.log(err.message,"error while logging out");
 
     res.status(404).json({ message: "something wrong happened" });
   }

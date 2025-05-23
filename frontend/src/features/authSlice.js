@@ -3,7 +3,7 @@ import {
   createAsyncThunk,
   buildCreateSlice,
 } from "@reduxjs/toolkit";
-import { registerUser, verifyUser, resendOtp, loginUser, requestPasswordReset, resendPasswordResetOtp, resetPassword } from "../services/authServices";
+import { registerUser, verifyUser, resendOtp, loginUser, requestPasswordReset, resendPasswordResetOtp, resetPassword ,logoutUser,refreshAccessToken} from "../services/authServices";
 // import { build } from "vite";
 
 export const login = createAsyncThunk(
@@ -96,6 +96,50 @@ export const resetPasswordWithOtp = createAsyncThunk(
     }
   }
 );
+
+export const logoutThunk = createAsyncThunk(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await logoutUser();
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenAccess');
+      localStorage.removeItem('tokenRefresh');
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.message || "logout failed");
+    }
+  }
+);
+
+
+export const refreshAccessTokenThunk = createAsyncThunk(
+  "auth/refreshAccessToken",
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await refreshAccessToken();
+      // Check if data contains tokenAccess (API response format)
+      if (data && data.tokenAccess) {
+        localStorage.setItem('tokenAccess', data.tokenAccess);
+        return data.tokenAccess; // Return the token for the reducer
+      } else {
+        throw new Error("Invalid token response format");
+      }
+    } catch (err) {
+      console.error("Token refresh failed:", err.message);
+      // Only remove tokens if it's an authentication error, not for network issues
+      if (err.message.includes("unauthorized") || err.message.includes("invalid") || 
+          err.message.includes("expired") || err.message.includes("No refresh token")) {
+        localStorage.removeItem('tokenAccess');
+        localStorage.removeItem('tokenRefresh');
+        localStorage.removeItem('user');
+      }
+      return rejectWithValue(err.message || "refresh access token failed");
+    }
+  }
+)
+
+
 const initialState = {
   user: null,
   email: null,
@@ -107,6 +151,7 @@ const initialState = {
   successMessage: null, // Added proper field for success messages
   showOtpModal: false,
   token: null,
+  otpExpiresAt: null, // Added to track OTP expiration time
   // Separate loading states for different actions
   verifyLoading: false,
   resendLoading: false,
@@ -141,18 +186,30 @@ const authSlice = createSlice({
       state.success = true;
       state.error = false;
       state.errormessage = null;
-    },
-    logout: (state) => {
-      state.token = null;
-      state.user = null;
-      state.isVerified = false;
-      state.success = false;
       
-      // Clear localStorage
-      localStorage.removeItem('user');
-      localStorage.removeItem('tokenAccess');
-      localStorage.removeItem('tokenRefresh');
+      // Try to get user data from localStorage if not already in state
+      if (!state.user) {
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            state.user = JSON.parse(storedUser);
+          }
+        } catch (error) {
+          console.error('Error parsing user from localStorage', error);
+        }
+      }
     },
+    // logout: (state) => {
+    //   state.token = null;
+    //   state.user = null;
+    //   state.isVerified = false;
+    //   state.success = false;
+      
+    //   // Clear localStorage
+    //   localStorage.removeItem('user');
+    //   localStorage.removeItem('tokenAccess');
+    //   localStorage.removeItem('tokenRefresh');
+    // },
     setPasswordResetEmail: (state, action) => {
       state.passwordResetEmail = action.payload;
     },
@@ -246,9 +303,13 @@ const authSlice = createSlice({
         state.error = false;
         state.errormessage = null;
       })
-      .addCase(resend.fulfilled, (state) => {
+      .addCase(resend.fulfilled, (state, action) => {
         state.resendLoading = false;
         state.success = true;
+        // Update the token with the new one containing the new OTP
+        state.token = action.payload.token;
+        // Store the expiration time for the OTP timer
+        state.otpExpiresAt = action.payload.expiresAt;
       })
       .addCase(resend.rejected, (state, action) => {
         state.resendLoading = false;
@@ -348,6 +409,41 @@ const authSlice = createSlice({
         state.passwordResetError = true;
         state.passwordResetMessage = action.payload;
       });
+      builder.addCase(logoutThunk.fulfilled,(state)=>{
+        state.token=null;
+        state.user=null;
+        state.isVerified=false;
+        state.success=false;
+        
+        
+      })  
+      .addCase(logoutThunk.rejected,(state,action)=>{
+        state.error=true;
+        state.errormessage=action.payload;  
+      })
+
+      builder.addCase(refreshAccessTokenThunk.pending, (state) => {
+        state.loading = true;
+        state.error = false;
+        state.errormessage = null;
+      })
+      .addCase(refreshAccessTokenThunk.fulfilled,(state,action)=>{
+        state.loading = false;
+        state.token = action.payload;
+        state.isVerified = true;
+        state.error = false;
+        state.errormessage = null;
+      })
+      .addCase(refreshAccessTokenThunk.rejected,(state,action)=>{
+        state.loading = false;
+        state.error = true;
+        state.errormessage = action.payload;
+        // Token refresh failed, clear auth state
+        state.token = null;
+        state.refreshToken = null;
+        state.user = null;
+        state.isVerified = false;
+      })
   },
 });
 

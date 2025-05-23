@@ -7,12 +7,23 @@ import { checkUserStatus } from '../services/authServices';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { logout } from '../features/authSlice';
+import { setupUserTokenRefresh } from '../utils/tokenRefresh';
 
 const UserLayout = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Initialize token refresh for user
+    const cancelTokenRefresh = setupUserTokenRefresh();
+    
+    // Cleanup function to cancel the refresh timer when component unmounts
+    return () => {
+      cancelTokenRefresh();
+    };
+  }, []);
 
   useEffect(() => {
     // Check if user is logged in
@@ -23,9 +34,13 @@ const UserLayout = () => {
       // Periodically check if user is blocked
       const checkStatus = async () => {
         try {
+          console.log('Checking user status...');
+          
           const response = await checkUserStatus();
+          console.log('User status check response:', response);
           
           if (response.isBlocked) {
+            console.warn('User is blocked, logging out');
             // Clear localStorage first to ensure immediate UI update
             localStorage.removeItem('user');
             localStorage.removeItem('tokenAccess');
@@ -39,15 +54,18 @@ const UserLayout = () => {
             
             // Trigger a storage event for other components to detect
             window.dispatchEvent(new Event('storage'));
-            
-            // No navigation - user stays on the current page
           }
         } catch (error) {
           console.error('Error checking user status:', error);
+          
           // If there's an authentication error, it might mean the token is invalid
-          if (error.message.includes('token') || error.message.includes('unauthorized')) {
+          if (error.message.includes('token') || 
+              error.message.includes('unauthorized') || 
+              error.message.includes('No access token')) {
+            console.warn('Authentication error, redirecting to login');
             dispatch(logout());
             navigate('/login');
+            toast.error('Your session has expired. Please log in again.');
           }
         }
       };
@@ -77,4 +95,4 @@ const UserLayout = () => {
   );
 };
 
-export default UserLayout
+export default UserLayout;

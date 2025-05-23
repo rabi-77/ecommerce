@@ -21,7 +21,7 @@ import {
   toggleBrandListing
 } from "../controllers/admin/mangeBrands.js";
 import { addProduct, editProduct, getProducts, softDelete, toggleFeatured, toggleList,fetchBrands,fetchCategories } from "../controllers/admin/mangeProducts.js";
-import { getUsers, blockUser, unblockUser, toggleUserBlock } from "../controllers/admin/manageUsers.js";
+import { getUsers, toggleUserBlock } from "../controllers/admin/manageUsers.js";
 import { authenticateAdmin,checkAdminAuth } from "../middlewares/authenticateAdmin.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { adminLoginSchema, categorySchema, brandSchema, productSchema } from "../../shared/validation.js";
@@ -75,8 +75,7 @@ admin.get('/get-categories',fetchCategories)
 
 // User management
 admin.get('/users', getUsers)
-admin.patch('/block-user/:id', blockUser)
-admin.patch('/unblock-user/:id', unblockUser)
+
 admin.patch('/toggle-user-block/:id', toggleUserBlock)
 
 export default admin;

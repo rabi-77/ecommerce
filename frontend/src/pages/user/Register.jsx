@@ -12,7 +12,7 @@ import { registerSchema, verifyOtpSchema } from '../../../../shared/validation';
 const Register = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading, verifyLoading, resendLoading, success, error, errormessage, successMessage, email, token, showOtpModal, isVerified } = useSelector((state) => state.auth);
+  const { loading, verifyLoading, resendLoading, success, error, errormessage, successMessage, email, token, showOtpModal, isVerified, otpExpiresAt } = useSelector((state) => state.auth);
   useEffect(() => {
     dispatch(resetAuthState()); 
   }, []);
@@ -34,16 +34,22 @@ const Register = () => {
   useEffect(() => {
     if (success && showOtpModal) {
       toast.success('OTP sent to your email');
+      resetOtpForm();
+      
+      // Always use 30 seconds for the timer regardless of server expiration
       setTimeLeft(30);
       setResendDisabled(true);
-      resetOtpForm();
     }
   }, [success, showOtpModal, resetOtpForm]);
   
   // Separate effect for the timer that depends only on showOtpModal
   useEffect(() => {
     if (showOtpModal) {
-      const timer = setInterval(() => {
+      // Clear any existing timer
+      let timer = null;
+      
+      // Start a new timer
+      timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
@@ -55,7 +61,7 @@ const Register = () => {
       }, 1000);
 
       return () => {
-        clearInterval(timer);
+        if (timer) clearInterval(timer);
       };
     }
   }, [showOtpModal]);
@@ -88,8 +94,12 @@ const Register = () => {
       resetOtpForm();
       setTimeLeft(30);
       setResendDisabled(true);
-      navigate('/login');
-      dispatch(resetAuthState());
+      
+      // Add a slight delay before redirecting to ensure the toast message is visible
+      setTimeout(() => {
+        navigate('/login');
+        dispatch(resetAuthState());
+      }, 1500); // 1.5 second delay
     }
   }, [error, errormessage, isVerified, navigate, dispatch, resetForm, resetOtpForm]);
 

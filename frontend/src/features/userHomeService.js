@@ -30,7 +30,7 @@ export const getProductById= async (id)=>{
     return response.data
 }
 
-export const getRelatedProducts= async ()=>{
+export const getRelatedProducts= async (id)=>{
     const response = await publicApi.get(`/products/${id}/related`)
     return response.data
 }

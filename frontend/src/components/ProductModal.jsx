@@ -89,11 +89,12 @@ const ProductModal = ({ product, onClose }) => {
 
   const onImageLoad = (e) => {
     const { width, height } = e.currentTarget;
+    // Create a smaller initial crop area for better control
     const crop = centerCrop(
       makeAspectCrop(
         {
           unit: "%",
-          width: 90,
+          width: 70,
         },
         4 / 3, // Aspect ratio
         width,
@@ -108,7 +109,38 @@ const ProductModal = ({ product, onClose }) => {
   const handleCropStart = (index) => {
     console.log("Starting crop for image at index:", index);
     setCroppingIndex(index);
-    setCroppedImage(imagePreviews[index]);
+    
+    // Create a new image with crossOrigin attribute to avoid tainted canvas issues
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      // Once loaded, create a canvas to get the image data
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      
+      // Convert to data URL to avoid CORS issues
+      try {
+        const dataUrl = canvas.toDataURL("image/jpeg");
+        setCroppedImage(dataUrl);
+      } catch (error) {
+        console.error("Error creating data URL:", error);
+        // Fallback to direct image preview (may cause CORS issues)
+        setCroppedImage(imagePreviews[index]);
+        toast.warning("Image may not be croppable due to security restrictions");
+      }
+    };
+    
+    img.onerror = () => {
+      console.error("Failed to load image for cropping");
+      setCroppedImage(imagePreviews[index]);
+      toast.warning("Could not prepare image for cropping");
+    };
+    
+    // Set the source last to trigger loading
+    img.src = imagePreviews[index];
   };
 
   const handleCropConfirm = () => {
@@ -148,24 +180,44 @@ const ProductModal = ({ product, onClose }) => {
       });
       const croppedUrl = URL.createObjectURL(croppedFile);
 
-      // Update formData.images and imagePreviews
-      const newImages = [...formData.images];
-      newImages[croppingIndex - existingImages.length] = croppedFile;
-      setFormData((prev) => ({
-        ...prev,
-        images: newImages,
-      }));
-
+      // Update the preview image regardless of whether it's existing or new
       const newPreviews = [...imagePreviews];
-      URL.revokeObjectURL(newPreviews[croppingIndex]);
+      if (newPreviews[croppingIndex]) {
+        URL.revokeObjectURL(newPreviews[croppingIndex]);
+      }
       newPreviews[croppingIndex] = croppedUrl;
       setImagePreviews(newPreviews);
+      
+      // Handle existing images differently from new images
+      if (croppingIndex < existingImages.length) {
+        // Mark the existing image for removal
+        const newExistingImages = [...existingImages];
+        newExistingImages[croppingIndex] = null; // Mark for removal
+        setExistingImages(newExistingImages);
+        
+        // Add the cropped image as a new image
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, croppedFile],
+        }));
+      } else {
+        // For new images, replace the file in the array
+        const newImages = [...formData.images];
+        const fileIndex = croppingIndex - existingImages.length;
+        if (fileIndex >= 0 && fileIndex < newImages.length) {
+          newImages[fileIndex] = croppedFile;
+          setFormData((prev) => ({
+            ...prev,
+            images: newImages,
+          }));
+        }
+      }
 
-      console.log("Cropped image updated, new URL:", croppedUrl);
+      // Reset cropping state
       setCroppingIndex(null);
       setCroppedImage(null);
       setCrop(null);
-    }, "image/jpeg");
+    }, "image/jpeg", 0.9);
   };
 
   const handleCropCancel = () => {
@@ -258,7 +310,9 @@ const ProductModal = ({ product, onClose }) => {
     // data.append("variants", JSON.stringify(formData.variants));
 
     if (isEdit) {
-      data.append("existImgs", JSON.stringify(existingImages));
+      // Filter out null values (images that were cropped)
+      const filteredExistingImages = existingImages.filter(img => img !== null);
+      data.append("existImgs", JSON.stringify(filteredExistingImages));
     }
 
 
@@ -304,153 +358,187 @@ const ProductModal = ({ product, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[#FFF8E1] p-6 rounded-lg w-full max-w-lg max-h-[80vh] overflow-y-auto border border-[#E6D7B2]">
+      <div className="bg-[#FFF8E1] p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-[#E6D7B2]">
         <h3 className="text-xl font-bold mb-4 text-[#8B4513]">
           {isEdit ? "Edit Product" : "Add Product"}
         </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              className="mt-1 w-full p-2 border rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
-              rows="3"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Price
-            </label>
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleInputChange}
-              className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
-              min="0"
-              step="0.01"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Category
-            </label>
-            {categories.length > 0 ? (
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
-                required
-              >
-                <option value="">-- Select a category --</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="mt-1 w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
+                  rows="3"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Price
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Category
+                </label>
+                {categories.length > 0 ? (
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full p-2 border border-[#D2B48C] rounded-md bg-[#FFFCF2] focus:outline-none focus:ring-2 focus:ring-[#D2B48C]"
+                    required
+                  >
+                    <option value="">-- Select a category --</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-yellow-700">
+                      No categories found. Please create categories first in the
+                      admin panel.
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                      onClick={() => {
+                        toast.info(
+                          "Navigate to Categories section to create new categories"
+                        );
+                      }}
+                    >
+                      Go to Categories Management
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Brand
+                </label>
+                {brands.length>0?(
+                <select
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleInputChange}
+                  className="mt-1 w-full p-2 border rounded-md"
+                  required
+                >
+                  <option value="">-- Select a brand --</option>
+                  {brands.map((brand) => (
+                    <option key={brand._id} value={brand._id}>
+                      {brand.name}
+                    </option>
+                  ))}
+                </select>
+                ):(
+                    <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-yellow-700">
+                      No brands found. Please create brands first in the admin panel.
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                      onClick={() => {
+                        toast.info("Navigate to Brands section to create new brands");
+                      }}
+                    >
+                      Go to Brands Management
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Variants (Sizes 6-10, at least one required)
+                </label>
+                <div className="flex space-x-2 mb-2">
+                  <span className="w-20 font-semibold">Size</span>
+                  <span className="w-24 font-semibold">Stock</span>
+                </div>
+                {formData.variants.map((variant, index) => (
+                  <div
+                    key={variant.size}
+                    className="flex space-x-2 mb-2 items-center"
+                  >
+                    <span className="w-20">Size {variant.size}</span>
+                    <input
+                      type="number"
+                      value={variant.stock}
+                      onChange={(e) =>
+                        handleVariantChange(index, "stock", e.target.value)
+                      }
+                      className="p-2 border rounded-md w-24"
+                      min="0"
+                      placeholder="Enter stock"
+                    />
+                  </div>
                 ))}
-              </select>
-            ) : (
-              <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-yellow-700">
-                  No categories found. Please create categories first in the
-                  admin panel.
-                </p>
-                <button
-                  type="button"
-                  className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-                  onClick={() => {
-                    // You might want to navigate to categories management
-                    // or show a message about where to create categories
-                    toast.info(
-                      "Navigate to Categories section to create new categories"
-                    );
-                  }}
-                >
-                  Go to Categories Management
-                </button>
               </div>
-            )}
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Brand
-            </label>
-            {brands.length>0?(
-            <select
-              name="brand"
-              value={formData.brand}
-              onChange={handleInputChange}
-              className="mt-1 w-full p-2 border rounded-md"
-              required
-            >
-              <option value="">-- Select a brand --</option>
-              {brands.map((brand) => (
-                <option key={brand._id} value={brand._id}>
-                  {brand.name}
-                </option>
-              ))}
-            </select>
-            ):(
-                <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-yellow-700">
-                  No brands found. Please create brands first in the admin panel.
-                </p>
-                <button
-                  type="button"
-                  className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-                  onClick={() => {
-                    toast.info("Navigate to Brands section to create new brands");
-                  }}
-                >
-                  Go to Brands Management
-                </button>
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Images (3-10)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              className="mt-1 w-full p-2 border rounded-md"
-              disabled={imagePreviews.length >= 10}
-              required={!isEdit && imagePreviews.length === 0}
-            />
+          
+          {/* Images Section - Full Width */}
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Product Images (3-10)</h3>
+            <div className="mb-4">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                className="w-full p-2 border rounded-md"
+                disabled={imagePreviews.length >= 10}
+                required={!isEdit && imagePreviews.length === 0}
+              />
+            </div>
+            
             {imagePreviews.length > 0 ? (
-              <div className="mt-2">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">
-                  Image Previews
-                </h4>
-                <div className="flex flex-wrap gap-2">
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Image Previews</h4>
+                <div className="flex flex-wrap gap-5">
                   {imagePreviews.map((src, index) => (
                     <div key={index} className="relative">
                       <img
                         src={src}
                         alt={`Preview ${index + 1}`}
-                        className="w-16 h-16 object-cover rounded"
+                        className="w-48 h-48 object-cover rounded-md shadow-sm border border-gray-200"
                         onError={(e) =>
                           console.error("Failed to load preview image:", src)
                         }
@@ -458,27 +546,31 @@ const ProductModal = ({ product, onClose }) => {
                       <button
                         type="button"
                         onClick={() => handleCropStart(index)}
-                        className="absolute top-0 left-0 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                        className="absolute top-2 left-2 bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-blue-600 transition-colors"
                       >
                         ✂️
                       </button>
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-red-600 transition-colors"
                       >
                         ×
                       </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 px-2 text-center">
+                        Image {index + 1}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="mt-1 text-sm text-gray-500">No images selected</p>
+              <p className="text-sm text-gray-500 italic">No images selected. Please upload at least 3 images.</p>
             )}
+            
             {croppingIndex !== null && croppedImage && (
-              <div className="mt-2 p-2 border rounded-md">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">
+              <div className="mt-6 p-4 border rounded-md bg-gray-50">
+                <h4 className="text-md font-medium text-gray-800 mb-2">
                   Crop Image
                 </h4>
                 <ReactCrop
@@ -491,20 +583,21 @@ const ProductModal = ({ product, onClose }) => {
                     src={croppedImage}
                     alt="Crop"
                     onLoad={onImageLoad}
+                    className="max-w-full"
                   />
                 </ReactCrop>
-                <div className="flex space-x-2 mt-2">
+                <div className="flex space-x-3 mt-3 justify-center">
                   <button
                     type="button"
                     onClick={handleCropConfirm}
-                    className="p-1 bg-green-500 text-white rounded-md"
+                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
                   >
                     Confirm Crop
                   </button>
                   <button
                     type="button"
                     onClick={handleCropCancel}
-                    className="p-1 bg-red-500 text-white rounded-md"
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
                   >
                     Cancel
                   </button>
@@ -512,34 +605,8 @@ const ProductModal = ({ product, onClose }) => {
               </div>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Variants (Sizes 6-10, at least one required)
-            </label>
-            <div className="flex space-x-2 mb-2">
-              <span className="w-20 font-semibold">Size</span>
-              <span className="w-24 font-semibold">Stock</span>
-            </div>
-            {formData.variants.map((variant, index) => (
-              <div
-                key={variant.size}
-                className="flex space-x-2 mb-2 items-center"
-              >
-                <span className="w-20">Size {variant.size}</span>
-                <input
-                  type="number"
-                  value={variant.stock}
-                  onChange={(e) =>
-                    handleVariantChange(index, "stock", e.target.value)
-                  }
-                  className="p-2 border rounded-md w-24"
-                  min="0"
-                  placeholder="Enter stock"
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex space-x-2">
+          
+          <div className="flex justify-center space-x-4 mt-6">
             <button
               type="submit"
               disabled={isLoading}

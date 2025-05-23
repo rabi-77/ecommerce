@@ -64,27 +64,27 @@ const register = async (req, res) => {
       // Special case: Google user trying to add password
       if (existingUser.authProvider === "google" && !existingUser.password) {
         // Allow Google users to add password capability
-        existingUser.password = password; // Will be hashed by pre-save hook
+        existingUser.password = password; 
         await existingUser.save();
         
         return res.status(200).json({ 
           message: "Password added to your Google account. You can now log in with either method.",
           email,
-          isPasswordAddedToGoogleAccount: true  // Add this flag to indicate special case
+          isPasswordAddedToGoogleAccount: true  
         });
       }
       return res.status(400).json({ message: "Email already exists" });
     }
     console.log("before otp");
-    if (password.length > 16) {
+    if (password.length > 16 || password.length < 8) {
       return res
         .status(400)
-        .json({ message: "Password must be less than 16 characters" });
+        .json({ message: "Password must be between 8 and 16 characters" });
     }
     // Generate and send OTP
     const { otp, expiresAt } = await generateAndSendOtp(email);
     console.log(otp);
-    console.log("otp");
+    console.log("old otp");
 
     // Create JWT with user data
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -112,10 +112,10 @@ const register = async (req, res) => {
 };
 
 const verify = async (req, res) => {
-  console.log("wow");
+  console.log("Verifying OTP");
 
   const { email, otp, token } = req.body;
-  console.log("heyyy");
+  console.log("verify",email,otp,token);
 
   try {
     // Verify JWT
@@ -126,19 +126,24 @@ const verify = async (req, res) => {
       return res.status(400).json({ message: "Registration session expired" });
     }
 
-    // Validate payload
-    if (payload.email !== email || payload.expiresAt < Date.now()) {
-      return res.status(400).json({ message: "Registration session expired" });
+    // Check if email matches and OTP hasn't expired
+    if (payload.email !== email) {
+      return res.status(400).json({ message: "Invalid registration session" });
+    }
+    
+    // Check if OTP has expired
+    if (payload.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "OTP has expired, please request a new one" });
     }
 
-    // Verify OTP
+    // Verify the OTP using bcrypt compare
     const isMatch = await bcrypt.compare(otp, payload.otp);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
-    console.log(payload.password);
+    console.log("OTP verified successfully");
 
-    // Save verified user
+    // Create new user
     const user = new userModel({
       username: payload.username,
       email: payload.email,
@@ -147,14 +152,14 @@ const verify = async (req, res) => {
       role: "user",
       isVerified: true,
     });
-    console.log("issaving");
+    console.log("Saving user to database");
 
     await user.save();
 
     res.json({ message: "Account verified, please log in" });
-    console.log("lollll");
+    console.log("Verification complete");
   } catch (error) {
-    console.log(error.message, "hurh");
+    console.log(error.message, "Error during verification");
 
     if (error.code === 11000 && error.keyValue?.email) {
       return res.status(400).json({ message: "Email already exists" });
@@ -175,16 +180,19 @@ const resend = async (req, res) => {
       return res.status(400).json({ message: "Registration session expired" });
     }
 
-    // Validate payload
+    
     if (payload.email !== email) {
       return res.status(400).json({ message: "Invalid registration session" });
     }
 
+    // Explicitly invalidate the old token by setting a new expiration time
     // Generate and send new OTP
     const { otp, expiresAt } = await generateAndSendOtp(email);
-    console.log("otp", otp);
+    console.log("resendotp", otp);
     
     const hashedOtp = await bcrypt.hash(otp, 10);
+    
+    // Create a completely new token with the new OTP
     const newToken = jwt.sign(
       {
         username: payload.username,
@@ -192,12 +200,19 @@ const resend = async (req, res) => {
         password: payload.password,
         otp: hashedOtp,
         expiresAt,
+        // Add a timestamp to ensure the token is unique
+        timestamp: Date.now()
       },
       process.env.JWT_SECRET,
       { expiresIn: "5m" }
     );
 
-    res.json({ message: "New OTP sent to your email", token: newToken });
+    res.json({ 
+      message: "New OTP sent to your email", 
+      token: newToken,
+      // Send the expiration time to the frontend
+      expiresAt: expiresAt
+    });
   } catch (error) {
     if (error.message === "Failed to send OTP email") {
       return res.status(500).json({ message: "Failed to send OTP email" });
@@ -212,10 +227,52 @@ const googleAuth = passport.authenticate("google", {
 
 const googleAuthCallback = async (req, res) => {
   try {
-    // Redirect to frontend home with token
-    res.redirect(`http://localhost:5173/?token=${token}`);
+    console.log('Google auth callback received user:', req.user);
+    
+    // Check if JWT_SECRET is defined
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
+
+    // Generate access token - use same format as regular login
+    const tokenAccess = jwt.sign(
+      { userId: req.user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '20m' }
+    );
+    
+    // Use JWT_REFRESH for consistency with regular login
+    const refreshSecret = process.env.JWT_REFRESH || process.env.JWT_SECRET;
+    
+    const tokenRefresh = jwt.sign(
+      { userId: req.user._id },
+      refreshSecret,
+      { expiresIn: '15d' }
+    );
+    
+    // Store refresh token in the database
+    req.user.refreshToken = tokenRefresh;
+    await req.user.save();
+    console.log('Saved refresh token to user:', req.user._id);
+    
+    // Create a user object with necessary information - same format as regular login
+    const userData = {
+      _id: req.user._id,
+      username: req.user.username || req.user.email.split('@')[0],
+      email: req.user.email,
+      role: req.user.role
+    };
+    
+    // Encode user data for URL
+    const encodedUserData = encodeURIComponent(JSON.stringify(userData));
+    
+    // Redirect to frontend home with token and user data
+    // Make sure the URL has the correct port and parameters
+    res.redirect(`http://localhost:5173/?tokenAccess=${tokenAccess}&tokenRefresh=${tokenRefresh}&userData=${encodedUserData}`);
+    console.log('Redirecting to frontend with user data:', userData);
   } catch (error) {
-    res.redirect("http://localhost:5173/login?error=Google%20auth%20failed");
+    console.error('Google auth callback error:', error);
+    res.redirect("http://localhost:5173/login?error=" + encodeURIComponent(error.message || 'Google auth failed'));
   }
 };
 
@@ -229,12 +286,10 @@ const googleAuthCallback = async (req, res) => {
     if(user.isBlocked){
       return res.status(403).json({message:'the user is blocked'})
     }
-    // Log login attempt details for debugging
     console.log('Login attempt for:', email);
-    console.log('Password provided (first 3 chars):', password.substring(0, 3) + '...');
-    console.log('Stored password hash (first 20 chars):', user.password.substring(0, 20) + '...');
+   
     
-    // Compare the provided password with the stored hash
+  
     const isMatch = await bcrypt.compare(password, user.password);
     console.log('Password match result:', isMatch);
     
@@ -300,11 +355,9 @@ const refreshAccessToken = async (req, res) => {
 
 const userLogout = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ message: "refresh token is required" });
-    }
-    const user = await userModel.findOne({ refreshToken });
+    const {email}= req.user
+    const user = await userModel.findOne({ email });
+  
     if (user) {
       user.refreshToken = undefined;
       await user.save();
@@ -317,8 +370,12 @@ const userLogout = async (req, res) => {
 
 const checkUserStatus = async (req, res) => {
   try {
-    const userId = req.userId;
+    console.log('Checking user status...');
+    const userId = req.user;
+    console.log('User ID:', userId);
+    
     const user = await userModel.findById(userId);
+    console.log('User:', user);
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -369,7 +426,7 @@ if (user.authProvider === 'google' && !user.password) {
     try {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
-      // Log the OTP for development purposes
+      
       console.log('Password reset OTP for', email, ':', otp);
       
       // Save OTP to user document using the existing structure
@@ -403,31 +460,27 @@ const resetPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Verify OTP - compare with bcrypt since OTP is hashed in the database
     if (!user.otp || !user.otp.code) {
       return res.status(400).json({ message: 'No OTP found. Please request a new one.' });
     }
     
-    // Check if OTP is expired
     if (!user.otp.expiresAt || Date.now() > user.otp.expiresAt) {
       return res.status(400).json({ message: 'OTP has expired' });
     }
     
-    // Log the received OTP for debugging
     console.log('Received OTP:', otp);
     
-    // Verify OTP using bcrypt.compare since the OTP is now hashed
     const isValidOtp = await bcrypt.compare(otp, user.otp.code);
     if (!isValidOtp) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
     
-    // If this is just a validation request, return success without changing password
+    
     if (validateOnly) {
       return res.status(200).json({ message: 'OTP is valid' });
     }
     
-    // Validate password
+    
     if (!newPassword) {
       return res.status(400).json({ message: 'New password is required' });
     }
@@ -436,11 +489,10 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 8 characters long' });
     }
     
-    // Log the password reset attempt for debugging
+    
     console.log('Resetting password for user:', user.email);
     
-    // Set the password directly - the pre-save hook in userModel will hash it
-    // This ensures we're using the same hashing method as during registration
+    
     user.password = newPassword;
     user.otp = {
       code: undefined,
