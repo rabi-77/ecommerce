@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import axios from 'axios';
-import { API_URL } from '../../../config';
 import { FaEnvelope } from 'react-icons/fa';
+import { requestEmailChangeThunk } from '../../../features/changeEmail/changeEmailSlice';
 
 const ChangeEmail = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { isLoading, isSuccess, isError, verificationSent, message } = useSelector(
+    (state) => state.changeEmail
+  );
   
   const [formData, setFormData] = useState({
     currentEmail: user?.email || '',
@@ -15,9 +17,25 @@ const ChangeEmail = () => {
     password: ''
   });
   
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [verificationSent, setVerificationSent] = useState(false);
+  
+  // Show toast messages based on Redux state changes
+  useEffect(() => {
+    if (isSuccess && message) {
+      toast.success(message);
+    }
+    
+    if (isError && message) {
+      toast.error(message);
+      
+      // Set field-specific errors if applicable
+      if (message.includes('password')) {
+        setErrors(prev => ({ ...prev, password: message }));
+      } else if (message.includes('email')) {
+        setErrors(prev => ({ ...prev, newEmail: message }));
+      }
+    }
+  }, [isSuccess, isError, message]);
   
   // Check if user logged in with Google
   const isGoogleUser = user?.googleId;
@@ -56,57 +74,23 @@ const ChangeEmail = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
     
-    setLoading(true);
+    dispatch(requestEmailChangeThunk({
+      newEmail: formData.newEmail,
+      password: isGoogleUser ? null : formData.password
+    }));
     
-    try {
-      const token = localStorage.getItem('tokenAccess');
-      if (!token) {
-        throw new Error('No token found');
-      }
-      
-      const response = await axios.post(
-        `${API_URL}/user/change-email-request`,
-        {
-          newEmail: formData.newEmail,
-          password: isGoogleUser ? null : formData.password
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      setVerificationSent(true);
-      toast.success('Verification email sent. Please check your new email inbox to complete the process.');
-      
-      // Reset form partially
-      setFormData({
-        ...formData,
-        password: ''
-      });
-      
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to request email change';
-      toast.error(errorMessage);
-      
-      // Set specific field error if returned from API
-      if (err.response?.data?.field) {
-        setErrors({
-          ...errors,
-          [err.response.data.field]: errorMessage
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
+    // Reset password field
+    setFormData({
+      ...formData,
+      password: ''
+    });
   };
   
   if (isGoogleUser) {
@@ -132,7 +116,7 @@ const ChangeEmail = () => {
           <p className="mt-4 text-sm">Didn't receive the email? Check your spam folder or <button 
             onClick={handleSubmit} 
             className="text-blue-600 underline"
-            disabled={loading}
+            disabled={isLoading}
           >
             resend the verification
           </button></p>
@@ -205,9 +189,9 @@ const ChangeEmail = () => {
             <button
               type="submit"
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? 'Processing...' : 'Change Email'}
+              {isLoading ? 'Processing...' : 'Change Email'}
             </button>
           </div>
         </div>

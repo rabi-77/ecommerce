@@ -9,6 +9,8 @@ import productSlice from '../features/admin/adminProducts/productSlice'
 import adminUsersReducer from '../features/admin/adminUsers/userSlice'
 import profileReducer from '../features/userprofile/profileSlice'
 import addressReducer from '../features/userAddress/addressSlice'
+import changeEmailReducer from '../features/changeEmail/changeEmailSlice'
+import changePasswordReducer from '../features/changePassword/changePasswordSlice'
 
 
 import userProduct from '../features/userHomeSlice'
@@ -28,7 +30,9 @@ const rootReducer=combineReducers({
   userProduct:userProduct,
   adminUsers:adminUsersReducer,
   profile:profileReducer,
-  address:addressReducer
+  address:addressReducer,
+  changeEmail:changeEmailReducer,
+  changePassword:changePasswordReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

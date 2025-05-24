@@ -142,6 +142,21 @@ const userSchema = new mongoose.Schema({
     type: Schema.Types.ObjectId,
     default: null
   },
+  newEmail: {
+    type: String,
+    required: false,
+    unique: true,
+    trim: true,
+    lowercase: true,
+  },
+  emailChangeToken: {
+    type: String,
+    required: false,
+  },
+  emailChangeTokenExpiry: {
+    type: Date,
+    required: false,
+  },
   /**
    * timestamps: Adds two properties, `createdAt` and `updatedAt`, to the document,
    * which are automatically set to the current date when the document is created
@@ -168,3 +183,12 @@ userSchema.pre("save", async function (next) {
 });
 
 export default mongoose.model("User", userSchema);
+
+
+
+
+
+
+// user.newEmail = newEmail;
+// user.emailChangeToken = token;
+// user.emailChangeTokenExpiry = expiryTime;

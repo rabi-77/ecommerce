@@ -123,9 +123,9 @@ export default function Navbar() {
               {user ? (
                 <>
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
-                    {user.profileImage ? (
+                    {user.image ? (
                       <img 
-                        src={user.profileImage.url || user.profileImage} 
+                        src={user.image} 
                         alt="Profile" 
                         className="w-full h-full object-cover"
                       />

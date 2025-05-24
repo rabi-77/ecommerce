@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import axios from 'axios';
-import { API_URL } from '../../../config';
+import { changePassword, resetChangePassword, clearChangePasswordErrors } from '../../../features/changePassword/changePasswordSlice';
 
 const ChangePassword = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { isLoading, isSuccess, isError, message, fieldError } = useSelector(
+    (state) => state.changePassword
+  );
   
   const [formData, setFormData] = useState({
     currentPassword: '',
@@ -14,11 +16,45 @@ const ChangePassword = () => {
     confirmPassword: ''
   });
   
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   
-  // Check if user logged in with Google (can't change password)
-  const isGoogleUser = user?.googleId;
+  // Check if user is a Google user without a password
+  const isGoogleUserWithoutPassword = user?.authProvider === 'google' && !user?.hasPassword;
+  
+  // Effect to handle success/error states from Redux
+  useEffect(() => {
+    if (isError) {
+      toast.error(message);
+      
+      // Set field-specific error if provided
+      if (fieldError) {
+        setErrors(prev => ({
+          ...prev,
+          [fieldError]: message
+        }));
+      }
+    }
+    
+    if (isSuccess) {
+      toast.success(message);
+      setFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      dispatch(resetChangePassword());
+    }
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isError, isSuccess, message]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(resetChangePassword());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const handleChange = (e) => {
     setFormData({
@@ -33,6 +69,11 @@ const ChangePassword = () => {
         [e.target.name]: null
       });
     }
+    
+    // Clear Redux errors when typing
+    if (isError) {
+      dispatch(clearChangePasswordErrors());
+    }
   };
   
   const validateForm = () => {
@@ -44,8 +85,17 @@ const ChangePassword = () => {
     
     if (!formData.newPassword) {
       newErrors.newPassword = 'New password is required';
-    } else if (formData.newPassword.length < 6) {
-      newErrors.newPassword = 'Password must be at least 6 characters';
+    } else {
+      // Length validation
+      if (formData.newPassword.length < 8 || formData.newPassword.length > 16) {
+        newErrors.newPassword = 'Password must be between 8 and 16 characters';
+      }
+      
+      // Regex validation - same as registration form
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[^\s]+$/;
+      if (!passwordRegex.test(formData.newPassword)) {
+        newErrors.newPassword = 'Password must include 1 uppercase, 1 lowercase, 1 number, 1 special character, and no spaces';
+      }
     }
     
     if (!formData.confirmPassword) {
@@ -58,60 +108,20 @@ const ChangePassword = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
     
-    setLoading(true);
-    
-    try {
-      const token = localStorage.getItem('tokenAccess');
-      if (!token) {
-        throw new Error('No token found');
-      }
-      
-      const response = await axios.put(
-        `${API_URL}/user/change-password`,
-        {
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      toast.success('Password changed successfully');
-      
-      // Reset form
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-      
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to change password';
-      toast.error(errorMessage);
-      
-      // Set specific field error if returned from API
-      if (err.response?.data?.field) {
-        setErrors({
-          ...errors,
-          [err.response.data.field]: errorMessage
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
+    dispatch(changePassword({
+      currentPassword: formData.currentPassword,
+      newPassword: formData.newPassword
+    }));
   };
   
-  if (isGoogleUser) {
+  if (isGoogleUserWithoutPassword) {
     return (
       <div className="text-center py-8">
         <h2 className="text-2xl font-semibold mb-4">Change Password</h2>
@@ -165,6 +175,7 @@ const ChangePassword = () => {
             {errors.newPassword && (
               <p className="text-red-500 text-sm mt-1">{errors.newPassword}</p>
             )}
+            <p className="text-gray-500 text-xs mt-1">Password must be 8-16 characters with at least 1 uppercase, 1 lowercase, 1 number, 1 special character, and no spaces</p>
           </div>
           
           <div>
@@ -190,9 +201,9 @@ const ChangePassword = () => {
             <button
               type="submit"
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
                   Changing Password...

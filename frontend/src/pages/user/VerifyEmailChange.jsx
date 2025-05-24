@@ -1,43 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from '../../config';
+import { useDispatch, useSelector } from 'react-redux';
+import { verifyEmailChangeThunk } from '../../features/changeEmail/changeEmailSlice';
+import { logoutThunk } from '../../features/authSlice';
 import { toast } from 'react-toastify';
 import { FaCheckCircle, FaTimesCircle, FaSpinner } from 'react-icons/fa';
 
 const VerifyEmailChange = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState('verifying'); // 'verifying', 'success', 'error'
+  const dispatch = useDispatch();
+  const verificationAttempted = useRef(false);
+  
+  const { isLoading, verificationStatus, message } = useSelector(
+    (state) => state.changeEmail
+  );
   
   useEffect(() => {
-    const verifyToken = async () => {
-      const token = searchParams.get('token');
-      
-      if (!token) {
-        setStatus('error');
-        toast.error('Invalid verification link');
-        return;
-      }
-      
-      try {
-        const response = await axios.get(`${API_URL}/user/verify-email-change?token=${token}`);
-        setStatus('success');
-        toast.success(response.data.message || 'Email updated successfully');
-        
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-        
-      } catch (err) {
-        setStatus('error');
-        toast.error(err.response?.data?.message || 'Failed to verify email');
-      }
-    };
+    const token = searchParams.get('token');
     
-    verifyToken();
-  }, [searchParams, navigate]);
+    if (!token) {
+      toast.error('Invalid verification link');
+      return;
+    }
+    
+    // Prevent multiple verification attempts with the same token
+    if (verificationAttempted.current) {
+      console.log("Verification already attempted, skipping duplicate request");
+      return;
+    }
+    
+    console.log("Verifying email with token:", token);
+    verificationAttempted.current = true;
+    dispatch(verifyEmailChangeThunk(token));
+  }, [searchParams, dispatch]);
+  
+  // Show toast messages based on Redux state changes
+  useEffect(() => {
+    if (verificationStatus === 'success' && message) {
+      toast.success(message);
+      
+      // Properly log out the user and then redirect to login
+      const timer = setTimeout(() => {
+        dispatch(logoutThunk()).then(() => {
+          navigate('/login');
+        });
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    if (verificationStatus === 'error' && message) {
+      toast.error(message);
+    }
+  }, [verificationStatus, message, navigate, dispatch]);
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -49,7 +65,7 @@ const VerifyEmailChange = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {status === 'verifying' && (
+          {(isLoading || verificationStatus === 'verifying') && (
             <div className="flex flex-col items-center justify-center py-6">
               <FaSpinner className="animate-spin text-blue-600 text-4xl mb-4" />
               <p className="text-gray-700 text-lg">Verifying your email...</p>
@@ -57,7 +73,7 @@ const VerifyEmailChange = () => {
             </div>
           )}
           
-          {status === 'success' && (
+          {verificationStatus === 'success' && (
             <div className="flex flex-col items-center justify-center py-6">
               <FaCheckCircle className="text-green-500 text-5xl mb-4" />
               <h3 className="text-xl font-medium text-gray-900 mb-2">Email Verified Successfully!</h3>
@@ -70,12 +86,12 @@ const VerifyEmailChange = () => {
             </div>
           )}
           
-          {status === 'error' && (
+          {verificationStatus === 'error' && (
             <div className="flex flex-col items-center justify-center py-6">
               <FaTimesCircle className="text-red-500 text-5xl mb-4" />
               <h3 className="text-xl font-medium text-gray-900 mb-2">Verification Failed</h3>
               <p className="text-gray-700 text-center">
-                We couldn't verify your email. The link may be invalid or expired.
+                {message || "We couldn't verify your email. The link may be invalid or expired."}
               </p>
               <div className="mt-6">
                 <button

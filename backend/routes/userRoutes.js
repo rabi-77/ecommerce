@@ -11,7 +11,7 @@ import {authenticateUser,userAuthorization} from '../middlewares/user/authentica
 import {getUserinfo,editUserDetails} from '../controllers/userProfile.js'
 import {uploadCategory} from '../middlewares/multerCheck.js'
 import { getUserAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../controllers/userAddressController.js'
-
+import {requestEmailChange, verifyEmailChange, changePassword} from '../controllers/userEmailController.js'
 
 user.post('/register',register)
 user.post('/login',userLogin)
@@ -64,7 +64,8 @@ user.put('/address/:addressId/default', verifyToken, setDefaultAddress)
 
 
 //change password setup
-
-
+user.post('/change-email-request',verifyToken,requestEmailChange)
+user.get('/verify-email-change',verifyEmailChange)
+user.put('/change-password',verifyToken,changePassword)
 
 export default user

@@ -2,6 +2,8 @@
  * A simple utility to handle Google authentication redirect
  * This doesn't affect the existing login/logout functionality
  */
+import { store } from '../store/store';
+import { login } from '../features/authSlice';
 
 // Function to check if we're on a Google redirect
 export const checkForGoogleRedirect = () => {
@@ -25,6 +27,19 @@ export const checkForGoogleRedirect = () => {
         localStorage.setItem('user', JSON.stringify(userData));
         
         console.log('Google authentication successful');
+        
+        // Update Redux store with user data by dispatching the login.fulfilled action
+        store.dispatch(
+          login.fulfilled(
+            {
+              user: userData,
+              tokenAccess: tokenAccess,
+              tokenRefresh: tokenRefresh || ''
+            },
+            'auth/login',
+            {}
+          )
+        );
         
         // Remove query parameters from URL to prevent re-processing
         window.history.replaceState({}, document.title, window.location.pathname);

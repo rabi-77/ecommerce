@@ -260,7 +260,10 @@ const googleAuthCallback = async (req, res) => {
       _id: req.user._id,
       username: req.user.username || req.user.email.split('@')[0],
       email: req.user.email,
-      role: req.user.role
+      role: req.user.role,
+      googleId: req.user.googleId,
+      authProvider: req.user.authProvider,
+      image: req.user.image
     };
     
     // Encode user data for URL
@@ -319,7 +322,8 @@ const googleAuthCallback = async (req, res) => {
         _id: user._id,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
+        image: user.image
       }
     });
   } catch (err) {
