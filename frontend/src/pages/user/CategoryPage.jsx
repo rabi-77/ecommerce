@@ -17,17 +17,27 @@ const CategoryPage = () => {
   const [page, setPage] = useState(1);
   const [categoryProducts, setCategoryProducts] = useState([]);
   const [category, setCategory] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(true);
 
   useEffect(() => {
     dispatch(fetchCategoriesThunk());
   }, [dispatch]);
 
   useEffect(() => {
+    // Set navigating state to true when categoryId changes
+    setIsNavigating(true);
+    
+    // Scroll to top when navigating to a new category
+    window.scrollTo(0, 0);
+    
     if (categoryId && categories.length > 0) {
       const foundCategory = categories.find(cat => cat._id === categoryId);
       if (foundCategory) {
         setCategory(foundCategory);
-        dispatch(fetchProductsThunk({ page, category: categoryId }));
+        dispatch(fetchProductsThunk({ page, category: categoryId }))
+          .finally(() => {
+            setIsNavigating(false);
+          });
       } else {
         navigate('/products');
       }
@@ -40,6 +50,13 @@ const CategoryPage = () => {
       setCategoryProducts(products);
     }
   }, [products, category]);
+
+  useEffect(() => {
+    // Reset navigating state when loading completes
+    if (!loading && isNavigating) {
+      setIsNavigating(false);
+    }
+  }, [loading]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -70,7 +87,7 @@ const CategoryPage = () => {
     );
   };
 
-  if (loading && categoryProducts.length === 0) {
+  if (loading || isNavigating) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

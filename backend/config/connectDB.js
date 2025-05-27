@@ -17,6 +17,8 @@ const connectDB = async () => {
 
     return connect;
   } catch (er) {
+    console.log(er.message,'is the error');
+    
     console.log(`connected unsuccessfully to ${process.env.MONGODB_URI}`);
     console.log("what");
     process.exit(1);

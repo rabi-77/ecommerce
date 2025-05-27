@@ -12,6 +12,8 @@ import ProductDetails from "../pages/user/ProductDetails";
 import NotFound from "../pages/NotFound";
 import GoogleAuthHandler from "../components/GoogleAuthHandler";
 import VerifyEmailChange from "../pages/user/VerifyEmailChange";
+import Wishlist from "../pages/user/Wishlist";
+import Cart from '../pages/user/Cart';
 
 // Profile components
 import ProfileLayout from "../pages/user/profile/ProfileLayout";
@@ -38,6 +40,8 @@ const UserRoutes = () => {
         <Route path="brand/:brandId" element={<BrandPage />} />
         <Route path="new-arrivals" element={<NewArrivalsPage />} />
         <Route path="featured" element={<FeaturedProductsPage />} />
+        <Route path="wishlist" element={<Wishlist />} />
+        <Route path="cart" element={<Cart />} />
       </Route>
 
       {/* Profile Routes */}

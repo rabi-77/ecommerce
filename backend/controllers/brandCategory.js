@@ -5,29 +5,28 @@ const getBrands = async (req, res) => {
   try {
     const brands = await brandModel.find({ isDeleted: false, isListed: true });
 
-    if (brands.length === 0) {
-      return res.status(400).json({ message: "no brands available" });
-    }
-
-    res.json({ message: "successfully fetched", brands });
+    // Return empty array with 200 status instead of 400 error
+    return res.status(200).json({ 
+      message: brands.length === 0 ? "No brands available" : "Successfully fetched", 
+      brands 
+    });
   } catch (err) {
-    return res.status(500).json({ message: "internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const getCategories = async (req, res) => {
   try {
     const categories = await categoryModel.find({ isDeleted: false, isListed: true });
-    if (categories && categories.length === 0) {
-      return res.status(400).json({ message: "no categories available" });
-    }
-
-    res.json({ message: "success", categories });
+    
+    // Return empty array with 200 status instead of 400 error
+    return res.status(200).json({ 
+      message: categories.length === 0 ? "No categories available" : "Success", 
+      categories 
+    });
   } catch (er) {
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export {getBrands,getCategories}
-
-
+export {getBrands, getCategories}

@@ -131,7 +131,7 @@ const Register = () => {
     setResendDisabled(true)
   };
   const handleGoogleLogin=()=>{
-    window.location.href = "http://localhost:5000/user/google";
+    window.location.href = "http://localhost:5050/user/google";
   }
 
   return (

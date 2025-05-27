@@ -16,17 +16,27 @@ const BrandPage = () => {
   const [page, setPage] = useState(1);
   const [brandProducts, setBrandProducts] = useState([]);
   const [brand, setBrand] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(true);
 
   useEffect(() => {
     dispatch(fetchBrandsThunk());
   }, [dispatch]);
 
   useEffect(() => {
+    // Set navigating state to true when brandId changes
+    setIsNavigating(true);
+    
+    // Scroll to top when navigating to a new brand
+    window.scrollTo(0, 0);
+    
     if (brandId && brands.length > 0) {
       const foundBrand = brands.find(b => b._id === brandId);
       if (foundBrand) {
         setBrand(foundBrand);
-        dispatch(fetchProductsThunk({ page, brand: brandId }));
+        dispatch(fetchProductsThunk({ page, brand: brandId }))
+          .finally(() => {
+            setIsNavigating(false);
+          });
       } else {
         navigate('/products');
       }
@@ -39,6 +49,13 @@ const BrandPage = () => {
       setBrandProducts(products);
     }
   }, [products, brand]);
+
+  useEffect(() => {
+    // Reset navigating state when loading completes
+    if (!loading && isNavigating) {
+      setIsNavigating(false);
+    }
+  }, [loading]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -69,7 +86,7 @@ const BrandPage = () => {
     );
   };
 
-  if (loading && brandProducts.length === 0) {
+  if (loading || isNavigating) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

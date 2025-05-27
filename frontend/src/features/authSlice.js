@@ -121,7 +121,13 @@ export const refreshAccessTokenThunk = createAsyncThunk(
       // Check if data contains tokenAccess (API response format)
       if (data && data.tokenAccess) {
         localStorage.setItem('tokenAccess', data.tokenAccess);
-        return data.tokenAccess; // Return the token for the reducer
+        
+        // Return both the token and the user data for the reducer
+        const userData = localStorage.getItem('user');
+        return {
+          tokenAccess: data.tokenAccess,
+          user: userData ? JSON.parse(userData) : null
+        };
       } else {
         throw new Error("Invalid token response format");
       }
@@ -429,7 +435,8 @@ const authSlice = createSlice({
       })
       .addCase(refreshAccessTokenThunk.fulfilled,(state,action)=>{
         state.loading = false;
-        state.token = action.payload;
+        state.token = action.payload.tokenAccess;
+        state.user = action.payload.user;
         state.isVerified = true;
         state.error = false;
         state.errormessage = null;

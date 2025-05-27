@@ -2,7 +2,7 @@ import axios from "axios";
 import { API_URL } from "../config";
 import api from "../apis/user/api";
 
-const URL = `${API_URL}/user/register`;
+const URL =`${API_URL}/user/register`;
 
 export const registerUser = async (userData) => {
   try {

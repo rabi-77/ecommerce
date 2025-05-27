@@ -11,6 +11,8 @@ import profileReducer from '../features/userprofile/profileSlice'
 import addressReducer from '../features/userAddress/addressSlice'
 import changeEmailReducer from '../features/changeEmail/changeEmailSlice'
 import changePasswordReducer from '../features/changePassword/changePasswordSlice'
+import wishlistReducer from '../features/wishlist/wishlistSlice'
+import cartReducer from '../features/cart/cartSlice'
 
 
 import userProduct from '../features/userHomeSlice'
@@ -18,7 +20,7 @@ import userProduct from '../features/userHomeSlice'
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist:['auth','adminAuth']
+  whitelist:['auth','adminAuth',]
 };
 
 const rootReducer=combineReducers({
@@ -32,7 +34,9 @@ const rootReducer=combineReducers({
   profile:profileReducer,
   address:addressReducer,
   changeEmail:changeEmailReducer,
-  changePassword:changePasswordReducer
+  changePassword:changePasswordReducer,
+  wishlist:wishlistReducer,
+  cart:cartReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

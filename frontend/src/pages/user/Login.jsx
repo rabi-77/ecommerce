@@ -101,7 +101,7 @@ const Login = () => {
   }, [error, errormessage, token, loading, navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/user/google";
+    window.location.href = "http://localhost:5050/user/google";
   };
 
   const handleChange = (e) => {

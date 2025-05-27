@@ -3,7 +3,7 @@ import {store} from "../../store/store";
 import { refreshTokenThunk } from "../../features/admin/adminAuth/adminAuthSlice";
 
 const api= axios.create({
-    baseURL:"http://localhost:5000/admin",
+    baseURL:"http://localhost:5050/admin",
 })
 
 api.interceptors.request.use(

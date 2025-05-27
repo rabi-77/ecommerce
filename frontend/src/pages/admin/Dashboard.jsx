@@ -17,17 +17,17 @@ const Dashboard = () => {
         const token = localStorage.getItem('accessToken');
         
         // Fetch users count
-        const usersResponse = await axios.get('http://localhost:5000/admin/users?size=1', {
+        const usersResponse = await axios.get('http://localhost:5050/admin/users?size=1', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         // Fetch products count
-        const productsResponse = await axios.get('http://localhost:5000/admin/products?size=1', {
+        const productsResponse = await axios.get('http://localhost:5050/admin/products?size=1', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         // Fetch categories count
-        const categoriesResponse = await axios.get('http://localhost:5000/admin/categories?size=1', {
+        const categoriesResponse = await axios.get('http://localhost:5050/admin/categories?size=1', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
