@@ -13,7 +13,8 @@ import {
   Home,
   ShoppingBag,
   Phone,
-  Info
+  Info,
+  Package
 } from "lucide-react";
 import { logoutThunk } from "../features/authSlice";
 import { toast } from "react-toastify";
@@ -264,6 +265,15 @@ export default function Navbar() {
                 
                 <button 
                   className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 w-full text-left cursor-pointer transition-colors"
+                  onClick={(e) => handleProfileNavigation(e, '/orders')}
+                  type="button"
+                >
+                  <Package size={16} className="mr-3 text-gray-500" />
+                  <span className="font-medium">My Orders</span>
+                </button>
+                
+                <button 
+                  className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 w-full text-left cursor-pointer transition-colors"
                   onClick={(e) => handleProfileNavigation(e, '/profile/edit')}
                   type="button"
                 >
@@ -378,6 +388,15 @@ export default function Navbar() {
                   className="block w-full text-left px-3 py-2 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
                 >
                   My Profile
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/orders');
+                  }}
+                  className="block w-full text-left px-3 py-2 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
+                >
+                  My Orders
                 </button>
                 <button
                   onClick={() => {

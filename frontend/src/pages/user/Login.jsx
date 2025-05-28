@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { setAuthToken, login, resetAuthState, resetPasswordState, clearPasswordResetErrors } from "../../features/authSlice";
+import { setAuthToken, login, resetAuthState, resetPasswordState, clearPasswordResetErrors, clearError } from "../../features/authSlice";
 import ForgotPasswordModal from "../../components/auth/ForgotPasswordModal";
 import OtpVerificationModal from "../../components/auth/OtpVerificationModal";
 import ResetPasswordModal from "../../components/auth/ResetPasswordModal";
@@ -92,13 +92,20 @@ const Login = () => {
     // Handle errors from Redux
     if (error && errormessage) {
       toast.error(errormessage);
+      // Clear the error after showing it to prevent duplicate toasts
+      dispatch(clearError());
     }
 
     // Handle successful login
     if (token && !loading) {
       navigate("/");
     }
-  }, [error, errormessage, token, loading, navigate]);
+    
+    // Clean up function to clear errors when component unmounts
+    return () => {
+      dispatch(clearError());
+    };
+  }, [error, errormessage, token, loading, navigate, dispatch]);
 
   const handleGoogleLogin = () => {
     window.location.href = "http://localhost:5050/user/google";

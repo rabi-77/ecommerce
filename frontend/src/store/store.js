@@ -13,6 +13,7 @@ import changeEmailReducer from '../features/changeEmail/changeEmailSlice'
 import changePasswordReducer from '../features/changePassword/changePasswordSlice'
 import wishlistReducer from '../features/wishlist/wishlistSlice'
 import cartReducer from '../features/cart/cartSlice'
+import orderReducer from '../features/order/orderSlice'
 
 
 import userProduct from '../features/userHomeSlice'
@@ -36,7 +37,8 @@ const rootReducer=combineReducers({
   changeEmail:changeEmailReducer,
   changePassword:changePasswordReducer,
   wishlist:wishlistReducer,
-  cart:cartReducer
+  cart:cartReducer,
+  order:orderReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

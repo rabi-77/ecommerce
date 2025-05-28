@@ -28,6 +28,11 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ message: "Product category is not available" });
     }
 
+    const brandPopulated = await categoryPopulated.populate('brand');
+    if (brandPopulated.brand && (!brandPopulated.brand.isListed || brandPopulated.brand.isDeleted)) {
+      return res.status(400).json({ message: "Product brand is not available" });
+    }
+
     // Check if the variant exists and has stock
     const variant = product.variants.find(v => v.size === size);
     if (!variant) {
@@ -330,7 +335,7 @@ export const getCart = async (req, res) => {
         path: 'items.product',
         select: 'name price discount images variants brand category isListed isDeleted',
         populate: [
-          { path: 'brand', select: 'name' },
+          { path: 'brand', select: 'name isListed isDeleted' },
           { path: 'category', select: 'name isListed isDeleted' }
         ]
       });
@@ -354,12 +359,19 @@ export const getCart = async (req, res) => {
       if (!product) return false; // Skip if product was deleted
       
       const category = product.category;
-      
+      const brand = product.brand;
+      const variant = product.variants.find(v => v.size === item.variant.size);
+
       return product.isListed && 
              !product.isDeleted && 
              category && 
              category.isListed && 
-             !category.isDeleted;
+             !category.isDeleted&&
+             brand &&
+             brand.isListed &&
+             !brand.isDeleted &&
+             variant && 
+             variant.stock >= item.quantity;
     });
 
     // Calculate cart totals

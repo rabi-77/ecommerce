@@ -300,7 +300,7 @@ const googleAuthCallback = async (req, res) => {
       return res.status(400).json({ message: "invalid credentials" });
     }
     const tokenAccess = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "20m",
+      expiresIn: "30d",
     });
 
     const tokenRefresh = jwt.sign(

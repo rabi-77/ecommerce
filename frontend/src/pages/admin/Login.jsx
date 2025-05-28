@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { loginThunk,logoutThunk } from "../../features/admin/adminAuth/adminAuthSlice";
+import { loginThunk, logoutThunk, clearError, clearState } from "../../features/admin/adminAuth/adminAuthSlice";
 
 
 const AdminLogin = () => {
@@ -22,8 +22,15 @@ const AdminLogin = () => {
     }
     if (error) {
       toast.error(error);
+      // Clear the error after showing it to prevent duplicate toasts
+      dispatch(clearError());
     }
-  }, [error, isAuthenticated, navigate]);
+    
+    // Clean up function to clear errors when component unmounts
+    return () => {
+      dispatch(clearError());
+    };
+  }, [error, isAuthenticated, navigate, dispatch]);
 
   const showHandle = () => {
     show ? setShow(false) : setShow(true);

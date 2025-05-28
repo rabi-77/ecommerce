@@ -90,6 +90,9 @@ const Cart = () => {
                product.category && 
                product.category.isListed && 
                !product.category.isDeleted &&
+               product.brand &&
+               product.brand.isListed &&
+               !product.brand.isDeleted &&
                variant && 
                variant.stock >= item.quantity;
       });

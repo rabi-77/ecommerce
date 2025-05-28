@@ -68,7 +68,19 @@ const initialState = {
 const adminAuthSlice = createSlice({
   name: "adminAuth",
   initialState,
-  reducers: {},
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    clearState: (state) => {
+      return {
+        ...initialState,
+        refreshToken: state.refreshToken,
+        accessToken: state.accessToken,
+        isAuthenticated: state.isAuthenticated
+      };
+    }
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loginThunk.pending, (state) => {
@@ -117,4 +129,5 @@ const adminAuthSlice = createSlice({
       });
   },
 });
+export const {clearError,clearState} =adminAuthSlice.actions
 export default adminAuthSlice.reducer;

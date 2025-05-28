@@ -162,19 +162,28 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Generate a unique order ID (e.g., ORD12345678)
-orderSchema.pre('save', async function(next) {
-  if (this.isNew && !this.orderNumber) {
-    try {
-      const count = await mongoose.model('Order').countDocuments();
-      const orderNumber = String(count + 1).padStart(8, '0');
-      this.orderNumber = `ORD${orderNumber}`;
-    } catch (error) {
-      return next(error);
-    }
-  }
-  next();
-});
+// // Generate a unique order ID (e.g., ORD12345678)
+// orderSchema.pre('save', async function(next) {
+//   if (this.isNew && !this.orderNumber) {
+//     try {
+//       // Get current date components for the order number prefix
+//       const now = new Date();
+//       const year = now.getFullYear().toString().slice(-2); // Last 2 digits of year
+//       const month = String(now.getMonth() + 1).padStart(2, '0');
+//       const day = String(now.getDate()).padStart(2, '0');
+      
+//       // Create a timestamp-based unique ID instead of counting documents
+//       const timestamp = now.getTime().toString().slice(-6); // Last 6 digits of timestamp
+//       const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      
+//       // Format: ORD-YYMMDD-XXXXXX-RRR (timestamp + random number for uniqueness)
+//       this.orderNumber = `ORD-${year}${month}${day}-${timestamp}-${random}`;
+//     } catch (error) {
+//       return next(error);
+//     }
+//   }
+//   next();
+// });
 
 const Order = mongoose.model('Order', orderSchema);
 
