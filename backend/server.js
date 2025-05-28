@@ -13,7 +13,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import passport from 'passport';
 import './config/passport.js'
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js'
-
+import Order from './models/orderModel.js';
 const app = express()
 await connectDB()
 
@@ -39,7 +39,14 @@ app.use('/orders', orderRoutes)
 // app.get('/test', (req, res) => {
 //   res.json({ message: 'Server is running correctly' });
 // });
-
+app.get('/test-orders', async (req, res) => {
+    try {
+      const orders = await Order.find();
+      res.status(200).json({ message: 'success', items: orders.length });
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching orders', error: error.message });
+    }
+  });
 // Error handling middleware
 app.use(notFound)
 app.use(errorHandler)

@@ -26,6 +26,8 @@ import { authenticateAdmin,checkAdminAuth } from "../middlewares/authenticateAdm
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { adminLoginSchema, categorySchema, brandSchema, productSchema } from "../../shared/validation.js";
 import { validate } from "../middlewares/validate.js";
+import {getAllOrders, updateOrderStatus, verifyReturnRequest} from '../controllers/admin/manageOrders.js'
+import { validateStatusChange } from '../middlewares/orderValidation.js'
 
 const admin = express.Router();
 
@@ -77,5 +79,12 @@ admin.get('/get-categories',fetchCategories)
 admin.get('/users', getUsers)
 
 admin.patch('/toggle-user-block/:id', toggleUserBlock)
+
+
+
+//order management
+admin.get('/orders',getAllOrders)
+admin.patch('/orders/:id/status', validateStatusChange, updateOrderStatus)
+admin.patch('/orders/:orderId/items/:itemId/verify-return', verifyReturnRequest)
 
 export default admin;

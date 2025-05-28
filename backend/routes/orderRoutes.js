@@ -12,6 +12,7 @@ import {
 } from '../controllers/orderController.js';
 import { verifyToken } from '../middlewares/auth.js';
 import { authenticateUser, userAuthorization } from '../middlewares/user/authenticateUser.js';
+import {getAllOrders} from '../controllers/admin/manageOrders.js'
 
 // User routes
 router.route('/')
@@ -38,5 +39,9 @@ router.route('/:id/items/:itemId/return')
 
 router.route('/:id/invoice')
   .get(verifyToken, authenticateUser, userAuthorization, generateInvoice);
+
+
+//admin
+// router.route('/orders').get(getAllOrders)  
 
 export default router;
