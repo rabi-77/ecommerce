@@ -1,4 +1,4 @@
-import Cart from '../models/cartModel.js';
+import cartModel from '../models/cartModel.js';
 import productModel from '../models/productModel.js';
 import wishlistModel from '../models/wishlistModel.js';
 
@@ -38,28 +38,24 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ message: `Only ${variant.stock} items available in this size` });
     }
 
-    // Find or create user's cart
-    let cart = await Cart.findOne({ user: userId });
+    // Get total quantity of this product in cart (across all variants)
+    const existingCartItems = await cartModel.find({ 
+      user: userId, 
+      product: productId 
+    });
     
-    if (!cart) {
-      cart = new Cart({
-        user: userId,
-        items: []
-      });
-    }
-
-    // Calculate total quantity of this product in cart (across all variants)
-    const productItems = cart.items.filter(item => item.product.toString() === productId);
-    let totalProductQuantity = productItems.reduce((total, item) => total + item.quantity, 0);
+    let totalProductQuantity = existingCartItems.reduce((total, item) => total + item.quantity, 0);
 
     // Check if item already exists in cart with this specific variant
-    const existingItemIndex = cart.items.findIndex(
-      item => item.product.toString() === productId && item.variant.size === size
-    );
+    let cartItem = await cartModel.findOne({ 
+      user: userId, 
+      product: productId, 
+      'variant.size': size 
+    });
 
-    if (existingItemIndex > -1) {
+    if (cartItem) {
       // Update quantity if item exists
-      const newVariantQuantity = cart.items[existingItemIndex].quantity + quantity;
+      const newVariantQuantity = cartItem.quantity + quantity;
       const newTotalQuantity = totalProductQuantity + quantity;
       
       // Check if new quantity exceeds stock for this variant
@@ -74,8 +70,8 @@ export const addToCart = async (req, res) => {
         });
       }
       
-      cart.items[existingItemIndex].quantity = newVariantQuantity;
-      cart.items[existingItemIndex].variant.stock = variant.stock; // Update stock info
+      cartItem.quantity = newVariantQuantity;
+      await cartItem.save();
     } else {
       // Check if adding this item would exceed the max quantity per product
       if (totalProductQuantity + quantity > MAX_QUANTITY_PER_PRODUCT) {
@@ -84,8 +80,9 @@ export const addToCart = async (req, res) => {
         });
       }
       
-      // Add new item to cart
-      cart.items.push({
+      // Create new cart item
+      cartItem = new cartModel({
+        user: userId,
         product: productId,
         variant: {
           size: size,
@@ -93,49 +90,15 @@ export const addToCart = async (req, res) => {
         },
         quantity
       });
+      await cartItem.save();
     }
-
-    // Save the cart
-    await cart.save();
 
     // Remove from wishlist if it exists there
     await wishlistModel.findOneAndDelete({ user: userId, product: productId });
 
-    // Populate cart for response
-    const populatedCart = await Cart.findById(cart._id)
-      .populate({
-        path: 'items.product',
-        select: 'name price discount images variants brand category isListed isDeleted',
-        populate: [
-          { path: 'brand', select: 'name' },
-          { path: 'category', select: 'name isListed isDeleted' }
-        ]
-      });
-
-    // Calculate cart totals
-    let subtotal = 0;
-    let discount = 0;
-    let total = 0;
-
-    populatedCart.items.forEach(item => {
-      const itemPrice = item.product.price;
-      const itemDiscount = item.product.discount || 0;
-      const discountedPrice = itemPrice * (1 - itemDiscount / 100);
-      
-      subtotal += itemPrice * item.quantity;
-      discount += (itemPrice - discountedPrice) * item.quantity;
-      total += discountedPrice * item.quantity;
-    });
-
     res.status(201).json({ 
       message: "Item added to cart",
-      cartItems: populatedCart.items,
-      count: populatedCart.items.length,
-      summary: {
-        subtotal: parseFloat(subtotal.toFixed(2)),
-        discount: parseFloat(discount.toFixed(2)),
-        total: parseFloat(total.toFixed(2))
-      }
+      cartItem
     });
   } catch (err) {
     console.error('Error adding to cart:', err.message);
@@ -154,19 +117,16 @@ export const updateCartItem = async (req, res) => {
       return res.status(400).json({ message: "Quantity must be at least 1" });
     }
 
-    // Find the user's cart
-    const cart = await Cart.findOne({ user: userId });
-    if (!cart) {
-      return res.status(404).json({ message: "Cart not found" });
-    }
-
-    // Find the cart item in the items array
-    const itemIndex = cart.items.findIndex(item => item._id.toString() === cartItemId);
-    if (itemIndex === -1) {
+    // Find the cart item
+    const cartItem = await cartModel.findById(cartItemId);
+    if (!cartItem) {
       return res.status(404).json({ message: "Cart item not found" });
     }
 
-    const cartItem = cart.items[itemIndex];
+    // Check if the cart item belongs to the user
+    if (cartItem.user.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
 
     // Get the product to check stock and availability
     const product = await productModel.findById(cartItem.product);
@@ -195,11 +155,14 @@ export const updateCartItem = async (req, res) => {
       return res.status(400).json({ message: `Only ${variant.stock} items available in this size` });
     }
 
-    // Calculate total quantity of this product in cart (across all variants)
-    const productItems = cart.items.filter(
-      item => item.product.toString() === cartItem.product.toString() && item._id.toString() !== cartItemId
-    );
-    const otherVariantsQuantity = productItems.reduce((total, item) => total + item.quantity, 0);
+    // Get total quantity of this product in cart (across all variants)
+    const existingCartItems = await cartModel.find({ 
+      user: userId, 
+      product: cartItem.product,
+      _id: { $ne: cartItemId } // Exclude current item
+    });
+    
+    const otherVariantsQuantity = existingCartItems.reduce((total, item) => total + item.quantity, 0);
     
     // Check if new total quantity exceeds maximum allowed per product
     if (otherVariantsQuantity + quantity > MAX_QUANTITY_PER_PRODUCT) {
@@ -209,45 +172,13 @@ export const updateCartItem = async (req, res) => {
     }
 
     // Update the quantity
-    cart.items[itemIndex].quantity = quantity;
-    cart.items[itemIndex].variant.stock = variant.stock; // Update stock info
-    await cart.save();
-
-    // Populate cart for response
-    const populatedCart = await Cart.findById(cart._id)
-      .populate({
-        path: 'items.product',
-        select: 'name price discount images variants brand category isListed isDeleted',
-        populate: [
-          { path: 'brand', select: 'name' },
-          { path: 'category', select: 'name isListed isDeleted' }
-        ]
-      });
-
-    // Calculate cart totals
-    let subtotal = 0;
-    let discount = 0;
-    let total = 0;
-
-    populatedCart.items.forEach(item => {
-      const itemPrice = item.product.price;
-      const itemDiscount = item.product.discount || 0;
-      const discountedPrice = itemPrice * (1 - itemDiscount / 100);
-      
-      subtotal += itemPrice * item.quantity;
-      discount += (itemPrice - discountedPrice) * item.quantity;
-      total += discountedPrice * item.quantity;
-    });
+    cartItem.quantity = quantity;
+    cartItem.variant.stock = variant.stock; // Update stock info
+    await cartItem.save();
 
     res.json({
       message: "Cart item updated",
-      cartItems: populatedCart.items,
-      count: populatedCart.items.length,
-      summary: {
-        subtotal: parseFloat(subtotal.toFixed(2)),
-        discount: parseFloat(discount.toFixed(2)),
-        total: parseFloat(total.toFixed(2))
-      }
+      cartItem
     });
   } catch (err) {
     console.error('Error updating cart item:', err.message);
@@ -261,58 +192,21 @@ export const removeFromCart = async (req, res) => {
     const { cartItemId } = req.params;
     const userId = req.user;
 
-    // Find the user's cart
-    const cart = await Cart.findOne({ user: userId });
-    if (!cart) {
-      return res.status(404).json({ message: "Cart not found" });
-    }
-
-    // Find the cart item in the items array
-    const itemIndex = cart.items.findIndex(item => item._id.toString() === cartItemId);
-    if (itemIndex === -1) {
+    // Find the cart item
+    const cartItem = await cartModel.findById(cartItemId);
+    if (!cartItem) {
       return res.status(404).json({ message: "Cart item not found" });
     }
 
-    // Remove the item from the items array
-    cart.items.splice(itemIndex, 1);
-    await cart.save();
+    // Check if the cart item belongs to the user
+    if (cartItem.user.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
 
-    // Populate cart for response
-    const populatedCart = await Cart.findById(cart._id)
-      .populate({
-        path: 'items.product',
-        select: 'name price discount images variants brand category isListed isDeleted',
-        populate: [
-          { path: 'brand', select: 'name' },
-          { path: 'category', select: 'name isListed isDeleted' }
-        ]
-      });
+    // Delete the cart item
+    await cartModel.findByIdAndDelete(cartItemId);
 
-    // Calculate cart totals
-    let subtotal = 0;
-    let discount = 0;
-    let total = 0;
-
-    populatedCart.items.forEach(item => {
-      const itemPrice = item.product.price;
-      const itemDiscount = item.product.discount || 0;
-      const discountedPrice = itemPrice * (1 - itemDiscount / 100);
-      
-      subtotal += itemPrice * item.quantity;
-      discount += (itemPrice - discountedPrice) * item.quantity;
-      total += discountedPrice * item.quantity;
-    });
-
-    res.json({
-      message: "Item removed from cart",
-      cartItems: populatedCart.items,
-      count: populatedCart.items.length,
-      summary: {
-        subtotal: parseFloat(subtotal.toFixed(2)),
-        discount: parseFloat(discount.toFixed(2)),
-        total: parseFloat(total.toFixed(2))
-      }
-    });
+    res.json({ message: "Item removed from cart" });
   } catch (err) {
     console.error('Error removing from cart:', err.message);
     res.status(500).json({ message: "Internal server error: " + err.message });
@@ -324,35 +218,20 @@ export const getCart = async (req, res) => {
   try {
     const userId = req.user;
 
-    // Find the user's cart
-    const cart = await Cart.findOne({ user: userId })
+    const cartItems = await cartModel.find({ user: userId })
       .populate({
-        path: 'items.product',
+        path: 'product',
         select: 'name price discount images variants brand category isListed isDeleted',
         populate: [
           { path: 'brand', select: 'name' },
           { path: 'category', select: 'name isListed isDeleted' }
         ]
-      });
-
-    // If no cart exists, return empty cart
-    if (!cart) {
-      return res.json({
-        cartItems: [],
-        count: 0,
-        summary: {
-          subtotal: 0,
-          discount: 0,
-          total: 0
-        }
-      });
-    }
+      })
+      .sort({ createdAt: -1 });
 
     // Filter out products that are no longer available or whose category is not available
-    const availableCartItems = cart.items.filter(item => {
+    const availableCartItems = cartItems.filter(item => {
       const product = item.product;
-      if (!product) return false; // Skip if product was deleted
-      
       const category = product.category;
       
       return product.isListed && 
@@ -397,24 +276,11 @@ export const clearCart = async (req, res) => {
   try {
     const userId = req.user;
     
-    // Find the user's cart
-    const cart = await Cart.findOne({ user: userId });
-    
-    if (!cart) {
-      return res.json({
-        message: "Cart is already empty",
-        itemsRemoved: 0
-      });
-    }
-    
-    // Clear the items array
-    const itemsRemoved = cart.items.length;
-    cart.items = [];
-    await cart.save();
+    const result = await cartModel.deleteMany({ user: userId });
     
     res.json({ 
       message: "Cart cleared",
-      itemsRemoved: itemsRemoved
+      itemsRemoved: result.deletedCount
     });
   } catch (err) {
     console.error('Error clearing cart:', err.message);

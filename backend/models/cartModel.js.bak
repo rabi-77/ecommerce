@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const cartItemSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
@@ -21,22 +26,12 @@ const cartItemSchema = new mongoose.Schema({
     min: 1,
     default: 1
   }
-});
-
-const cartSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    unique: true
-  },
-  items: [cartItemSchema]
 }, { timestamps: true });
 
 // Create a compound index to ensure a user can't add the same product variant multiple times
-cartSchema.index({ 'user': 1 });
-cartSchema.index({ 'items.product': 1, 'items.variant.size': 1 });
+// Instead, the quantity will be updated
+cartItemSchema.index({ user: 1, product: 1, 'variant.size': 1 }, { unique: true });
 
-const Cart = mongoose.model('Cart', cartSchema);
+const cartModel = mongoose.model('CartItem', cartItemSchema);
 
-export default Cart;
+export default cartModel;

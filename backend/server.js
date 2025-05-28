@@ -9,8 +9,10 @@ import helmet from 'helmet'
 import connectDB from './config/connectDB.js'
 import user from './routes/userRoutes.js'
 import admin from './routes/adminRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 import passport from 'passport';
 import './config/passport.js'
+import { notFound, errorHandler } from './middlewares/errorMiddleware.js'
 
 const app = express()
 await connectDB()
@@ -31,10 +33,15 @@ const PORT = process.env.PORT
 
 app.use('/user', user)
 app.use("/admin", admin)
+app.use('/orders', orderRoutes)
 
 // Add a test endpoint to verify server is running
 // app.get('/test', (req, res) => {
 //   res.json({ message: 'Server is running correctly' });
 // });
+
+// Error handling middleware
+app.use(notFound)
+app.use(errorHandler)
 
 app.listen(PORT, () => console.log(`Server is running on ${PORT}`));
