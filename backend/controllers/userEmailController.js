@@ -32,7 +32,6 @@ export const requestEmailChange = async (req, res) => {
       });
     }
 
-    // Find user
     const user = await userModel.findById(userId);
     if (!user) {
       console.log("User not found");
@@ -40,7 +39,6 @@ export const requestEmailChange = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if user is using Google auth
     if (user.authProvider === "google") {
       return res.status(400).json({
         message:
@@ -48,7 +46,6 @@ export const requestEmailChange = async (req, res) => {
       });
     }
 
-    // Check if new email is different from current
     if (user.email === newEmail) {
       return res.status(400).json({
         message: "New email must be different from current email",
@@ -249,7 +246,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Validate new password length (same as registration)
     if (newPassword.length > 16 || newPassword.length < 8) {
       return res.status(400).json({ 
         message: "Password must be between 8 and 16 characters",
@@ -263,14 +259,12 @@ export const changePassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if user has a password (Google users might not have one)
     if (!user.password) {
       return res.status(400).json({ 
         message: "You don't have a password set. Please use your authentication provider settings.",
       });
     }
 
-    // Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ 
@@ -279,12 +273,10 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Update password (don't hash it here, let the pre-save hook handle it)
     user.password = newPassword;
     user.updatedAt = new Date();
     await user.save();
-
-    // Send notification email
+    
     try {
       const mailOptions = {
         from: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",

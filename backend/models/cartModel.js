@@ -33,7 +33,6 @@ const cartSchema = new mongoose.Schema({
   items: [cartItemSchema]
 }, { timestamps: true });
 
-// Create a compound index to ensure a user can't add the same product variant multiple times
 cartSchema.index({ 'user': 1 });
 cartSchema.index({ 'items.product': 1, 'items.variant.size': 1 });
 

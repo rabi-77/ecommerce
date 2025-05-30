@@ -151,8 +151,9 @@ const OrderDetails = () => {
   const getOrderSteps = () => {
     const steps = [
       { label: 'Order Placed', completed: true },
-      { label: 'Processing', completed: ['processing', 'shipped', 'delivered'].includes(order?.status) },
-      { label: 'Shipped', completed: ['shipped', 'delivered'].includes(order?.status) },
+      { label: 'Processing', completed: ['processing', 'shipped', 'out for delivery', 'delivered'].includes(order?.status) },
+      { label: 'Shipped', completed: ['shipped', 'out for delivery', 'delivered'].includes(order?.status) },
+      { label: 'Out for Delivery', completed: ['out for delivery', 'delivered'].includes(order?.status) },
       { label: 'Delivered', completed: order?.status === 'delivered' }
     ];
 
@@ -167,8 +168,18 @@ const OrderDetails = () => {
         { label: 'Order Placed', completed: true },
         { label: 'Processing', completed: true },
         { label: 'Shipped', completed: true },
+        { label: 'Out for Delivery', completed: true },
         { label: 'Delivered', completed: true },
         { label: 'Returned', completed: true }
+      ];
+    } else if (order?.returnRequestStatus === 'pending') {
+      return [
+        { label: 'Order Placed', completed: true },
+        { label: 'Processing', completed: true },
+        { label: 'Shipped', completed: true },
+        { label: 'Out for Delivery', completed: true },
+        { label: 'Delivered', completed: true },
+        { label: 'Return Requested', completed: true, status: 'pending' }
       ];
     }
 
@@ -273,9 +284,9 @@ const OrderDetails = () => {
                 {(item.isCancelled || item.isReturned) && (
                   <div className="absolute inset-0 flex items-center justify-center z-10">
                     <span 
-                      className={`px-3 py-1 text-sm font-bold rounded-full transform -rotate-12 ${item.isCancelled ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-800'}`}
+                      className={`px-3 py-1 text-sm font-bold rounded-full transform -rotate-12 ${item.isCancelled ? 'bg-red-100 text-red-800' : item.returnRequestStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-purple-100 text-purple-800'}`}
                     >
-                      {item.isCancelled ? 'CANCELLED' : 'RETURNED'}
+                      {item.isCancelled ? 'CANCELLED' : item.returnRequestStatus === 'pending' ? 'RETURN REQUESTED' : item.returnRequestStatus === 'rejected' ? 'RETURN REJECTED' : 'RETURNED'}
                     </span>
                   </div>
                 )}
@@ -313,7 +324,7 @@ const OrderDetails = () => {
                           Total: ${item.totalPrice.toFixed(2)}
                         </span>
                         <div className="flex space-x-2">
-                          {!item.isCancelled && !item.isReturned && ['pending', 'processing'].includes(order.status) && (
+                          {!item.isCancelled && !item.isReturned && ['pending', 'processing', 'shipped', 'out for delivery'].includes(order.status) && (
                             <button 
                               className="inline-flex items-center px-3 py-1 text-sm font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={() => handleCancelItem(item)}

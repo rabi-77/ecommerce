@@ -35,11 +35,11 @@ const HomePage = () => {
       <section className="relative bg-[var(--primary)] text-white">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-0 bg-black opacity-30"></div>
-          <img 
+          {/* <img 
             src="https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1950&q=80" 
             alt="Shoes Collection" 
             className="w-full h-full object-cover object-center"
-          />
+          /> */}
         </div>
         <div className="container mx-auto px-4 py-32 relative z-10">
           <div className="max-w-2xl">

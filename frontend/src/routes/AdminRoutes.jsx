@@ -4,6 +4,9 @@ import AdminLogin from "../pages/admin/Login";
 import Dashboard from "../pages/admin/Dashboard";
 import Products from "../pages/admin/Products";
 import Orders from "../pages/admin/Orders";
+import OrderList from "../pages/admin/OrderList";
+import OrderDetails from "../pages/admin/OrderDetails";
+import Inventory from "../pages/admin/Inventory";
 import Users from "../pages/admin/Users";
 import Brand from "../pages/admin/Brand";
 import Offers from "../pages/admin/Offers";
@@ -24,7 +27,9 @@ const AdminRoutes = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="product" element={<Products />} />
-          <Route path="orders" element={<Orders />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="orders" element={<OrderList />} />
+          <Route path="orders/:id" element={<OrderDetails />} />
           <Route path="users" element={<Users />} />
           <Route path="brands" element={<Brand />} />
           <Route path="offers" element={<Offers />} />

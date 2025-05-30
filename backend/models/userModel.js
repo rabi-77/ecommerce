@@ -63,7 +63,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, "Username is required"],
     minlength: [3, "Username must be at least 3 characters"],
-    maxlength: [30, "Username cannot exceed 30 characters"],
+    maxlength: [10, "Username cannot exceed 30 characters"],
     match: [
       /^[a-zA-Z0-9_-]+$/,
       "Username can only contain letters, numbers, underscores, or hyphens",
@@ -157,14 +157,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     required: false,
   },
-  /**
-   * timestamps: Adds two properties, `createdAt` and `updatedAt`, to the document,
-   * which are automatically set to the current date when the document is created
-   * or updated.
-   */
+ 
 },{timestamps:true});
 
-// Add virtual field for default address
+
 userSchema.virtual('defaultAddress').get(function() {
   return this.addresses.find(addr => 
     addr._id.toString() === this.defaultAddressId?.toString()
@@ -175,7 +171,7 @@ userSchema.pre("save", async function (next) {
   if (this.isModified("password") && this.password) {
     this.password = await bcrypt.hash(this.password, 10);
   }
-  // Hash OTP code if it's modified
+  
   if (this.isModified("otp.code") && this.otp && this.otp.code) {
     this.otp.code = await bcrypt.hash(this.otp.code, 10);
   }

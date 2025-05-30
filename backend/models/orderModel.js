@@ -39,10 +39,16 @@ const orderItemSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  returnRequestStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', ''],
+    default: ''
+  },
   cancellationReason: String,
   returnReason: String,
   cancellationDate: Date,
-  returnDate: Date
+  returnDate: Date,
+  returnRequestDate: Date
 });
 
 const orderSchema = new mongoose.Schema(
@@ -94,7 +100,7 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['COD'], // Cash on Delivery for now, can add more methods later
+      enum: ['COD'], 
       default: 'COD'
     },
     paymentResult: {
@@ -123,6 +129,7 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0.0
     },
+    
     totalPrice: {
       type: Number,
       required: true,
@@ -143,15 +150,20 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'],
+      enum: ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'cancelled', 'returned'],
       default: 'pending'
     },
     trackingNumber: String,
     notes: String,
     cancellationReason: String,
     returnReason: String,
-    cancellationDate: Date,
     returnDate: Date,
+    returnRequestStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', ''],
+      default: ''
+    },
+    returnRequestDate: Date,
     invoice: {
       url: String,
       generatedAt: Date

@@ -8,6 +8,7 @@ import brandSlice from '../features/admin/adminBrand/brandSlice'
 import productSlice from '../features/admin/adminProducts/productSlice'
 import adminUsersReducer from '../features/admin/adminUsers/userSlice'
 import adminOrdersReducer from '../features/admin/adminOrders/adminOrderSlice'
+import adminInventoryReducer from '../features/admin/adminInventory/adminInventorySlice'
 import profileReducer from '../features/userprofile/profileSlice'
 import addressReducer from '../features/userAddress/addressSlice'
 import changeEmailReducer from '../features/changeEmail/changeEmailSlice'
@@ -34,6 +35,7 @@ const rootReducer=combineReducers({
   userProduct:userProduct,
   adminUsers:adminUsersReducer,
   adminOrders:adminOrdersReducer,
+  adminInventory:adminInventoryReducer,
   profile:profileReducer,
   address:addressReducer,
   changeEmail:changeEmailReducer,

@@ -17,12 +17,10 @@ export const addToCart = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Check if the product is listed and not blocked/deleted
     if (!product.isListed || product.isDeleted) {
       return res.status(400).json({ message: "Product is not available" });
     }
 
-    // Check if product's category is active
     const categoryPopulated = await product.populate('category');
     if (categoryPopulated.category && (!categoryPopulated.category.isListed || categoryPopulated.category.isDeleted)) {
       return res.status(400).json({ message: "Product category is not available" });
@@ -148,7 +146,6 @@ export const addToCart = async (req, res) => {
   }
 };
 
-// Update cart item quantity
 export const updateCartItem = async (req, res) => {
   try {
     const { cartItemId } = req.params;
@@ -159,13 +156,11 @@ export const updateCartItem = async (req, res) => {
       return res.status(400).json({ message: "Quantity must be at least 1" });
     }
 
-    // Find the user's cart
     const cart = await Cart.findOne({ user: userId });
     if (!cart) {
       return res.status(404).json({ message: "Cart not found" });
     }
 
-    // Find the cart item in the items array
     const itemIndex = cart.items.findIndex(item => item._id.toString() === cartItemId);
     if (itemIndex === -1) {
       return res.status(404).json({ message: "Cart item not found" });
@@ -189,7 +184,10 @@ export const updateCartItem = async (req, res) => {
     if (categoryPopulated.category && (!categoryPopulated.category.isListed || categoryPopulated.category.isDeleted)) {
       return res.status(400).json({ message: "Product category is not available" });
     }
-
+    const brandPopulated = await product.populate('brand');
+    if (brandPopulated.brand && (!brandPopulated.brand.isListed || brandPopulated.brand.isDeleted)) {
+      return res.status(400).json({ message: "Product brand is not available" });
+    }
     // Check if the variant has enough stock
     const variant = product.variants.find(v => v.size === cartItem.variant.size);
     if (!variant) {

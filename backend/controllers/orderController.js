@@ -6,9 +6,7 @@ import PDFDocument from "pdfkit";
 // import path from 'path';
 import asyncHandler from "express-async-handler";
 
-// @desc    Create new order
-// @route   POST /orders
-// @access  Private
+
 const createOrder = asyncHandler(async (req, res) => {
   const { addressId, paymentMethod = "COD" } = req.body;
   console.log("addressId", addressId, paymentMethod);
@@ -16,7 +14,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const userId = req.user;
   console.log("so finally im here right", req.body, req.user.addresses, "ad");
 
-  // Get user's cart
+
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "items.product",
     populate:[ {
@@ -234,12 +232,8 @@ const cancelOrder = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Order not found");
   }
-
-  // Only allow cancellation if order is pending or processing
-  if (!["pending", "processing"].includes(order.status)) {
-    res.status(400);
-    throw new Error("Cannot cancel order that has been shipped or delivered");
-  }
+  
+  // Status validation is now handled by the validateUserStatusChange middleware
 
   // Update order status
   order.status = "cancelled";
@@ -370,24 +364,25 @@ const returnOrder = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Only delivered orders can be returned");
   }
-
-  // Update order status
-  order.status = "returned";
+  
+  // Check if a return request is already pending
+  if (order.returnRequestStatus === 'pending') {
+    res.status(400);
+    throw new Error("A return request is already pending for this order");
+  }
+  
+  // Create a return request instead of immediately returning
+  order.returnRequestStatus = 'pending';
   order.returnReason = reason;
-  order.returnDate = Date.now();
-
-  // Restore product stock for all items
+  order.returnRequestDate = Date.now();
+  
+  // Mark all items as having a return request
   for (const item of order.items) {
     if (!item.isCancelled) {
-      await Product.updateOne(
-        {
-          _id: item.product,
-          "variants._id": item.variant._id,
-        },
-        {
-          $inc: { "variants.$.stock": item.quantity },
-        }
-      );
+      item.isReturned = true;
+      item.returnReason = reason;
+      item.returnRequestStatus = 'pending';
+      item.returnDate = Date.now();
     }
   }
 
@@ -445,31 +440,20 @@ const returnOrderItem = asyncHandler(async (req, res) => {
     throw new Error("Cancelled items cannot be returned");
   }
 
-  // Update item status
+  // Update item status - mark as return requested, not immediately returned
   item.isReturned = true;
   item.returnReason = reason;
+  item.returnRequestStatus = 'pending';
   item.returnDate = Date.now();
+  
+  // Update order return request status
+  order.returnRequestStatus = 'pending';
+  order.returnRequestDate = Date.now();
+  
+  // Note: We don't restore product stock here - that happens when admin approves the return
 
-  // Restore product stock
-  await Product.updateOne(
-    {
-      _id: item.product,
-      "variants._id": item.variant._id,
-    },
-    {
-      $inc: { "variants.$.stock": item.quantity },
-    }
-  );
-
-  // Check if all items are returned, update order status if needed
-  const allItemsReturnedOrCancelled = order.items.every(
-    (item) => item.isReturned || item.isCancelled
-  );
-  if (allItemsReturnedOrCancelled) {
-    order.status = "returned";
-    order.returnReason = "All items returned or cancelled";
-    order.returnDate = Date.now();
-  }
+  // We don't change the order status to "returned" immediately
+  // This will happen only after admin approves the return request
 
   const updatedOrder = await order.save();
 
@@ -479,9 +463,7 @@ const returnOrderItem = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Generate invoice for order
-// @route   GET /orders/:id/invoice
-// @access  Private
+
 const generateInvoice = asyncHandler(async (req, res) => {
   const order = await Order.findOne({
     $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],

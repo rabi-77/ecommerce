@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getAllOrders, updateOrderStatus, verifyReturnRequest, resetOrderState } from '../../features/admin/adminOrders/adminOrderSlice';
-import Loader from '../../components/Loader';
+import { getAllOrders, updateOrderStatus, verifyReturnRequest, resetAdminOrderState } from '../../features/admin/adminOrders/adminOrderSlice';
 
 const OrderDetails = () => {
   const { id } = useParams();
@@ -58,18 +57,18 @@ const OrderDetails = () => {
   useEffect(() => {
     if (error) {
       toast.error(error);
-      dispatch(resetOrderState());
+      dispatch(resetAdminOrderState());
     }
 
     if (statusUpdateSuccess) {
       toast.success('Order status updated successfully');
-      dispatch(resetOrderState());
+      dispatch(resetAdminOrderState());
     }
 
     if (verifyReturnSuccess) {
       toast.success('Return request processed successfully');
       setShowReturnModal(false);
-      dispatch(resetOrderState());
+      dispatch(resetAdminOrderState());
       // Refresh orders to get updated data
       dispatch(getAllOrders({}));
     }
@@ -133,7 +132,11 @@ const OrderDetails = () => {
   };
 
   if (loading || !order) {
-    return <Loader />;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   return (
@@ -264,17 +267,17 @@ const OrderDetails = () => {
                         Cancelled
                       </span>
                     )}
-                    {item.isReturned && !item.returnVerified && !item.returnRejectedAt && (
+                    {item.isReturned && item.returnRequestStatus === 'pending' && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                         Return Requested
                       </span>
                     )}
-                    {item.isReturned && item.returnVerified && (
+                    {item.isReturned && item.returnRequestStatus === 'approved' && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         Return Approved
                       </span>
                     )}
-                    {item.returnRejectedAt && (
+                    {item.isReturned && item.returnRequestStatus === 'rejected' && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                         Return Rejected
                       </span>
@@ -286,7 +289,7 @@ const OrderDetails = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {item.isReturned && !item.returnVerified && !item.returnRejectedAt && (
+                    {item.isReturned && item.returnRequestStatus === 'pending' && (
                       <button
                         onClick={() => openReturnModal(item._id)}
                         className="text-indigo-600 hover:text-indigo-900"

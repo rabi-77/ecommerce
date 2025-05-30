@@ -254,7 +254,7 @@ const Orders = () => {
                         <FileText size={18} />
                       </button>
                       
-                      {['pending', 'processing'].includes(order.status) && (
+                      {['pending', 'processing', 'shipped', 'out for delivery'].includes(order.status) && (
                         <button 
                           onClick={() => handleCancelOrder(order)}
                           disabled={cancellingOrder}

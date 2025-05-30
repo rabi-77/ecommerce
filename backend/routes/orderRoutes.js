@@ -12,6 +12,7 @@ import {
 } from '../controllers/orderController.js';
 import { verifyToken } from '../middlewares/auth.js';
 import { authenticateUser, userAuthorization } from '../middlewares/user/authenticateUser.js';
+import { validateUserStatusChange } from '../middlewares/orderValidation.js';
 import {getAllOrders} from '../controllers/admin/manageOrders.js'
 
 // User routes
@@ -26,7 +27,7 @@ router.route('/:id')
   .get(verifyToken, authenticateUser, userAuthorization, getOrderById);
 
 router.route('/:id/cancel')
-  .put(verifyToken, authenticateUser, userAuthorization, cancelOrder);
+  .put(verifyToken, authenticateUser, userAuthorization, validateUserStatusChange, cancelOrder);
 
 router.route('/:id/items/:itemId/cancel')
   .put(verifyToken, authenticateUser, userAuthorization, cancelOrderItem);

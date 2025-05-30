@@ -1,6 +1,5 @@
 import userModel from "../models/userModel.js";
 
-// Get all addresses for a user
 export const getUserAddresses = async (req, res) => {
   try {
     const userId = req.user;
@@ -10,7 +9,6 @@ export const getUserAddresses = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Convert addresses to plain objects and add isDefault property
     const addresses = user.addresses.map(address => {
       const addressObj = address.toObject();
       addressObj.isDefault = user.defaultAddressId && 
@@ -25,13 +23,11 @@ export const getUserAddresses = async (req, res) => {
   }
 };
 
-// Add a new address
 export const addAddress = async (req, res) => {
   try {
     const userId = req.user;
     const addressData = req.body;
     
-    // Validate required fields
     const requiredFields = ['name', 'phoneNumber', 'addressLine1', 'city', 'state', 'postalCode', 'country'];
     for (const field of requiredFields) {
       if (!addressData[field]) {

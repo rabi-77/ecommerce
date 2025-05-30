@@ -19,9 +19,10 @@ const initialState = {
 // Get all orders with pagination and search
 export const getAllOrders = createAsyncThunk(
   'adminOrders/getAll',
-  async ({ page = 1, size = 10, search = '' }, thunkAPI) => {
+  async ({ keyword = '', status = '', sort = 'newest' } = {}, thunkAPI) => {
     try {
-      return await adminOrderService.getAllOrders(page, size, search);
+      const response = await adminOrderService.getAllOrders(keyword, status, sort);
+      return response.data;
     } catch (error) {
       const message = 
         (error.response && 
@@ -96,7 +97,7 @@ export const adminOrderSlice = createSlice({
       .addCase(getAllOrders.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
-        state.orders = action.payload.items;
+        state.orders = action.payload.orders || [];
         state.total = action.payload.total;
         state.page = action.payload.page;
         state.size = action.payload.size;
@@ -132,8 +133,12 @@ export const adminOrderSlice = createSlice({
       .addCase(verifyReturnRequest.fulfilled, (state, action) => {
         state.verifyingReturn = false;
         state.verifyReturnSuccess = true;
-        // We'll need to refresh the orders after a successful verification
-        // This will be handled by re-fetching the orders in the component
+        
+        // Update the order in the state with the populated data
+        const updatedOrder = action.payload.order;
+        state.orders = state.orders.map(order => 
+          order._id === updatedOrder._id ? updatedOrder : order
+        );
       })
       .addCase(verifyReturnRequest.rejected, (state, action) => {
         state.verifyingReturn = false;
@@ -142,5 +147,5 @@ export const adminOrderSlice = createSlice({
   }
 });
 
-export const { resetOrderState, clearError } = adminOrderSlice.actions;
+export const { resetOrderState: resetAdminOrderState, clearError } = adminOrderSlice.actions;
 export default adminOrderSlice.reducer;

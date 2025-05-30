@@ -27,7 +27,8 @@ import { validateRequest } from "../middlewares/validateRequest.js";
 import { adminLoginSchema, categorySchema, brandSchema, productSchema } from "../../shared/validation.js";
 import { validate } from "../middlewares/validate.js";
 import {getAllOrders, updateOrderStatus, verifyReturnRequest} from '../controllers/admin/manageOrders.js'
-import { validateStatusChange } from '../middlewares/orderValidation.js'
+import { validateAdminStatusChange } from '../middlewares/orderValidation.js'
+import { getInventory, updateInventory, getInventoryHistory, getLowStockProducts } from '../controllers/admin/manageInventory.js'
 
 const admin = express.Router();
 
@@ -84,7 +85,13 @@ admin.patch('/toggle-user-block/:id', toggleUserBlock)
 
 //order management
 admin.get('/orders',getAllOrders)
-admin.patch('/orders/:id/status', validateStatusChange, updateOrderStatus)
+admin.patch('/orders/:id/status', validateAdminStatusChange, updateOrderStatus)
 admin.patch('/orders/:orderId/items/:itemId/verify-return', verifyReturnRequest)
+
+//inventory management
+admin.get('/inventory', getInventory)
+admin.put('/inventory/:id', updateInventory)
+admin.get('/inventory/:id/history', getInventoryHistory)
+admin.get('/inventory/low-stock', getLowStockProducts)
 
 export default admin;

@@ -1,10 +1,10 @@
 import api from '../../../apis/admin/api';
 
 // Get all orders with pagination, search, and filters
-export const getAllOrders = async (page = 1, size = 10, search = '') => {
+export const getAllOrders = async (keyword = '', status = '', sort = 'newest') => {
   try {
-    const response = await api.get(`/orders?page=${page}&size=${size}&search=${search}`);
-    return response.data;
+    const response = await api.get(`/orders?keyword=${keyword}&status=${status}&sort=${sort}`);
+    return response;
   } catch (error) {
     throw error;
   }

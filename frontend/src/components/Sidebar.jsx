@@ -5,6 +5,7 @@ const Sidebar = () => {
     { name: 'Dashboard', path: '/admin/dashboard' },
     { name: 'Users', path: '/admin/users' },
     { name: 'Product', path: '/admin/product' },
+    { name: 'Inventory', path: '/admin/inventory' },
     { name: 'Brands', path: '/admin/brands' },
     { name: 'Category', path: '/admin/category' },
     { name: 'Orders', path: '/admin/orders' },
