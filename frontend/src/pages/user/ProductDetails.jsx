@@ -183,6 +183,8 @@ const ProductDetails = () => {
 
     if (!product) return null;
 
+    
+
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

@@ -16,16 +16,17 @@ import {
   Info,
   Package
 } from "lucide-react";
-import { logoutThunk } from "../features/authSlice";
+import { clearError, logoutThunk } from "../features/authSlice";
 import { toast } from "react-toastify";
-import { fetchCart } from "../features/cart/cartSlice";
-import { fetchWishlist } from "../features/wishlist/wishlistSlice";
+import { fetchCart, resetCart } from "../features/cart/cartSlice";
+import { fetchWishlist, resetWishlist } from "../features/wishlist/wishlistSlice";
 
 export default function Navbar() {
-  const [user, setUser] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const {user}=useSelector((state)=>state.auth)
+  const [,forceUpdate]=useState()
   
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -35,39 +36,12 @@ export default function Navbar() {
   const { count: cartItemCount } = useSelector(state => state.cart);
   const { itemsCount: wishlistItemCount } = useSelector(state => state.wishlist);
 
-  // Function to check and update user from localStorage
-  const checkUserStatus = () => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error("Error parsing user from localStorage", error);
-        setUser(null);
-      }
-    } else {
-      setUser(null);
-    }
-  };
-
   useEffect(() => {
-    // Check user status on component mount
-    checkUserStatus();
-    
-    // Fetch cart and wishlist data only once when the component mounts and user is logged in
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    // Fetch cart and wishlist data only when user is logged in
+    if (user) {
       dispatch(fetchCart());
       dispatch(fetchWishlist());
     }
-
-    // Listen for storage events (when localStorage changes)
-    const handleStorageChange = (e) => {
-      if (e.key === "user" || e.key === "tokenAccess" || e.key === null) {
-        checkUserStatus();
-      }
-    };
     
     // Add scroll event listener to change navbar appearance on scroll
     const handleScroll = () => {
@@ -80,12 +54,6 @@ export default function Navbar() {
     
     window.addEventListener('scroll', handleScroll);
 
-    // Add event listener for storage changes
-    window.addEventListener("storage", handleStorageChange);
-
-    // Create an interval to check user status periodically
-    const intervalId = setInterval(checkUserStatus, 1000); // Check every second
-
     // Handle clicks outside of dropdown to close it
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -97,21 +65,10 @@ export default function Navbar() {
 
     // Cleanup function
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener('scroll', handleScroll);
-      clearInterval(intervalId);      
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dispatch]);  // Added dispatch to dependency array
-
-  // Separate useEffect to handle cart and wishlist data fetching
-  useEffect(() => {
-    // Only fetch initial data when the component mounts and user is logged in
-    if (user) {
-      dispatch(fetchCart());
-      dispatch(fetchWishlist());
-    }
-  }, []); // Empty dependency array means this only runs once on mount
+  }, [user, dispatch]);
 
   const handleUserClick = (e) => {
     // Prevent event from bubbling up
@@ -127,10 +84,20 @@ export default function Navbar() {
 
 
   const handleLogout = () => {
-    dispatch(logoutThunk());
-    setUser(null);
-    setDropdownOpen(false);
-    navigate('/');
+    dispatch(logoutThunk()).then(()=>{
+      // setUser(null);
+      // forceUpdate({})
+      dispatch(resetCart());
+      dispatch(resetWishlist())
+
+      dispatch(clearError())
+      setDropdownOpen(false);
+      clearError()
+      navigate('/');
+    }).catch((error)=>{
+      console.log(error)
+      toast.error(error.message || "Logout failed")
+    })  
   };
 
   const handleProfileNavigation = (e, path) => {
@@ -174,18 +141,33 @@ export default function Navbar() {
 
           
           {/* Cart */}
-          <Link to="/cart" className="relative p-2 rounded-full hover:bg-[var(--background-cream)] transition-colors">
+          
+          {/* <Link to="/cart" className="relative p-2 rounded-full hover:bg-[var(--background-cream)] transition-colors"> */}
+          <button onClick={()=>{
+            console.log('user name and email services');
+            
+            if(!user){
+              toast.error(<div>Please login to view your cart
+                <button onClick={()=>navigate('/login')} className="ml-2 underline text-[var(--primary)]">login</button>
+              </div>,{duration:5000})
+            }else{
+              navigate('/cart')
+            }
+          }} className="relative p-2 rounded-full hover:bg-[var(--background-cream)] transition-colors"
+          aria-label="Cart">
             <ShoppingCart size={20} className="hover:text-[var(--primary)] transition-colors" />
             {cartItemCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-[var(--primary)] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center">
                 {cartItemCount > 99 ? '99+' : cartItemCount}
               </span>
             )}
-          </Link>
+          </button>
+          {/* </Link> */}
           
           {/* Wishlist */}
           <button 
             onClick={() => {
+            console.log('user name and email services');
               if (!user) {
                 toast.error(
                   <div>

@@ -148,6 +148,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     lowercase: true,
+    sparse:true
   },
   emailChangeToken: {
     type: String,

@@ -10,7 +10,6 @@ export const getAllOrders = asyncHandler(async (req, res) => {
 
   let query = {};
   
-  // Add search functionality
   if (keyword) {
     query = {
       $or: [
@@ -21,15 +20,13 @@ export const getAllOrders = asyncHandler(async (req, res) => {
     };
   }
   
-  // Add status filter
+  
   if (status && status !== 'all') {
     query.status = status;
   }
   
-  // Get total count for pagination
   const total = await Order.countDocuments(query);
   
-  // Set up sorting based on sort parameter
   let sortOption = {};
   switch (sort) {
     case "oldest":
@@ -47,7 +44,6 @@ export const getAllOrders = asyncHandler(async (req, res) => {
       break;
   }
   
-  // Get orders with pagination
   const orders = await Order.find(query)
     .populate('user', 'username email')
     .populate('items.product', 'name images price')
@@ -111,37 +107,30 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   });
 });
 
-// Verify return request and process refund
 export const verifyReturnRequest = asyncHandler(async (req, res) => {
   const { orderId, itemId } = req.params;
   const { approved, notes } = req.body;
   
-  // Find the order
   const order = await Order.findById(orderId);
   if (!order) {
     return res.status(404).json({ message: "Order not found" });
   }
   
-  // Find the specific item in the order
   const orderItem = order.items.id(itemId);
   if (!orderItem) {
     return res.status(404).json({ message: "Order item not found" });
   }
   
-  // Check if the item has a return request
   if (!orderItem.isReturned) {
     return res.status(400).json({ message: "This item does not have a return request" });
   }
   
-  // Process the return verification
   if (approved) {
-    // Update order item with verification details
     orderItem.returnVerified = true;
     orderItem.returnVerifiedAt = Date.now();
     orderItem.returnNotes = notes || 'Return approved';
     orderItem.returnRequestStatus = 'approved';
     
-    // Restore product stock for this item
     await Product.updateOne(
       {
         _id: orderItem.product,
@@ -152,19 +141,17 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       }
     );
     
-    // Only process refund if the order is not COD or if COD order has been delivered
     const shouldProcessRefund = 
       order.paymentMethod !== 'COD' || 
       (order.paymentMethod === 'COD' && order.isDelivered);
     
     if (shouldProcessRefund) {
-      // Get the user
       const user = await User.findById(order.user);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Check if user has wallet field, if not, add it
+      
       if (!user.wallet) {
         user.wallet = {
           balance: 0,
@@ -172,13 +159,13 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         };
       }
       
-      // Calculate refund amount (item price minus any applicable fees)
+     
       const refundAmount = orderItem.totalPrice;
       
-      // Add refund to user's wallet
+      
       user.wallet.balance += refundAmount;
       
-      // Add transaction record
+      
       user.wallet.transactions.push({
         type: 'credit',
         amount: refundAmount,
@@ -186,28 +173,28 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         date: Date.now()
       });
       
-      // Save the user with updated wallet
+      
       await user.save();
     }
     
-    // Check if all items in the order have been approved for return
+    
     const allItemsReturned = order.items.every(item => 
       item.isCancelled || (item.isReturned && item.returnRequestStatus === 'approved')
     );
     
-    // If all items are returned, update the order status
+    
     if (allItemsReturned) {
       order.status = 'returned';
       order.returnDate = Date.now();
     }
     
-    // Update the order's return request status
+    
     order.returnRequestStatus = 'approved';
     
-    // Save the updated order
+    
     await order.save();
     
-    // Fetch the populated order to return complete data
+    
     const populatedOrder = await Order.findById(orderId)
       .populate('user', 'username email')
       .populate('items.product', 'name images price');
@@ -219,13 +206,13 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       order: populatedOrder
     });
   } else {
-    // Reject the return request
+    
     orderItem.returnVerified = false;
     orderItem.returnVerifiedAt = Date.now();
     orderItem.returnNotes = notes || 'Return rejected';
     orderItem.returnRequestStatus = 'rejected';
     
-    // Check if all items in the order have been processed (approved or rejected)
+    
     const allItemsProcessed = order.items.every(item => 
       item.isCancelled || 
       !item.isReturned || 
@@ -240,15 +227,15 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       );
       
       if (!anyItemApproved) {
-        // If no items were approved, set the order's return request status to rejected
+        
         order.returnRequestStatus = 'rejected';
       }
     }
     
-    // Save the updated order
+    
     await order.save();
     
-    // Fetch the populated order to return complete data
+    
     const populatedOrder = await Order.findById(orderId)
       .populate('user', 'username email')
       .populate('items.product', 'name images price');

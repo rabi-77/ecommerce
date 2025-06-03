@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { fetchCategoriesThunk, fetchBrandsThunk, fetchProductsThunk } from '../../features/userHomeSlice';
 import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
+import { fetchUserProfile } from '../../features/userprofile/profileSlice';
 
 const HomePage = () => {
   const dispatch = useDispatch();
@@ -13,8 +14,10 @@ const HomePage = () => {
     brands = [],
     loading = false
   } = useSelector((state) => state.userProduct || {});
-  
+  const {user} = useSelector((state)=>state.auth)
   const [featuredProducts, setFeaturedProducts] = useState([]);
+
+  
 
   useEffect(() => {
     dispatch(fetchCategoriesThunk());
@@ -174,7 +177,7 @@ const HomePage = () => {
           {brands.length > 0 ? (
             <div className="relative">
               {/* Add custom CSS to hide scrollbar but keep functionality */}
-              <style jsx>{`
+              <style >{`
                 .hide-scrollbar::-webkit-scrollbar {
                   display: none;
                 }

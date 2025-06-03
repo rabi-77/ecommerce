@@ -47,16 +47,16 @@ const FilterSidebar = ({
           {openSection.category && (
             <div className="space-y-2 pl-2">
               {categories.map(category => (
-                <label key={category._id} className="flex items-center">
+                <label key={category._id} className="grid grid-cols-[24px_1fr] gap-3 items-center py-1">
                   <input
                     type="radio"
                     name="category"
                     value={category._id}
                     checked={filters.category === category._id}
                     onChange={onFilterChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded justify-self-center"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{category.name}</span>
+                  <span className="text-sm text-gray-700">{category.name}</span>
                 </label>
               ))}
             </div>
@@ -75,16 +75,16 @@ const FilterSidebar = ({
           {openSection.brand && (
             <div className="space-y-2 pl-2">
               {brands.map(brand => (
-                <label key={brand._id} className="flex items-center">
+                <label key={brand._id} className="grid grid-cols-[24px_1fr] gap-3 items-center py-1">
                   <input
                     type="radio"
                     name="brand"
                     value={brand._id}
                     checked={filters.brand === brand._id}
                     onChange={onFilterChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded justify-self-center"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{brand.name}</span>
+                  <span className="text-sm text-gray-700">{brand.name}</span>
                 </label>
               ))}
             </div>
