@@ -107,7 +107,10 @@ const orderSchema = new mongoose.Schema(
       id: String,
       status: String,
       update_time: String,
-      email_address: String
+      email_address: String,
+      razorpayOrderId:String,
+      razorpayPaymentId:String,
+      razorpaySignature:String
     },
     itemsPrice: {
       type: Number,
