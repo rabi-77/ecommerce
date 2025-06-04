@@ -139,7 +139,7 @@ const createOrder = asyncHandler(async (req, res) => {
     discountAmount,
     totalPrice,
     status: "pending",
-    isPaid: paymentMethod !== "COD", // Only COD is not paid initially
+    isPaid: false, 
   });
   console.log("is it saved?");
 
@@ -148,6 +148,18 @@ const createOrder = asyncHandler(async (req, res) => {
 
   // Clear cart after successful order
   await Cart.findOneAndUpdate({ user: userId }, { $set: { items: [] } });
+
+  
+if (paymentMethod === 'RAZORPAY') {
+  return res.status(201).json({
+    success: true,
+    order: {
+      _id: createdOrder._id,
+      orderNumber: createdOrder.orderNumber,
+      totalPrice: createdOrder.totalPrice
+    }
+  });
+}
 
   res.status(201).json({
     success: true,

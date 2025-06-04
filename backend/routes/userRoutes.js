@@ -15,6 +15,8 @@ import {requestEmailChange, verifyEmailChange, changePassword} from '../controll
 import { addToWishlist, removeFromWishlist, getWishlist, checkWishlistItem, clearWishlist } from '../controllers/userWishlistController.js'
 import { addToCart, updateCartItem, removeFromCart, getCart, clearCart } from '../controllers/userCartController.js'
 
+import {createRazorpayOrder,verifyPayment,getRazorpayKey} from '../controllers/razorpayController.js'
+
 user.post('/register',register)
 user.post('/login',userLogin)
 user.post('/logout',authenticateUser,userAuthorization,userLogout)
@@ -82,5 +84,10 @@ user.delete('/cart', verifyToken, clearCart)
 user.post('/change-email-request',verifyToken,requestEmailChange)
 user.get('/verify-email-change',verifyEmailChange)
 user.put('/change-password',verifyToken,changePassword)
+
+
+user.post('/create-order',verifyToken,createRazorpayOrder)
+user.post('/verify-payment',verifyToken,verifyPayment)
+user.get('/razorpay-key',verifyToken,getRazorpayKey)
 
 export default user

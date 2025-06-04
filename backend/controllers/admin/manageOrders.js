@@ -91,9 +91,11 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   
   // Update additional fields based on status
   if (status === 'delivered') {
+    order.isPaid= true;
     order.isDelivered = true;
     order.deliveredAt = Date.now();
   } else if (status === 'cancelled') {
+    order.isPaid=false
     order.cancellationDate = Date.now();
   }
   
