@@ -8,8 +8,8 @@ import asyncHandler from "express-async-handler";
 
 
 const createOrder = asyncHandler(async (req, res) => {
-  const { addressId, paymentMethod = "COD" } = req.body;
-  console.log("addressId", addressId, paymentMethod);
+  const { address, paymentMethod = "COD" } = req.body;
+  console.log("addressId", address, paymentMethod);
 
   const userId = req.user;
   console.log("so finally im here right", req.body, req.user.addresses, "ad");
@@ -35,8 +35,9 @@ const createOrder = asyncHandler(async (req, res) => {
   // Get user's address
   const userAddresses = req.user.addresses;
   const shippingAddress = userAddresses.find(
-    (address) => address._id.toString() === addressId
+    (address) => address._id.toString() === address._id.toString()
   );
+console.log(shippingAddress,'shippingAddress');
 
   if (!shippingAddress) {
     res.status(400);

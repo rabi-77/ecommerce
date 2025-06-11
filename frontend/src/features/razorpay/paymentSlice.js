@@ -2,7 +2,7 @@ import { toast } from "react-toastify";
 import {
   createRazorpayOrder,
   verifyPayment,
-  gerRazorPayKey,
+  gerRazorPayKey as fetchRazorPayKey,
 } from "../razorpay/paymentService.js";
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
@@ -11,114 +11,125 @@ export const razorpayOrderThunk = createAsyncThunk(
   async (orderData, { rejectWithValue }) => {
     try {
       const response = await createRazorpayOrder(orderData);
-      //  toast.success('Order created successfully')
       return response;
     } catch (error) {
-      toast.error(error.response?.data?.message || "failed to create order");
-      return rejectWithValue(
-        error.response?.data?.message || "failed to create order"
-      );
+      const errorMessage = error.response?.data?.message || "Failed to create Razorpay order";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 export const verifyPaymentThunk = createAsyncThunk(
-  "payment/verifypayment",
+  "payment/verifyPayment",
   async (paymentData, { rejectWithValue }) => {
     try {
       const response = await verifyPayment(paymentData);
       toast.success("Payment verified successfully");
       return response;
     } catch (error) {
-      toast.error(error.response?.data?.message || "failed to verify payment");
-      return rejectWithValue(
-        error.response?.data?.message || "failed to verify payment"
-      );
+      const errorMessage = error.response?.data?.message || "Failed to verify payment";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 export const getRazorPayKeyThunk = createAsyncThunk(
   "payment/getRazorPayKey",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      const response = await gerRazorPayKey();
+      const { payment } = getState();
+      // Return cached key if it exists
+      if (payment.razorpayKey?.key) {
+        return { key: payment.razorpayKey.key };
+      }
+      
+      const response = await fetchRazorPayKey();
       return response;
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || "failed to get payment configuration"
-      );
-      return rejectWithValue(
-        error.response?.data?.message || "failed to get payment configuration"
-      );
+      const errorMessage = error.response?.data?.message || "Failed to get payment configuration";
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 const paymentSlice = createSlice({
-
-    name:'payment',
-    initialState:{
-        razorpayloading:false,
-        razorpayerror:null,
-        razorpayOrder:{},
-        razorpayKey:{},
-        verified:false
+  name: 'payment',
+  initialState: {
+    razorpayloading: false,
+    razorpayerror: null,
+    razorpayOrder: null,
+    razorpayKey: null,
+    verified: false,
+    paymentStatus: 'idle', // 'idle' | 'processing' | 'succeeded' | 'failed'
+  },
+  reducers: {
+    clearPaymentState: (state) => {
+      state.razorpayloading = false;
+      state.razorpayerror = null;
+      state.razorpayOrder = null;
+      state.razorpayKey = null;
+      state.verified = false;
+      state.paymentStatus = 'idle';
     },
-    reducers:{
-     clearPaymentState:(state)=>{
-        state.razorpayloading=false
-        state.razorpayerror=null
-        state.razorpayOrder={}
-        state.razorpayKey={}
-        state.verified=false
+    resetPaymentStatus: (state) => {
+      state.paymentStatus = 'idle';
     }
-},extraReducers:(builder)=>{
+  },
+  extraReducers: (builder) => {
+    // Razorpay Order
     builder
-    .addCase(razorpayOrderThunk.pending,(state)=>{
-        state.razorpayloading=true
-        state.razorpayerror=null
-    })
-    .addCase(razorpayOrderThunk.fulfilled,(state,action)=>{
-        state.razorpayloading=false
-        state.razorpayerror=null
-        state.razorpayOrder=action.payload.order
-    })
-    .addCase(razorpayOrderThunk.rejected,(state,action)=>{
-        state.razorpayloading=false
-        state.razorpayerror=action.payload
-    });
+      .addCase(razorpayOrderThunk.pending, (state) => {
+        state.razorpayloading = true;
+        state.razorpayerror = null;
+        state.paymentStatus = 'processing';
+      })
+      .addCase(razorpayOrderThunk.fulfilled, (state, action) => {
+        state.razorpayloading = false;
+        state.razorpayOrder = action.payload?.order || null;
+        state.paymentStatus = 'succeeded';
+      })
+      .addCase(razorpayOrderThunk.rejected, (state, action) => {
+        state.razorpayloading = false;
+        state.razorpayerror = action.payload;
+        state.paymentStatus = 'failed';
+      });
 
-    builder.addCase(verifyPaymentThunk.pending,(state)=>{
-        state.razorpayloading=true
-        state.razorpayerror=null
-    })
-    .addCase(verifyPaymentThunk.fulfilled,(state,action)=>{
-        state.razorpayloading=false
-        state.razorpayerror=false
-        state.verified=true
-    }).addCase(verifyPaymentThunk.rejected,(state,action)=>{
-        state.razorpayloading=false
-        state.razorpayerror=action.payload
-        state.verified=false
-    })
-    builder.addCase(getRazorPayKeyThunk.pending,(state)=>{
-        state.razorpayloading=true
-        state.razorpayerror=null
-    })
-    .addCase(getRazorPayKeyThunk.fulfilled,(state,action)=>{
-        state.razorpayloading=false
-        state.razorpayerror=null
-        state.razorpayKey=action.payload.key
-    })
-    .addCase(getRazorPayKeyThunk.rejected,(state,action)=>{
-        state.razorpayloading=false
-        state.razorpayerror=action.payload
-    })
-}
+    // Verify Payment
+    builder
+      .addCase(verifyPaymentThunk.pending, (state) => {
+        state.razorpayloading = true;
+        state.razorpayerror = null;
+        state.paymentStatus = 'processing';
+      })
+      .addCase(verifyPaymentThunk.fulfilled, (state) => {
+        state.razorpayloading = false;
+        state.verified = true;
+        state.paymentStatus = 'succeeded';
+      })
+      .addCase(verifyPaymentThunk.rejected, (state, action) => {
+        state.razorpayloading = false;
+        state.razorpayerror = action.payload;
+        state.paymentStatus = 'failed';
+      });
 
-
+    // Get Razorpay Key
+    builder
+      .addCase(getRazorPayKeyThunk.pending, (state) => {
+        state.razorpayloading = true;
+        state.razorpayerror = null;
+      })
+      .addCase(getRazorPayKeyThunk.fulfilled, (state, action) => {
+        state.razorpayloading = false;
+        state.razorpayKey = action.payload;
+      })
+      .addCase(getRazorPayKeyThunk.rejected, (state, action) => {
+        state.razorpayloading = false;
+        state.razorpayerror = action.payload;
+      });
+  }
 });
 
-export default paymentSlice.reducer
-export const {clearPaymentState}=paymentSlice.actions
+export const { clearPaymentState, resetPaymentStatus } = paymentSlice.actions;
+export default paymentSlice.reducer;

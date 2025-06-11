@@ -42,9 +42,16 @@ const OrderDetails = () => {
   useEffect(() => {
     if (!user) {
       navigate('/login');
-    } else if (id) {
-      dispatch(getOrderDetails(id));
+      return;
     }
+
+    if (!id) {
+      // If no order ID, redirect to orders list
+      navigate('/orders');
+      return;
+    }
+
+    dispatch(getOrderDetails(id));
 
     if (error) {
       toast.error(error);

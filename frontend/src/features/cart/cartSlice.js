@@ -68,6 +68,30 @@ export const clearCart = createAsyncThunk(
   }
 );
 
+export const applyCoupon = createAsyncThunk(
+  'cart/applyCoupon',
+  async (couponData, { rejectWithValue }) => {
+    try {
+      const response = await validateCouponApi(couponData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to apply coupon');
+    }
+  }
+);
+
+export const removeCoupon = createAsyncThunk(
+  'cart/removeCoupon',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await removeCouponApi();
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to remove coupon');
+    }
+  }
+);
+
 // Initial state
 const initialState = {
   items: [],
@@ -181,9 +205,60 @@ const cartSlice = createSlice({
       .addCase(clearCart.rejected, (state, action) => {
         state.clearingCart = false;
         state.error = action.payload || 'Failed to clear cart';
+      })
+      
+      // Apply coupon
+      .addCase(applyCoupon.pending, (state) => {
+        state.applyingCoupon = true;
+        state.couponError = null;
+      })
+      .addCase(applyCoupon.fulfilled, (state, action) => {
+        state.applyingCoupon = false;
+        state.coupon = action.payload.coupon;
+        state.summary = action.payload.summary;
+      })
+      .addCase(applyCoupon.rejected, (state, action) => {
+        state.applyingCoupon = false;
+        state.couponError = action.payload || 'Failed to apply coupon';
+      })
+      
+      // Remove coupon
+      .addCase(removeCoupon.pending, (state) => {
+        state.removingCoupon = true;
+        state.couponError = null;
+      })
+      .addCase(removeCoupon.fulfilled, (state) => {
+        state.removingCoupon = false;
+        state.coupon = null;
+        state.summary = {
+          subtotal: 0,
+          discount: 0,
+          total: 0
+        };
+      })
+      .addCase(removeCoupon.rejected, (state, action) => {
+        state.removingCoupon = false;
+        state.couponError = action.payload || 'Failed to remove coupon';
       });
   }
 });
 
-export const { clearCartError, resetCart } = cartSlice.actions;
+export const { 
+  clearCartError, 
+  resetCart, 
+  resetCouponValidation 
+} = cartSlice.actions;
+
+export const validateCoupon = (couponData) => async (dispatch) => {
+  try {
+    const result = await dispatch(applyCoupon(couponData)).unwrap();
+    return { valid: true, ...result };
+  } catch (error) {
+    return { 
+      valid: false, 
+      message: error.message || 'Invalid coupon code' 
+    };
+  }
+};
+
 export default cartSlice.reducer;

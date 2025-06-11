@@ -52,7 +52,11 @@ export const getOrderDetails = createAsyncThunk(
   'order/getDetails',
   async (orderId, thunkAPI) => {
     try {
+      console.log('orderis',orderId);
+      
       const response = await getOrderDetailsService(orderId);
+      console.log(response.data);
+      
       return response.data;
     } catch (error) {
       const message = 

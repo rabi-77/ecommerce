@@ -17,7 +17,7 @@ import wishlistReducer from '../features/wishlist/wishlistSlice'
 import cartReducer from '../features/cart/cartSlice'
 import orderReducer from '../features/order/orderSlice'
 import paymentReducer from '../features/razorpay/paymentSlice'
-
+import couponReducer from '../features/admin/adminCoupons/couponSlice'
 import userProduct from '../features/userHomeSlice'
 // storage.removeItem('persist:root');
 const persistConfig = {
@@ -43,7 +43,8 @@ const rootReducer=combineReducers({
   wishlist:wishlistReducer,
   cart:cartReducer,
   order:orderReducer,
-  payment:paymentReducer
+  payment:paymentReducer,
+  coupons:couponReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

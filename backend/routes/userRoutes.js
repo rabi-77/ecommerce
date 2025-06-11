@@ -76,9 +76,9 @@ user.delete('/wishlist', verifyToken, clearWishlist)
 // Cart routes
 user.get('/cart', verifyToken, getCart)
 user.post('/cart', verifyToken, addToCart)
+user.delete('/cart/clear', verifyToken, clearCart)
 user.put('/cart/:cartItemId', verifyToken, updateCartItem)
 user.delete('/cart/:cartItemId', verifyToken, removeFromCart)
-user.delete('/cart', verifyToken, clearCart)
 
 //change password setup
 user.post('/change-email-request',verifyToken,requestEmailChange)
