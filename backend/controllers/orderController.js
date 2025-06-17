@@ -2,6 +2,7 @@ import Order from "../models/orderModel.js";
 import Cart from "../models/cartModel.js";
 import Product from "../models/productModel.js";
 import PDFDocument from "pdfkit";
+import Coupon from "../models/couponModel.js";
 // import fs from 'fs';
 // import path from 'path';
 import asyncHandler from "express-async-handler";
@@ -110,10 +111,57 @@ console.log(shippingAddress,'shippingAddress');
     );
   }
 
+  // Include coupon discount if applied on cart, but re-validate to ensure it is still eligible
+  let couponDiscount = 0;
+  let appliedCoupon = null;
+  if (cart.coupon) {
+    const couponDoc = await Coupon.findById(cart.coupon);
+    const now = new Date();
+
+    const stillValid =
+      couponDoc &&
+      couponDoc.isActive &&
+      couponDoc.startDate <= now &&
+      couponDoc.expiryDate >= now &&
+      (couponDoc.maxUses === null || couponDoc.usedCount < couponDoc.maxUses) &&
+      !couponDoc.usedBy.some(id => id.toString() === userId.toString());
+
+    if (!stillValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'The coupon applied to your cart is no longer available. Please review your order before placing it.'
+      });
+    }
+
+    // appliedCoupon = couponDoc._id;
+    // // Recalculate discount to be safe
+    // let subtotalWithoutProductLevelDiscount = 0;
+    // cart.items.forEach(item => {
+    //   subtotalWithoutProductLevelDiscount += item.price * item.quantity;
+    // });
+
+    // Use existing cart.discount if already correctly calculated, else calculate
+    couponDiscount = cart.discount || 0;
+    discountAmount += couponDiscount;
+  }
+
   // Calculate final prices
   const taxPrice = 0; // Tax is included in price for now
   const shippingPrice = 0; // Free shipping for now
   const totalPrice = itemsPrice - discountAmount + taxPrice + shippingPrice;
+
+  // Prevent duplicate unpaid Razorpay orders
+  if (paymentMethod === 'RAZORPAY') {
+    const existingPending = await Order.findOne({
+      user: userId,
+      paymentMethod: 'RAZORPAY',
+      isPaid: false,
+      status: 'pending',
+    });
+    if (existingPending) {
+      return res.status(200).json({ success: true, order: existingPending });
+    }
+  }
 
   // Create order
   console.log("before saving");
@@ -138,6 +186,8 @@ console.log(shippingAddress,'shippingAddress');
     taxPrice,
     shippingPrice,
     discountAmount,
+    couponDiscount,
+    coupon: appliedCoupon,
     totalPrice,
     status: "pending",
     isPaid: false, 
@@ -147,25 +197,36 @@ console.log(shippingAddress,'shippingAddress');
   const createdOrder = await order.save();
   console.log("err");
 
-  // Clear cart after successful order
-  await Cart.findOneAndUpdate({ user: userId }, { $set: { items: [] } });
+  // Razorpay flow: return pending order, leave cart intact
+  if (paymentMethod === 'RAZORPAY') {
+    return res.status(201).json({ success: true, order: createdOrder });
+  }
 
-  
-if (paymentMethod === 'RAZORPAY') {
-  return res.status(201).json({
-    success: true,
-    order: {
-      _id: createdOrder._id,
-      orderNumber: createdOrder.orderNumber,
-      totalPrice: createdOrder.totalPrice
+  // COD flow: clear cart & update coupon usage
+  await Cart.findOneAndUpdate(
+    { user: userId },
+    {
+      $set: {
+        items: [],
+        coupon: null,
+        discount: 0,
+        total: 0,
+      },
     }
-  });
-}
+  );
 
-  res.status(201).json({
-    success: true,
-    order: createdOrder,
-  });
+  if (appliedCoupon) {
+    try {
+      await Coupon.findByIdAndUpdate(appliedCoupon, {
+        $inc: { usedCount: 1 },
+        $push: { usedBy: userId },
+      });
+    } catch (err) {
+      console.error("Failed to increment coupon usedCount", err);
+    }
+  }
+
+  return res.status(201).json({ success: true, order: createdOrder });
 });
 
 // @desc    Get order by ID or order number
@@ -236,6 +297,8 @@ const getMyOrders = asyncHandler(async (req, res) => {
 // @access  Private
 const cancelOrder = asyncHandler(async (req, res) => {
   const { reason } = req.body;
+  console.log('heyy');
+  
   const order = await Order.findOne({
     $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],
     user: req.user,
@@ -252,6 +315,12 @@ const cancelOrder = asyncHandler(async (req, res) => {
   order.status = "cancelled";
   order.cancellationReason = reason;
   order.cancellationDate = Date.now();
+
+  for (const item of order.items) {
+    item.isCancelled = true;
+    item.cancellationReason = reason;
+    item.cancellationDate = Date.now();
+  }
 
   // Restore product stock for all items
   for (const item of order.items) {
@@ -384,21 +453,32 @@ const returnOrder = asyncHandler(async (req, res) => {
     throw new Error("A return request is already pending for this order");
   }
   
-  // Create a return request instead of immediately returning
-  order.returnRequestStatus = 'pending';
+  // Determine which items are still eligible for return
+  const eligibleItems = order.items.filter((item) => {
+    if (item.isCancelled) return false; // cancelled items cannot be returned
+    if (item.isReturned && item.returnRequestStatus === 'approved') return false; // already returned & accepted
+    if (item.returnRequestStatus === 'pending') return false; // already has an open request
+    if (item.returnRequestStatus === 'rejected') return false; // admin rejected, do not reopen automatically
+    return true;
+  });
+
+  if (eligibleItems.length === 0) {
+    return res.status(400).json({ message: 'No items are eligible for return' });
+  }
+
+  // Create return request only for eligible items
+  eligibleItems.forEach((item) => {
+    item.isReturned = false;
+    item.returnReason = reason;
+    item.returnRequestStatus = 'pending';
+    // item.returnDate = Date.now();
+  });
+
+  // If some items were skipped (already processed) mark the order status accordingly
+  order.returnRequestStatus = eligibleItems.length === order.items.length ? 'pending' : 'partial-pending';
   order.returnReason = reason;
   order.returnRequestDate = Date.now();
   
-  // Mark all items as having a return request
-  for (const item of order.items) {
-    if (!item.isCancelled) {
-      item.isReturned = true;
-      item.returnReason = reason;
-      item.returnRequestStatus = 'pending';
-      item.returnDate = Date.now();
-    }
-  }
-
   const updatedOrder = await order.save();
 
   res.json({
@@ -476,7 +556,33 @@ const returnOrderItem = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Delete/cancel unpaid pending Razorpay order when checkout is abandoned
+// @route   DELETE /orders/:id/unpaid
+// @access  Private
+const cancelUnpaidOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+console.log('is is cancelling',id);
 
+  const order = await Order.findOne({
+    _id: id,
+    user: req.user,
+    paymentMethod: 'RAZORPAY',
+    isPaid: false,
+    status: 'pending',
+  });
+
+  if (!order) {
+    return res.status.json({ success: false, message: 'Unpaid order not found or already processed' });
+  }
+
+  await order.deleteOne(); // Alternatively set status: 'cancelled-unpaid' to keep history
+
+  return res.json({ success: true, message: 'Unpaid order cancelled' });
+});
+
+// @desc    Generate invoice for order
+// @route   GET /orders/:id/invoice
+// @access  Private
 const generateInvoice = asyncHandler(async (req, res) => {
   const order = await Order.findOne({
     $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],
@@ -634,6 +740,42 @@ const generateInvoice = asyncHandler(async (req, res) => {
   await order.save();
 });
 
+// @desc   Mark Razorpay order payment as failed and clear cart
+// @route  POST /orders/:id/payment-failed
+// @access Private
+const markPaymentFailed = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const order = await Order.findOne({
+    _id: id,
+    user: req.user,
+    paymentMethod: 'RAZORPAY',
+    isPaid: false,
+  });
+
+  if (!order) {
+    return res.status(404).json({ message: 'Order not found' });
+  }
+
+  // Update status so it is not considered pending
+  order.status = 'payment_failed';
+  await order.save();
+
+  // Clear cart so user starts fresh
+  await Cart.findOneAndUpdate(
+    { user: req.user },
+    {
+      $set: {
+        items: [],
+        coupon: null,
+        discount: 0,
+        total: 0,
+      },
+    }
+  );
+
+  return res.json({ success: true });
+});
+
 export {
   createOrder,
   getOrderById,
@@ -643,4 +785,6 @@ export {
   returnOrder,
   returnOrderItem,
   generateInvoice,
+  cancelUnpaidOrder,
+  markPaymentFailed,
 };

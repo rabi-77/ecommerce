@@ -130,16 +130,18 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Order item not found" });
   }
   
-  // Check if the item has a return request
-  if (!orderItem.isReturned) {
-    return res.status(400).json({ message: "This item does not have a return request" });
+  // Validate there is a pending return request on this item
+  if (orderItem.returnRequestStatus !== 'pending') {
+    return res.status(400).json({ message: "This item does not have a pending return request" });
   }
   
   // Process the return verification
   if (approved) {
     // Update order item with verification details
+    orderItem.isReturned = true;
     orderItem.returnVerified = true;
     orderItem.returnVerifiedAt = Date.now();
+    orderItem.returnDate = Date.now();
     orderItem.returnNotes = notes || 'Return approved';
     orderItem.returnRequestStatus = 'approved';
     
@@ -204,7 +206,11 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     }
     
     // Update the order's return request status
-    order.returnRequestStatus = 'approved';
+    order.returnRequestStatus = order.items.every(item => 
+      item.isCancelled || 
+      !item.isReturned || 
+      (item.isReturned && (item.returnRequestStatus === 'approved' || item.returnRequestStatus === 'rejected'))
+    ) ? 'approved' : 'pending';
     
     // Save the updated order
     await order.save();
@@ -222,30 +228,18 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     });
   } else {
     // Reject the return request
+    orderItem.isReturned = false;
     orderItem.returnVerified = false;
     orderItem.returnVerifiedAt = Date.now();
     orderItem.returnNotes = notes || 'Return rejected';
     orderItem.returnRequestStatus = 'rejected';
     
-    // Check if all items in the order have been processed (approved or rejected)
-    const allItemsProcessed = order.items.every(item => 
+    // Update the order's return request status
+    order.returnRequestStatus = order.items.every(item => 
       item.isCancelled || 
       !item.isReturned || 
       (item.isReturned && (item.returnRequestStatus === 'approved' || item.returnRequestStatus === 'rejected'))
-    );
-    
-    // If all return requests have been processed, update the order's return request status
-    if (allItemsProcessed) {
-      // If at least one item was approved for return, keep the order status
-      const anyItemApproved = order.items.some(item => 
-        item.isReturned && item.returnRequestStatus === 'approved'
-      );
-      
-      if (!anyItemApproved) {
-        // If no items were approved, set the order's return request status to rejected
-        order.returnRequestStatus = 'rejected';
-      }
-    }
+    ) ? 'rejected' : 'pending';
     
     // Save the updated order
     await order.save();

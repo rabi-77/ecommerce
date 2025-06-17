@@ -2,6 +2,8 @@ import Order from "../models/orderModel.js";
 import razorpay from "../config/razorpay.js";
 import asyncHandler from "express-async-handler";
 import crypto from "crypto";
+import Cart from "../models/cartModel.js";
+import Coupon from "../models/couponModel.js";
 
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
     try {
@@ -102,6 +104,7 @@ console.log(order,'order');
 
     order.isPaid=true
     order.paidAt=Date.now()
+    order.status='pending'
     order.paymentResult={
         id:razorpay_payment_id,
         status:'succeeded',
@@ -113,6 +116,28 @@ console.log(order,'order');
     }
     await order.save()
     console.log(order,'order');
+    let appliedCoupon=order.coupon
+    let userId= req.user
+    await Cart.findOneAndUpdate(
+        { user: userId },
+        {
+          $set: {
+            items: [],
+            coupon: null,
+            discount: 0,
+            total: 0,
+          },
+        }
+      );
+    
+      if (appliedCoupon) {
+        try {
+          await Coupon.findByIdAndUpdate(appliedCoupon, { $inc: { usedCount: 1 } });
+          await Coupon.findByIdAndUpdate(appliedCoupon, { $push: { usedBy: userId } });
+        } catch (err) {
+          console.error("Failed to increment coupon usedCount", err);
+        }
+      } 
     
     res.status(200).json({success:true,message:'Payment verified successfully'})
 })

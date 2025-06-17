@@ -48,8 +48,15 @@ export const couponValidationRules = [
   body('startDate')
     .isISO8601()
     .withMessage('Invalid start date format. Use ISO 8601 format (YYYY-MM-DD)')
-    .custom((value, { req }) => {
-      if (new Date(value) < new Date()) {
+    .custom((value) => {
+      const inputDate = new Date(value);
+      const today = new Date();
+
+      // Set both dates to midnight (00:00:00)
+      inputDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+
+      if (inputDate < today) {
         throw new Error('Start date cannot be in the past');
       }
       return true;

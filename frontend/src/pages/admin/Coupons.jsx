@@ -56,8 +56,13 @@ const Coupons = () => {
 
   const getStatusBadge = (coupon) => {
     const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startDate = new Date(coupon.startDate);
     const expiryDate = new Date(coupon.expiryDate);
+    
+    // Set time to midnight for accurate day comparison
+    startDate.setHours(0, 0, 0, 0);
+    expiryDate.setHours(23, 59, 59, 999); 
 
     if (!coupon.isActive) {
       return <span className="px-2 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded-full">Inactive</span>;
@@ -198,7 +203,7 @@ const Coupons = () => {
                           )}
                         </button>
                         <Link
-                          to={`/admin/coupons/${coupon._id}`}
+                          to={`/admin/coupons/edit/${coupon._id}`}
                           className="text-blue-600 hover:text-blue-900"
                           title="Edit"
                         >

@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Check, ChevronRight, X, Loader2 } from 'lucide-react';
-import { createOrder, resetOrderCreated } from '../../features/order/orderSlice';
+import { createOrder, resetOrderCreated, clearOrderDetails, markPaymentFailed, cancelUnpaidPending } from '../../features/order/orderSlice';
 import { 
   fetchCart, 
-  validateCoupon, 
   applyCoupon, 
   removeCoupon, 
-  resetCouponValidation 
+  clearCartError 
 } from '../../features/cart/cartSlice';
 import { addAddressThunk, getAllAddressesThunk } from '../../features/userAddress/addressSlice';
 import { fetchUserProfile } from '../../features/userprofile/profileSlice';
 import RazorpayButton from '../../components/checkout/RazorpayButton';
 import CouponForm from '../../components/checkout/CouponForm';
 import { clearPaymentState } from '../../features/razorpay/paymentSlice';
+import api from '../../apis/user/api';
 
 const steps = [
   { id: 'cart', name: 'Cart' },
@@ -30,10 +30,12 @@ const Checkout = () => {
   
   const [activeStep, setActiveStep] = useState(1); // Start at shipping step
   const [selectedAddress, setSelectedAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('COD');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressFormLoading, setAddressFormLoading] = useState(false);
+  const cartCoupon   = useSelector(state => state.cart.coupon);
+  const cartSummary  = useSelector(state => state.cart.summary);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isCouponValidating, setIsCouponValidating] = useState(false);
   
@@ -45,7 +47,6 @@ const Checkout = () => {
     count: cartCount, 
     summary, 
     couponValidation,
-    appliedCoupon: cartAppliedCoupon,
     discountAmount
   } = useSelector((state) => state.cart);
   const { creatingOrder, orderCreated, order, error } = useSelector((state) => state.order);
@@ -64,36 +65,43 @@ const Checkout = () => {
     isDefault: false
   });
   
-  // Handle applied coupon from cart state
+  // Keep local appliedCoupon in sync with redux cart
   useEffect(() => {
-    if (cartAppliedCoupon) {
-      setAppliedCoupon(cartAppliedCoupon);
+    if (cartCoupon) {
+      setAppliedCoupon({
+        code: cartCoupon.code,
+        discountAmount: cartSummary?.discount || 0,
+        type: cartCoupon.discountType
+      });
+    } else {
+      setAppliedCoupon(null);
     }
-  }, [cartAppliedCoupon]);
+  }, [cartCoupon, cartSummary]);
 
   // Handle coupon application
-  const handleApplyCoupon = async (coupon) => {
+  const handleApplyCoupon = async (couponCode) => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+
+    setIsCouponValidating(true);
+    
     try {
-      setIsCouponValidating(true);
-      const result = await dispatch(validateCoupon({
-        code: coupon.code,
-        amount: summary?.subtotal || 0
-      })).unwrap();
+      const result = await dispatch(applyCoupon(couponCode.trim().toUpperCase()));
       
-      if (result.valid) {
-        dispatch(applyCoupon({
-          code: result.code,
-          discountAmount: result.discountAmount,
-          type: result.discountType
-        }));
+      if (applyCoupon.fulfilled.match(result)) {
+        const { coupon, discount } = result.payload;
+        // redux state will trigger useEffect sync, but set local for immediate UI
         setAppliedCoupon({
-          code: result.code,
-          discountAmount: result.discountAmount,
-          type: result.discountType
+          code: coupon.code,
+          discountAmount: discount,
+          type: coupon.discountType
         });
         toast.success('Coupon applied successfully!');
       } else {
-        toast.error(result.message || 'Invalid coupon code');
+        const errorMessage = result.payload || 'Invalid or expired coupon code';
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Error applying coupon:', error);
@@ -105,10 +113,16 @@ const Checkout = () => {
 
   // Handle coupon removal
   const handleRemoveCoupon = () => {
-    dispatch(removeCoupon());
-    dispatch(resetCouponValidation());
-    setAppliedCoupon(null);
-    toast.success('Coupon removed successfully');
+    dispatch(removeCoupon())
+      .unwrap()
+      .then(() => {
+        // redux state sync will clear it but clear local immediately
+        setAppliedCoupon(null);
+        toast.success('Coupon removed successfully');
+      })
+      .catch(error => {
+        toast.error(error || 'Failed to remove coupon');
+      });
   };
 
   // Get total price from summary
@@ -132,6 +146,12 @@ const Checkout = () => {
     }
   }, [dispatch, user, navigate, profileData]);
   
+  // Clear any stale order when Checkout mounts
+  useEffect(() => {
+    dispatch(clearOrderDetails());
+    dispatch(resetOrderCreated());
+  }, [dispatch]);
+  
   // Handle order creation success - separate effect
   useEffect(() => {
     if (orderCreated && order) {
@@ -139,7 +159,8 @@ const Checkout = () => {
         // Don't navigate yet, let the Razorpay button handle the payment
         return;
       } else if (paymentMethod === 'COD') {
-        navigate(`/order/success/${order._id}`);
+        const orderId = order?._id || order._id;
+        navigate(`/order/success/${orderId}`);
         dispatch(resetOrderCreated());
       }
     }
@@ -148,17 +169,33 @@ const Checkout = () => {
   // Handle payment success callback from RazorpayButton
   const handlePaymentSuccess = useCallback(() => {
     if (order) {
-      navigate(`/order/success/${order._id}`);
+      const orderId = order?._id || order._id;
+      navigate(`/order/success/${orderId}`);
       dispatch(resetOrderCreated());
     }
   }, [order, navigate, dispatch]);
 
   // Handle payment error callback from RazorpayButton
-  const handlePaymentError = useCallback((error) => {
-    toast.error(error || 'Payment failed. Please try again.');
+  const handlePaymentError = useCallback((errorMsg) => {
+    // If user simply dismissed the Razorpay modal, treat it as a cancellation – not a failure
+    const isCancelledByUser = errorMsg && errorMsg.toLowerCase().includes('cancelled');
+
+    toast.error(isCancelledByUser ? 'Payment cancelled' : (errorMsg || 'Payment failed. Please try again.'));
     setProcessingPayment(false);
-  }, []);
-  
+
+    // Only mark failure / redirect when it's an actual payment failure
+    if (!isCancelledByUser) {
+      if (order?._id) {
+        dispatch(markPaymentFailed(order._id)).finally(() => {
+          navigate(`/order/failure/${order._id}`);
+        });
+      } else {
+        dispatch(resetOrderCreated());
+        dispatch(clearOrderDetails());
+      }
+    }
+  }, [dispatch, navigate, order]);
+
   // Handle errors - separate effect
   useEffect(() => {
     if (error) {
@@ -242,9 +279,12 @@ const Checkout = () => {
       // Create the order
       const result = await dispatch(createOrder(orderData)).unwrap();
       
+      // backend returns { success:true, order:{ _id: .. } }
+      const orderId = result.order?._id || result._id;
+
       // If payment method is COD, redirect to success page
       if (paymentMethod === 'COD') {
-        navigate(`/order/success/${result._id}`);
+        navigate(`/order/success/${orderId}`);
       }
       // For Razorpay, the payment will be handled by the RazorpayButton component
       
@@ -254,6 +294,9 @@ const Checkout = () => {
       setProcessingPayment(false);
     }
   };
+
+  // Track unpaid Razorpay order for potential cleanup
+  const pendingOrderIdRef = useRef(null);
 
   const handleNext = () => {
     if (activeStep === 1 && !selectedAddress) {
@@ -702,21 +745,12 @@ const Checkout = () => {
                   </div>
                 </div>
                 
-                {paymentMethod === 'RAZORPAY' && (
+                {paymentMethod === 'RAZORPAY' && orderCreated && order && (
                   <div className="mt-4">
                     <RazorpayButton
-                      orderId={order._id}
-                      amount={Math.round(totalPrice * 100)}
-                      currency="INR"
-                      orderData={{
-                        receipt: `order_${Date.now()}`,
-                        name: 'Your Store Name',
-                        description: 'Order Payment',
-                        email: user?.email,
-                        contact: user?.phone
-                      }}
-                      onSuccess={handleRazorpaySuccess}
-                      onError={handleRazorpayError}
+                      order={order}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
                       buttonText="Pay with Razorpay"
                     />
                   </div>
@@ -778,28 +812,34 @@ const Checkout = () => {
                 </div>
               
                 {/* Coupon Form */}
-                <div className="mt-4">
-                  <CouponForm 
-                    onApplyCoupon={handleApplyCoupon}
-                    onRemoveCoupon={handleRemoveCoupon}
-                    appliedCoupon={appliedCoupon}
-                    isLoading={isCouponValidating}
-                  />
-                </div>
-              
-                {appliedCoupon?.discountAmount > 0 && (
+                {appliedCoupon ? (
                   <div className="flex justify-between py-2">
                     <div className="flex items-center">
                       <span className="text-gray-600">Discount</span>
-                      {appliedCoupon?.code && (
-                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          {appliedCoupon.code}
-                        </span>
-                      )}
+                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center gap-1">
+                        {appliedCoupon.code}
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="text-red-600 hover:text-red-800 ml-1"
+                          title="Remove coupon"
+                        >
+                          ✕
+                        </button>
+                      </span>
                     </div>
                     <span className="font-medium text-green-600">
                       -${parseFloat(appliedCoupon.discountAmount).toFixed(2)}
                     </span>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <CouponForm 
+                      onApplyCoupon={handleApplyCoupon}
+                      onRemoveCoupon={handleRemoveCoupon}
+                      appliedCoupon={appliedCoupon}
+                      isLoading={isCouponValidating}
+                    />
                   </div>
                 )}
               
@@ -881,11 +921,36 @@ const Checkout = () => {
     }
   };
 
+  // Cleanup: cancel unpaid pending order when user leaves checkout page
+  useEffect(() => {
+    return () => {
+      const orderId = pendingOrderIdRef.current;
+      if (orderId) {
+        api.delete(`/orders/${orderId}/unpaid`).catch(() => {});
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!orderCreated || paymentMethod !== 'RAZORPAY' || !order?._id) return;
+
+    const handleBeforeUnload = () => {
+      // Fire the thunk – browser may ignore the async call but this is the clean, single source of truth
+      dispatch(cancelUnpaidPending(order._id));
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup listener and run thunk on route change (component unmount)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      dispatch(cancelUnpaidPending(order._id));
+    };
+  }, [orderCreated, paymentMethod, order, dispatch]);
+
   // ... (rest of the component remains the same)
 
 
-// export default Checkout;
-  
   if (cartLoading) {
     return (
       <div className="flex justify-center items-center h-screen">

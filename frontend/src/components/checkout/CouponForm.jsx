@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch,useSelector } from 'react-redux';
 import { FaTimes, FaCheck } from 'react-icons/fa';
-import { validateCoupon, resetCouponValidation } from '../../features/cart/cartSlice';
+import { applyCoupon, removeCoupon } from '../../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 
 const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
@@ -24,24 +24,20 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
     
     setIsLoading(true);
     try {
-      const resultAction = await dispatch(validateCoupon(couponCode.trim().toUpperCase()));
+      const result = await dispatch(applyCoupon(couponCode.trim().toUpperCase()));
       
-      if (validateCoupon.fulfilled.match(resultAction)) {
-        const { valid, discountAmount, message } = resultAction.payload;
-        
-        if (valid) {
-          toast.success(message || 'Coupon applied successfully!');
-          onApplyCoupon({
-            code: couponCode.trim().toUpperCase(),
-            discountAmount,
-            type: couponValidation?.discountType,
-          });
-          setCouponCode('');
-        } else {
-          toast.error(message || 'Invalid coupon code');
-        }
+      if (applyCoupon.fulfilled.match(result)) {
+        const { coupon, discount } = result.payload;
+        onApplyCoupon({
+          code: coupon.code,
+          discountAmount: discount,
+          type: coupon.discountType,
+        });
+        setCouponCode('');
+        toast.success('Coupon applied successfully!');
       } else {
-        toast.error('Failed to validate coupon');
+        const errorMessage=result.payload 
+        toast.error(errorMessage||'invalid coupon');
       }
     } catch (error) {
       toast.error(error.message || 'An error occurred while applying the coupon');
@@ -51,8 +47,15 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
   };
 
   const handleRemoveCoupon = () => {
-    onRemoveCoupon();
-    dispatch(resetCouponValidation());
+    dispatch(removeCoupon())
+      .unwrap()
+      .then(() => {
+        onRemoveCoupon();
+        toast.success('Coupon removed successfully');
+      })
+      .catch(error => {
+        toast.error(error || 'Failed to remove coupon');
+      });
   };
 
   const handleChange = (e) => {

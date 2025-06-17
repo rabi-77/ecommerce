@@ -109,8 +109,8 @@ admin.get('/coupons', getAllCoupons);
 admin.get('/coupons/:id', getCouponById);
 admin.post('/coupons',(req,res,next)=>{console.log(req.body)
   console.log('fef')
-  next()}, createCoupon);
-admin.put('/coupons/:id', validate(couponValidationRules), updateCoupon);
+  next()},couponValidationRules, createCoupon);
+admin.put('/coupons/:id', couponValidationRules, updateCoupon);
 admin.delete('/coupons/:id', deleteCoupon);
 admin.patch('/coupons/:id/toggle', toggleCouponStatus);
 admin.post('/coupons/validate', validate(validateCouponRules), validateCoupon);

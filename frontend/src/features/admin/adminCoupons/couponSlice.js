@@ -65,7 +65,7 @@ export const createCoupon = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to create coupon'
+        error.response?.data?.message||error.response?.data?.errors[0].msg || 'Failed to create coupon'
       );
     }
   }
@@ -78,8 +78,9 @@ export const updateCoupon = createAsyncThunk(
       const response = await updateExistingCoupon({ id, ...couponData });
       return response.data;
     } catch (error) {
+      console.log(error.response?.data)
       return rejectWithValue(
-        error.response?.data?.message || 'Failed to update coupon'
+        error.response?.data?.message||error.response?.data?.errors[0].msg || 'Failed to update coupon'
       );
     }
   }

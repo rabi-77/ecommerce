@@ -66,7 +66,7 @@ export const getMyOrders = async (keyword = '', status = '') => {
 // Cancel entire order
 export const cancelOrder = async (orderId, reason) => {
   try {
-    const response = await api.put(`/orders/${orderId}/cancel`, { reason });
+    const response = await api.put(`/orders/${orderId}/cancel`, { status: "cancelled", reason });
     return response;
   } catch (error) {
     throw error;
@@ -103,6 +103,16 @@ export const returnOrderItem = async (orderId, itemId, reason) => {
   }
 };
 
+// Delete unpaid pending Razorpay order
+export const cancelUnpaidPending = async (orderId) => {
+  try {
+    const response = await api.delete(`/orders/${orderId}/unpaid`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Generate and download invoice
 export const downloadInvoice = async (orderId) => {
   try {
@@ -131,6 +141,16 @@ export const downloadInvoice = async (orderId) => {
   }
 };
 
+// Mark Razorpay payment as failed
+export const markPaymentFailed = async (orderId) => {
+  try {
+    const res = await api.post(`/orders/${orderId}/payment-failed`);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const orderService = {
   createOrder,
   getOrderDetails,
@@ -139,7 +159,9 @@ const orderService = {
   cancelOrderItem,
   returnOrder,
   returnOrderItem,
-  downloadInvoice
+  downloadInvoice,
+  cancelUnpaidPending,
+  markPaymentFailed,
 };
 
 export default orderService;

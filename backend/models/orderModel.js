@@ -41,14 +41,21 @@ const orderItemSchema = new mongoose.Schema({
   },
   returnRequestStatus: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', ''],
+    enum: ['pending', 'approved', 'rejected', 'partial-pending'],
     default: ''
   },
   cancellationReason: String,
   returnReason: String,
   cancellationDate: Date,
   returnDate: Date,
-  returnRequestDate: Date
+  returnRequestDate: Date,
+  // Admin verification fields
+  returnVerified: {
+    type: Boolean,
+    default: false
+  },
+  returnVerifiedAt: Date,
+  returnNotes: String
 });
 
 const orderSchema = new mongoose.Schema(
@@ -128,6 +135,15 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0.0
     },
+    // Coupon related fields
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coupon',
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0.0,
+    },
     discountAmount: {
       type: Number,
       required: true,
@@ -154,7 +170,7 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'cancelled', 'returned'],
+      enum: ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'cancelled', 'returned', 'payment_failed'],
       default: 'pending'
     },
     trackingNumber: String,
@@ -164,7 +180,7 @@ const orderSchema = new mongoose.Schema(
     returnDate: Date,
     returnRequestStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', ''],
+      enum: ['pending', 'approved', 'rejected', 'partial-pending', ''],
       default: ''
     },
     returnRequestDate: Date,

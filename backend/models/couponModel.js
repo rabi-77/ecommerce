@@ -62,6 +62,13 @@ const couponSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    // Track users who already redeemed this coupon
+    usedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,

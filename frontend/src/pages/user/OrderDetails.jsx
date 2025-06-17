@@ -6,7 +6,8 @@ import {
   cancelOrderItem, 
   returnOrderItem,
   downloadInvoice,
-  resetOrderState
+  resetOrderState,
+  resetOrderCreated
 } from '../../features/order/orderSlice';
 import { toast } from 'react-toastify';
 import { 
@@ -16,6 +17,7 @@ import {
   ArrowLeft,
   Check
 } from 'lucide-react';
+import RazorpayButton from '../../components/checkout/RazorpayButton';
 
 const OrderDetails = () => {
   const { id } = useParams();
@@ -117,6 +119,21 @@ const OrderDetails = () => {
       .catch((error) => {
         toast.error(error);
       });
+  };
+
+  const handlePaymentSuccess = () => {
+    toast.success('Payment successful');
+    // Refresh order details in background
+    dispatch(getOrderDetails(id));
+    // Navigate to success page so user sees confirmation
+    navigate(`/order/success/${id}`);
+    // Clear orderCreated so another checkout doesn't auto-redirect
+    dispatch(resetOrderCreated());
+  };
+
+  const handlePaymentError = (err) => {
+    console.error(err);
+    toast.error(err || 'Payment failed');
   };
 
   const handleDownloadInvoice = () => {
@@ -406,6 +423,18 @@ const OrderDetails = () => {
                 <span className="text-lg font-semibold">Total</span>
                 <span className="text-lg font-bold text-blue-600">${order.totalPrice.toFixed(2)}</span>
               </div>
+
+              {/* Pay Now button for unpaid Razorpay orders */}
+              {order.paymentMethod === 'RAZORPAY' && !order.isPaid && (
+                <div className="mt-4">
+                  <RazorpayButton
+                    order={order}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    autoLaunch={false}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
