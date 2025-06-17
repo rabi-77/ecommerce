@@ -7,7 +7,9 @@ import orderService, {
   cancelOrderItem as cancelOrderItemService,
   returnOrder as returnOrderService,
   returnOrderItem as returnOrderItemService,
-  downloadInvoice as downloadInvoiceService
+  downloadInvoice as downloadInvoiceService,
+  cancelUnpaidPending as cancelUnpaidPendingService,
+  markPaymentFailed as markPaymentFailedService,
 } from './orderService';
 
 const initialState = {
@@ -52,7 +54,11 @@ export const getOrderDetails = createAsyncThunk(
   'order/getDetails',
   async (orderId, thunkAPI) => {
     try {
+      console.log('orderis',orderId);
+      
       const response = await getOrderDetailsService(orderId);
+      console.log(response.data);
+      
       return response.data;
     } catch (error) {
       const message = 
@@ -164,6 +170,37 @@ export const returnOrderItem = createAsyncThunk(
         error.message ||
         error.toString();
       
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Delete unpaid pending order
+export const cancelUnpaidPending = createAsyncThunk(
+  'order/cancelUnpaid',
+  async (orderId, thunkAPI) => {
+    try {
+      const response = await cancelUnpaidPendingService(orderId);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response && error.response.data && error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Mark payment failed
+export const markPaymentFailed = createAsyncThunk(
+  'order/markPaymentFailed',
+  async (orderId, thunkAPI) => {
+    try {
+      const res = await markPaymentFailedService(orderId);
+      return res.data;
+    } catch (error) {
+      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -352,6 +389,16 @@ export const orderSlice = createSlice({
       })
       .addCase(returnOrderItem.rejected, (state, action) => {
         state.returningItem = false;
+        state.error = action.payload;
+      })
+      
+      // Cancel unpaid pending order (no state change needed except maybe error)
+      .addCase(cancelUnpaidPending.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      
+      // Mark payment failed
+      .addCase(markPaymentFailed.rejected, (state, action) => {
         state.error = action.payload;
       })
       

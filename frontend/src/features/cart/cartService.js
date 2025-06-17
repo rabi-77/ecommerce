@@ -1,5 +1,40 @@
 import api from '../../apis/user/api';
 
+// ======================
+// Coupon Related Functions
+// ======================
+
+export const validateCoupon = async (couponData) => {
+  try {
+    const response = await api.post('/coupons/validate', couponData);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const applyCouponToCart = async (couponCode) => {
+  try {
+    const response = await api.post('/cart/apply-coupon', { code: couponCode });
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const removeCouponFromCart = async () => {
+  try {
+    const response = await api.delete('/cart/coupon');
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ======================
+// Cart Item Functions
+// ======================
+
 // Get all cart items
 export const getCartItems = async () => {
   try {
@@ -33,6 +68,7 @@ export const updateCartItemQuantity = async (cartItemId, quantity) => {
 // Remove item from cart
 export const removeItemFromCart = async (cartItemId) => {
   try {
+    console.log("removing item from cart");
     const response = await api.delete(`/cart/${cartItemId}`);
     return response;
   } catch (error) {
@@ -43,7 +79,8 @@ export const removeItemFromCart = async (cartItemId) => {
 // Clear entire cart
 export const clearCartItems = async () => {
   try {
-    const response = await api.delete('/cart');
+    console.log("clearing cart");
+    const response = await api.delete('/cart/clear');
     return response;
   } catch (error) {
     throw error;

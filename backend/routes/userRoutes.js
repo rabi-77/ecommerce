@@ -13,7 +13,9 @@ import {uploadCategory} from '../middlewares/multerCheck.js'
 import { getUserAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../controllers/userAddressController.js'
 import {requestEmailChange, verifyEmailChange, changePassword} from '../controllers/userEmailController.js'
 import { addToWishlist, removeFromWishlist, getWishlist, checkWishlistItem, clearWishlist } from '../controllers/userWishlistController.js'
-import { addToCart, updateCartItem, removeFromCart, getCart, clearCart } from '../controllers/userCartController.js'
+import { addToCart, updateCartItem, removeFromCart, getCart, clearCart, applyCoupon, removeCoupon,validateCoupon } from '../controllers/userCartController.js'
+import {validateAndApplyCoupon,removeCoupon as removecpn,getCouponDetails} from '../controllers/user/userCouponController.js'
+import {createRazorpayOrder,verifyPayment,getRazorpayKey} from '../controllers/razorpayController.js'
 
 user.post('/register',register)
 user.post('/login',userLogin)
@@ -74,13 +76,23 @@ user.delete('/wishlist', verifyToken, clearWishlist)
 // Cart routes
 user.get('/cart', verifyToken, getCart)
 user.post('/cart', verifyToken, addToCart)
+user.delete('/cart/clear', verifyToken, clearCart);
+
+// Coupon routes
+user.post('/coupons/validate', verifyToken, validateCoupon);
+user.post('/cart/apply-coupon', verifyToken, applyCoupon);
+user.delete('/cart/coupon', verifyToken, removeCoupon);
 user.put('/cart/:cartItemId', verifyToken, updateCartItem)
 user.delete('/cart/:cartItemId', verifyToken, removeFromCart)
-user.delete('/cart', verifyToken, clearCart)
 
 //change password setup
 user.post('/change-email-request',verifyToken,requestEmailChange)
 user.get('/verify-email-change',verifyEmailChange)
 user.put('/change-password',verifyToken,changePassword)
+
+
+user.post('/create-order',verifyToken,createRazorpayOrder)
+user.post('/verify-payment',verifyToken,verifyPayment)
+user.get('/razorpay-key',verifyToken,getRazorpayKey)
 
 export default user

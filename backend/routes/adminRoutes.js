@@ -29,6 +29,16 @@ import { validate } from "../middlewares/validate.js";
 import {getAllOrders, updateOrderStatus, verifyReturnRequest} from '../controllers/admin/manageOrders.js'
 import { validateAdminStatusChange } from '../middlewares/orderValidation.js'
 import { getInventory, updateInventory, getInventoryHistory, getLowStockProducts } from '../controllers/admin/manageInventory.js'
+import { 
+  createCoupon, 
+  getAllCoupons, 
+  getCouponById, 
+  updateCoupon, 
+  deleteCoupon, 
+  toggleCouponStatus,
+  validateCoupon
+} from '../controllers/admin/manageCoupons.js'
+import { couponValidationRules, validateCouponRules } from '../validations/couponValidation.js';
 
 const admin = express.Router();
 
@@ -93,5 +103,16 @@ admin.get('/inventory', getInventory)
 admin.put('/inventory/:id', updateInventory)
 admin.get('/inventory/:id/history', getInventoryHistory)
 admin.get('/inventory/low-stock', getLowStockProducts)
+
+// Coupon Management
+admin.get('/coupons', getAllCoupons);
+admin.get('/coupons/:id', getCouponById);
+admin.post('/coupons',(req,res,next)=>{console.log(req.body)
+  console.log('fef')
+  next()},couponValidationRules, createCoupon);
+admin.put('/coupons/:id', couponValidationRules, updateCoupon);
+admin.delete('/coupons/:id', deleteCoupon);
+admin.patch('/coupons/:id/toggle', toggleCouponStatus);
+admin.post('/coupons/validate', validate(validateCouponRules), validateCoupon);
 
 export default admin;

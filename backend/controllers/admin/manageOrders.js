@@ -20,7 +20,6 @@ export const getAllOrders = asyncHandler(async (req, res) => {
     };
   }
   
-  
   if (status && status !== 'all') {
     query.status = status;
   }
@@ -87,9 +86,11 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   
   // Update additional fields based on status
   if (status === 'delivered') {
+    order.isPaid= true;
     order.isDelivered = true;
     order.deliveredAt = Date.now();
   } else if (status === 'cancelled') {
+    order.isPaid=false
     order.cancellationDate = Date.now();
   }
   
@@ -121,13 +122,40 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Order item not found" });
   }
   
-  if (!orderItem.isReturned) {
-    return res.status(400).json({ message: "This item does not have a return request" });
+  // Validate there is a pending return request on this item
+  if (orderItem.returnRequestStatus !== 'pending') {
+    return res.status(400).json({ message: "This item does not have a pending return request" });
   }
   
+  // Helper to recalculate order-level returnRequestStatus
+  function calculateOrderReturnStatus(order) {
+    const relevantItems = order.items.filter(item => !item.isCancelled);
+    const pendingCount = relevantItems.filter(item => item.returnRequestStatus === 'pending').length;
+    const approvedCount = relevantItems.filter(item => item.returnRequestStatus === 'approved').length;
+    const rejectedCount = relevantItems.filter(item => item.returnRequestStatus === 'rejected').length;
+
+    if (pendingCount > 0 && (approvedCount > 0 || rejectedCount > 0)) {
+      return 'partial-pending';
+    }
+    if (pendingCount > 0) {
+      return 'pending';
+    }
+    if (approvedCount > 0 && rejectedCount === 0) {
+      return 'approved';
+    }
+    if (rejectedCount > 0 && approvedCount === 0) {
+      return 'rejected';
+    }
+    // Mixed approved and rejected with no pending – fall back to partial-pending so admin can review
+    return 'partial-pending';
+  }
+
   if (approved) {
+    // Update order item with verification details
+    orderItem.isReturned = true;
     orderItem.returnVerified = true;
     orderItem.returnVerifiedAt = Date.now();
+    orderItem.returnDate = Date.now();
     orderItem.returnNotes = notes || 'Return approved';
     orderItem.returnRequestStatus = 'approved';
     
@@ -151,7 +179,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: "User not found" });
       }
       
-      
       if (!user.wallet) {
         user.wallet = {
           balance: 0,
@@ -159,12 +186,9 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         };
       }
       
-     
       const refundAmount = orderItem.totalPrice;
       
-      
       user.wallet.balance += refundAmount;
-      
       
       user.wallet.transactions.push({
         type: 'credit',
@@ -173,27 +197,22 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         date: Date.now()
       });
       
-      
       await user.save();
     }
-    
     
     const allItemsReturned = order.items.every(item => 
       item.isCancelled || (item.isReturned && item.returnRequestStatus === 'approved')
     );
-    
     
     if (allItemsReturned) {
       order.status = 'returned';
       order.returnDate = Date.now();
     }
     
-    
-    order.returnRequestStatus = 'approved';
-    
+    // Re-calculate order-level return status with new helper
+    order.returnRequestStatus = calculateOrderReturnStatus(order);
     
     await order.save();
-    
     
     const populatedOrder = await Order.findById(orderId)
       .populate('user', 'username email')
@@ -206,35 +225,17 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       order: populatedOrder
     });
   } else {
-    
+    // Reject the return request
+    orderItem.isReturned = false;
     orderItem.returnVerified = false;
     orderItem.returnVerifiedAt = Date.now();
     orderItem.returnNotes = notes || 'Return rejected';
     orderItem.returnRequestStatus = 'rejected';
     
-    
-    const allItemsProcessed = order.items.every(item => 
-      item.isCancelled || 
-      !item.isReturned || 
-      (item.isReturned && (item.returnRequestStatus === 'approved' || item.returnRequestStatus === 'rejected'))
-    );
-    
-    // If all return requests have been processed, update the order's return request status
-    if (allItemsProcessed) {
-      // If at least one item was approved for return, keep the order status
-      const anyItemApproved = order.items.some(item => 
-        item.isReturned && item.returnRequestStatus === 'approved'
-      );
-      
-      if (!anyItemApproved) {
-        
-        order.returnRequestStatus = 'rejected';
-      }
-    }
-    
+    // Re-calculate order-level return status with new helper
+    order.returnRequestStatus = calculateOrderReturnStatus(order);
     
     await order.save();
-    
     
     const populatedOrder = await Order.findById(orderId)
       .populate('user', 'username email')

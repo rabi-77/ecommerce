@@ -20,6 +20,8 @@ api.interceptors.request.use(
 // Create new order
 export const createOrder = async (orderData) => {
   try {
+    console.log(orderData,'d');
+    
     const response = await api.post('/orders', orderData);
     return response;
   } catch (error) {
@@ -33,7 +35,17 @@ export const getOrderDetails = async (orderId) => {
     const response = await api.get(`/orders/${orderId}`);
     return response;
   } catch (error) {
-    throw error;
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      throw new Error(error.response.data.message || 'Failed to fetch order details');
+    } else if (error.request) {
+      // The request was made but no response was received
+      throw new Error('No response received from server');
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      throw new Error('Failed to fetch order details');
+    }
   }
 };
 
@@ -54,7 +66,7 @@ export const getMyOrders = async (keyword = '', status = '') => {
 // Cancel entire order
 export const cancelOrder = async (orderId, reason) => {
   try {
-    const response = await api.put(`/orders/${orderId}/cancel`, { reason });
+    const response = await api.put(`/orders/${orderId}/cancel`, { status: "cancelled", reason });
     return response;
   } catch (error) {
     throw error;
@@ -91,6 +103,16 @@ export const returnOrderItem = async (orderId, itemId, reason) => {
   }
 };
 
+// Delete unpaid pending Razorpay order
+export const cancelUnpaidPending = async (orderId) => {
+  try {
+    const response = await api.delete(`/orders/${orderId}/unpaid`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Generate and download invoice
 export const downloadInvoice = async (orderId) => {
   try {
@@ -119,6 +141,16 @@ export const downloadInvoice = async (orderId) => {
   }
 };
 
+// Mark Razorpay payment as failed
+export const markPaymentFailed = async (orderId) => {
+  try {
+    const res = await api.post(`/orders/${orderId}/payment-failed`);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const orderService = {
   createOrder,
   getOrderDetails,
@@ -127,7 +159,9 @@ const orderService = {
   cancelOrderItem,
   returnOrder,
   returnOrderItem,
-  downloadInvoice
+  downloadInvoice,
+  cancelUnpaidPending,
+  markPaymentFailed,
 };
 
 export default orderService;

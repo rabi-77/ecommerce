@@ -18,6 +18,7 @@ import Orders from '../pages/user/Orders';
 import OrderDetails from '../pages/user/OrderDetails';
 import Checkout from '../pages/user/Checkout';
 import OrderSuccess from '../pages/user/OrderSuccess';
+import OrderFailure from '../pages/user/OrderFailure';
 
 // Profile components
 import ProfileLayout from "../pages/user/profile/ProfileLayout";
@@ -50,6 +51,7 @@ const UserRoutes = () => {
         <Route path="order/:id" element={<OrderDetails />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="order/success/:id" element={<OrderSuccess />} />
+        <Route path="order/failure/:id" element={<OrderFailure />} />
       </Route>
 
       {/* Profile Routes */}

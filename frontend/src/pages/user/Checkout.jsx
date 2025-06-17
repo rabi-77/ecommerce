@@ -1,12 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Check, ChevronRight, X } from 'lucide-react';
-import { createOrder, resetOrderCreated } from '../../features/order/orderSlice';
-import { fetchCart } from '../../features/cart/cartSlice';
+import { Check, ChevronRight, X, Loader2 } from 'lucide-react';
+import { createOrder, resetOrderCreated, clearOrderDetails, markPaymentFailed, cancelUnpaidPending } from '../../features/order/orderSlice';
+import { 
+  fetchCart, 
+  applyCoupon, 
+  removeCoupon, 
+  clearCartError 
+} from '../../features/cart/cartSlice';
 import { addAddressThunk, getAllAddressesThunk } from '../../features/userAddress/addressSlice';
 import { fetchUserProfile } from '../../features/userprofile/profileSlice';
+import RazorpayButton from '../../components/checkout/RazorpayButton';
+import CouponForm from '../../components/checkout/CouponForm';
+import { clearPaymentState } from '../../features/razorpay/paymentSlice';
+import api from '../../apis/user/api';
 
 const steps = [
   { id: 'cart', name: 'Cart' },
@@ -22,12 +31,24 @@ const Checkout = () => {
   const [activeStep, setActiveStep] = useState(1); // Start at shipping step
   const [selectedAddress, setSelectedAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressFormLoading, setAddressFormLoading] = useState(false);
+  const cartCoupon   = useSelector(state => state.cart.coupon);
+  const cartSummary  = useSelector(state => state.cart.summary);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [isCouponValidating, setIsCouponValidating] = useState(false);
   
   const { user } = useSelector((state) => state.auth);
   const { profileData } = useSelector(state => state.profile);
-  const { items: cartItems, loading: cartLoading, count: cartCount, summary } = useSelector((state) => state.cart);
+  const { 
+    items: cartItems, 
+    loading: cartLoading, 
+    count: cartCount, 
+    summary, 
+    couponValidation,
+    discountAmount
+  } = useSelector((state) => state.cart);
   const { creatingOrder, orderCreated, order, error } = useSelector((state) => state.order);
   const { addresses, addressLoading, addressError } = useSelector(state => state.address);
   
@@ -44,6 +65,66 @@ const Checkout = () => {
     isDefault: false
   });
   
+  // Keep local appliedCoupon in sync with redux cart
+  useEffect(() => {
+    if (cartCoupon) {
+      setAppliedCoupon({
+        code: cartCoupon.code,
+        discountAmount: cartSummary?.discount || 0,
+        type: cartCoupon.discountType
+      });
+    } else {
+      setAppliedCoupon(null);
+    }
+  }, [cartCoupon, cartSummary]);
+
+  // Handle coupon application
+  const handleApplyCoupon = async (couponCode) => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+
+    setIsCouponValidating(true);
+    
+    try {
+      const result = await dispatch(applyCoupon(couponCode.trim().toUpperCase()));
+      
+      if (applyCoupon.fulfilled.match(result)) {
+        const { coupon, discount } = result.payload;
+        // redux state will trigger useEffect sync, but set local for immediate UI
+        setAppliedCoupon({
+          code: coupon.code,
+          discountAmount: discount,
+          type: coupon.discountType
+        });
+        toast.success('Coupon applied successfully!');
+      } else {
+        const errorMessage = result.payload || 'Invalid or expired coupon code';
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      toast.error(error.message || 'Failed to apply coupon');
+    } finally {
+      setIsCouponValidating(false);
+    }
+  };
+
+  // Handle coupon removal
+  const handleRemoveCoupon = () => {
+    dispatch(removeCoupon())
+      .unwrap()
+      .then(() => {
+        // redux state sync will clear it but clear local immediately
+        setAppliedCoupon(null);
+        toast.success('Coupon removed successfully');
+      })
+      .catch(error => {
+        toast.error(error || 'Failed to remove coupon');
+      });
+  };
+
   // Get total price from summary
   const totalPrice = summary?.total || 0;
   
@@ -65,14 +146,56 @@ const Checkout = () => {
     }
   }, [dispatch, user, navigate, profileData]);
   
+  // Clear any stale order when Checkout mounts
+  useEffect(() => {
+    dispatch(clearOrderDetails());
+    dispatch(resetOrderCreated());
+  }, [dispatch]);
+  
   // Handle order creation success - separate effect
   useEffect(() => {
     if (orderCreated && order) {
-      navigate(`/order/success/${order._id}`);
+      if (paymentMethod === 'RAZORPAY') {
+        // Don't navigate yet, let the Razorpay button handle the payment
+        return;
+      } else if (paymentMethod === 'COD') {
+        const orderId = order?._id || order._id;
+        navigate(`/order/success/${orderId}`);
+        dispatch(resetOrderCreated());
+      }
+    }
+  }, [orderCreated, order, navigate, dispatch, paymentMethod]);
+
+  // Handle payment success callback from RazorpayButton
+  const handlePaymentSuccess = useCallback(() => {
+    if (order) {
+      const orderId = order?._id || order._id;
+      navigate(`/order/success/${orderId}`);
       dispatch(resetOrderCreated());
     }
-  }, [orderCreated, order, navigate, dispatch]);
-  
+  }, [order, navigate, dispatch]);
+
+  // Handle payment error callback from RazorpayButton
+  const handlePaymentError = useCallback((errorMsg) => {
+    // If user simply dismissed the Razorpay modal, treat it as a cancellation – not a failure
+    const isCancelledByUser = errorMsg && errorMsg.toLowerCase().includes('cancelled');
+
+    toast.error(isCancelledByUser ? 'Payment cancelled' : (errorMsg || 'Payment failed. Please try again.'));
+    setProcessingPayment(false);
+
+    // Only mark failure / redirect when it's an actual payment failure
+    if (!isCancelledByUser) {
+      if (order?._id) {
+        dispatch(markPaymentFailed(order._id)).finally(() => {
+          navigate(`/order/failure/${order._id}`);
+        });
+      } else {
+        dispatch(resetOrderCreated());
+        dispatch(clearOrderDetails());
+      }
+    }
+  }, [dispatch, navigate, order]);
+
   // Handle errors - separate effect
   useEffect(() => {
     if (error) {
@@ -116,6 +239,65 @@ const Checkout = () => {
     });
   };
   
+  const handleSubmitOrder = async () => {
+    if (!selectedAddress) {
+      toast.error('Please select a shipping address');
+      return;
+    }
+    
+    if (!paymentMethod) {
+      toast.error('Please select a payment method');
+      return;
+    }
+    
+    try {
+      setProcessingPayment(true);
+      
+      // Get the selected address details
+      const address = addresses.find(addr => addr._id === selectedAddress);
+      
+      // Prepare order data
+      const orderData = {
+        shippingAddress: address,
+        paymentMethod,
+        items: cartItems.map(item => ({
+          product: item.product._id,
+          variant: item.variant._id,
+          quantity: item.quantity,
+          price: item.product.price
+        })),
+        itemsPrice: summary.subtotal,
+        taxPrice: 0, // Add tax calculation if needed
+        shippingPrice: 0, // Add shipping calculation if needed
+        totalPrice: summary.total,
+        coupon: appliedCoupon ? {
+          code: appliedCoupon.code,
+          discount: appliedCoupon.discountAmount
+        } : null
+      };
+      
+      // Create the order
+      const result = await dispatch(createOrder(orderData)).unwrap();
+      
+      // backend returns { success:true, order:{ _id: .. } }
+      const orderId = result.order?._id || result._id;
+
+      // If payment method is COD, redirect to success page
+      if (paymentMethod === 'COD') {
+        navigate(`/order/success/${orderId}`);
+      }
+      // For Razorpay, the payment will be handled by the RazorpayButton component
+      
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error(error.message || 'Failed to create order');
+      setProcessingPayment(false);
+    }
+  };
+
+  // Track unpaid Razorpay order for potential cleanup
+  const pendingOrderIdRef = useRef(null);
+
   const handleNext = () => {
     if (activeStep === 1 && !selectedAddress) {
       toast.error('Please select a shipping address');
@@ -201,25 +383,34 @@ const Checkout = () => {
       // Error is already handled in the thunk and displayed via useEffect
     } finally {
       setAddressFormLoading(false);
+      setProcessingPayment(false);
     }
   };
   
-  const handlePaymentMethodChange = (event) => {
-    setPaymentMethod(event.target.value);
+  const handleRazorpaySuccess = async (paymentResponse) => {
+    try {
+      setProcessingPayment(true);
+      // Create order with Razorpay payment details
+      await dispatch(createOrder({
+        addressId: selectedAddress,
+        paymentMethod: 'RAZORPAY',
+        paymentDetails: {
+          razorpay_payment_id: paymentResponse.razorpay_payment_id,
+          razorpay_order_id: paymentResponse.razorpay_order_id,
+          razorpay_signature: paymentResponse.razorpay_signature
+        }
+      })).unwrap();
+    } catch (error) {
+      console.error('Order submission after payment failed:', error);
+      toast.error('Order creation failed after payment');
+      setProcessingPayment(false);
+    }
   };
   
-  const handlePlaceOrder = () => {
-    if (!selectedAddress) {
-      toast.error('Please select a shipping address');
-      return;
-    }
-    
-    const orderData = {
-      addressId: selectedAddress,
-      paymentMethod
-    };
-    
-    dispatch(createOrder(orderData));
+  const handleRazorpayError = (error) => {
+    console.error('Razorpay payment failed:', error);
+    toast.error('Payment failed. Please try again.');
+    setProcessingPayment(false);
   };
   
   const getStepContent = (step) => {
@@ -503,7 +694,7 @@ const Checkout = () => {
             <div className="mt-4">
               <div className="space-y-4">
                 <div 
-                  className={`p-4 rounded-lg border-2 ${paymentMethod === 'COD' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} cursor-pointer`}
+                  className={`p-4 rounded-lg border-2 ${paymentMethod === 'COD' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} cursor-pointer mb-3`}
                   onClick={() => setPaymentMethod('COD')}
                 >
                   <div className="flex items-start">
@@ -528,126 +719,238 @@ const Checkout = () => {
                   </div>
                 </div>
                 
-                {/* Additional payment methods can be added here */}
+                <div 
+                  className={`p-4 rounded-lg border-2 ${paymentMethod === 'RAZORPAY' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} cursor-pointer mb-3`}
+                  onClick={() => setPaymentMethod('RAZORPAY')}
+                >
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        id="payment-razorpay"
+                        name="payment-method"
+                        type="radio"
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        checked={paymentMethod === 'RAZORPAY'}
+                        onChange={() => setPaymentMethod('RAZORPAY')}
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="payment-razorpay" className="font-medium text-gray-900 block">
+                        Pay with Razorpay
+                      </label>
+                      <p className="text-gray-500 mt-1">
+                        Secure payment via credit/debit card, UPI, net banking
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {paymentMethod === 'RAZORPAY' && orderCreated && order && (
+                  <div className="mt-4">
+                    <RazorpayButton
+                      order={order}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                      buttonText="Pay with Razorpay"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         );
         
-      case 3: // Review
+        case 3: // Review
         return (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">
-              Order Summary
-            </h2>
-            <div className="space-y-4">
-              {cartItems && cartItems.length > 0 ? cartItems.map((item) => (
-                <div key={item._id} className="py-2 border-b border-gray-100 last:border-b-0">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 w-16 h-16 overflow-hidden rounded">
-                      <img 
-                        src={item.product.images[0]} 
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="ml-4 flex-1">
-                      <h3 className="text-base font-medium text-gray-900">
-                        {item.product.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Size: {item.variant.size} | Qty: {item.quantity}
-                      </p>
-                      <p className="text-sm text-gray-700 mt-1">
-                        <span className="font-medium">
-                          ${parseFloat(item.product.price || 0).toFixed(2)}
-                        </span> for each
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-base font-medium text-gray-900">
-                        ${(parseFloat(item.product.price || 0) * item.quantity).toFixed(2)}
-                      </p>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">
+                Order Summary
+              </h2>
+              <div className="space-y-4">
+                {cartItems && cartItems.length > 0 ? cartItems.map((item) => (
+                  <div key={item._id} className="py-2 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 w-16 h-16 overflow-hidden rounded">
+                        <img 
+                          src={item.product.images[0]} 
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="ml-4 flex-1">
+                        <h3 className="text-base font-medium text-gray-900">
+                          {item.product.name}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Size: {item.variant.size} | Qty: {item.quantity}
+                        </p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          <span className="font-medium">
+                            ${parseFloat(item.product.price || 0).toFixed(2)}
+                          </span> for each
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-base font-medium text-gray-900">
+                          ${(parseFloat(item.product.price || 0) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )) : (
-                <div className="py-4 text-center text-gray-500">
-                  No items in cart
-                </div>
-              )}
+                )) : (
+                  <div className="py-4 text-center text-gray-500">
+                    No items in cart
+                  </div>
+                )}
               
-              <div className="border-t border-gray-200 my-4"></div>
+                <div className="border-t border-gray-200 my-4"></div>
               
-              <div className="flex justify-between py-2">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${summary?.subtotal ? parseFloat(summary.subtotal).toFixed(2) : '0.00'}</span>
-              </div>
-              
-              {summary?.discount > 0 && (
                 <div className="flex justify-between py-2">
-                  <span className="text-gray-600">Discount</span>
-                  <span className="font-medium text-green-600">-${parseFloat(summary.discount).toFixed(2)}</span>
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">${summary?.subtotal ? parseFloat(summary.subtotal).toFixed(2) : '0.00'}</span>
                 </div>
-              )}
               
-              <div className="flex justify-between py-2">
-                <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">$0.00</span>
-              </div>
+                {/* Coupon Form */}
+                {appliedCoupon ? (
+                  <div className="flex justify-between py-2">
+                    <div className="flex items-center">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center gap-1">
+                        {appliedCoupon.code}
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="text-red-600 hover:text-red-800 ml-1"
+                          title="Remove coupon"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    </div>
+                    <span className="font-medium text-green-600">
+                      -${parseFloat(appliedCoupon.discountAmount).toFixed(2)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <CouponForm 
+                      onApplyCoupon={handleApplyCoupon}
+                      onRemoveCoupon={handleRemoveCoupon}
+                      appliedCoupon={appliedCoupon}
+                      isLoading={isCouponValidating}
+                    />
+                  </div>
+                )}
               
-              <div className="flex justify-between py-2 font-semibold text-lg border-t border-gray-200 pt-3 mt-1">
-                <span>Total</span>
-                <span>${summary?.total ? parseFloat(summary.total).toFixed(2) : '0.00'}</span>
+                <div className="border-t border-gray-200 my-4"></div>
+              
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-medium">$0.00</span>
+                </div>
+              
+                <div className="flex justify-between py-2 font-semibold text-lg border-t border-gray-200 pt-3 mt-1">
+                  <span>Total</span>
+                  <span>
+                    ${summary?.total ? parseFloat(summary.total).toFixed(2) : '0.00'}
+                  </span>
+                </div>
               </div>
             </div>
             
-            <div className="border-t border-gray-200 my-6"></div>
-            
-            <h3 className="text-lg font-semibold mb-2">
-              Shipping
-            </h3>
-            
-            {addresses && selectedAddress && (
-              <div className="mb-6">
-                {addresses.filter(addr => addr._id === selectedAddress).map((address) => (
-                  <div key={address._id} className="text-gray-700">
-                    <p className="font-medium">
-                      {address.name}
-                    </p>
-                    <p>
-                      {address.addressLine1}
-                      {address.addressLine2 && <>, {address.addressLine2}</>}
-                    </p>
-                    <p>
-                      {address.city}, {address.state}, {address.postalCode}
-                    </p>
-                    <p>
-                      {address.country}
-                    </p>
-                    <p>
-                      Phone: {address.phoneNumber}
-                    </p>
-                  </div>
-                ))}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold mb-2">
+                Shipping
+              </h3>
+              
+              {addresses && selectedAddress && (
+                <div className="mb-6">
+                  {addresses.filter(addr => addr._id === selectedAddress).map((address) => (
+                    <div key={address._id} className="text-gray-700">
+                      <p className="font-medium">
+                        {address.name}
+                      </p>
+                      <p>
+                        {address.addressLine1}
+                        {address.addressLine2 && <>, {address.addressLine2}</>}
+                      </p>
+                      <p>
+                        {address.city}, {address.state}, {address.postalCode}
+                      </p>
+                      <p>
+                        {address.country}
+                      </p>
+                      <p>
+                        Phone: {address.phoneNumber}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">
+                  Payment
+                </h3>
+                
+                <div className="space-y-2">
+                  <p className="text-gray-700">
+                    {paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment (Razorpay)'}
+                  </p>
+                  
+                  {paymentMethod === 'RAZORPAY' && order && (
+                    <div className="mt-4">
+                      <RazorpayButton
+                        order={order}
+                        onSuccess={handlePaymentSuccess}
+                        onError={handlePaymentError}
+                        loading={processingPayment}
+                        buttonText={processingPayment ? 'Processing Payment...' : 'Pay Now'}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            
-            <h3 className="text-lg font-semibold mb-2">
-              Payment
-            </h3>
-            
-            <p className="text-gray-700">
-              {paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod}
-            </p>
+            </div>
           </div>
         );
         
       default:
-        return <Typography>Unknown step</Typography>;
+        return <div>Unknown step</div>;
     }
   };
-  
+
+  // Cleanup: cancel unpaid pending order when user leaves checkout page
+  useEffect(() => {
+    return () => {
+      const orderId = pendingOrderIdRef.current;
+      if (orderId) {
+        api.delete(`/orders/${orderId}/unpaid`).catch(() => {});
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!orderCreated || paymentMethod !== 'RAZORPAY' || !order?._id) return;
+
+    const handleBeforeUnload = () => {
+      // Fire the thunk – browser may ignore the async call but this is the clean, single source of truth
+      dispatch(cancelUnpaidPending(order._id));
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup listener and run thunk on route change (component unmount)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      dispatch(cancelUnpaidPending(order._id));
+    };
+  }, [orderCreated, paymentMethod, order, dispatch]);
+
+  // ... (rest of the component remains the same)
+
+
   if (cartLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -706,9 +1009,13 @@ const Checkout = () => {
                   </div>
                 )}
                 
-                {stepIdx !== steps.length - 1 ? (
-                  <div className="absolute top-4 right-0 hidden h-0.5 w-5 bg-gray-200 lg:block" aria-hidden="true" style={{ width: '100%', right: '-50%' }} />
-                ) : null}
+                {stepIdx !== steps.length - 1 && (
+                  <div 
+                    className="absolute top-4 right-0 hidden h-0.5 w-5 bg-gray-200 lg:block" 
+                    aria-hidden="true" 
+                    style={{ width: '100%', right: '-50%' }} 
+                  />
+                )}
               </li>
             ))}
           </ol>
@@ -729,7 +1036,7 @@ const Checkout = () => {
               {activeStep === steps.length - 1 ? (
                 <button
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  onClick={handlePlaceOrder}
+                  onClick={handleSubmitOrder}
                   disabled={creatingOrder}
                 >
                   {creatingOrder ? (
@@ -787,6 +1094,7 @@ const Checkout = () => {
       </div>
     </div>
   );
+
 };
 
 export default Checkout;
