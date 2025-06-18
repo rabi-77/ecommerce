@@ -107,7 +107,7 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['COD','RAZORPAY'], 
+      enum: ['COD','RAZORPAY','WALLET'], 
       default: 'COD'
     },
     paymentResult: {
@@ -184,6 +184,10 @@ const orderSchema = new mongoose.Schema(
       default: ''
     },
     returnRequestDate: Date,
+    refundToWallet: {
+      type: Number,
+      default: 0
+    },
     invoice: {
       url: String,
       generatedAt: Date

@@ -2,8 +2,6 @@ import Order from "../../models/orderModel.js";
 import User from "../../models/userModel.js";
 import Product from "../../models/productModel.js";
 import asyncHandler from "express-async-handler";
-import { creditWallet } from "../../services/walletService.js";
-import Coupon from "../../models/couponModel.js";
 
 export const getAllOrders = asyncHandler(async (req, res) => {
   const { page = 1, size = 10, keyword = "", status = "all", sort = "newest" } = req.query;
@@ -21,6 +19,7 @@ export const getAllOrders = asyncHandler(async (req, res) => {
       ]
     };
   }
+  
   
   if (status && status !== 'all') {
     query.status = status;
@@ -92,17 +91,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     order.isDelivered = true;
     order.deliveredAt = Date.now();
   } else if (status === 'cancelled') {
-    // If payment was already collected (wallet or razorpay), refund to user wallet
-    if (order.isPaid && ['WALLET', 'RAZORPAY'].includes(order.paymentMethod)) {
-      await creditWallet(order.user, order.totalPrice, {
-        orderId: order._id,
-        source: 'refund',
-        description: 'Refund for cancelled order',
-      });
-      order.refundToWallet = (order.refundToWallet || 0) + order.totalPrice;
-    }
-
-    order.isPaid = false;
+    order.isPaid=false
     order.cancellationDate = Date.now();
   }
   
@@ -139,29 +128,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "This item does not have a pending return request" });
   }
   
-  // Helper to recalculate order-level returnRequestStatus
-  function calculateOrderReturnStatus(order) {
-    const relevantItems = order.items.filter(item => !item.isCancelled);
-    const pendingCount = relevantItems.filter(item => item.returnRequestStatus === 'pending').length;
-    const approvedCount = relevantItems.filter(item => item.returnRequestStatus === 'approved').length;
-    const rejectedCount = relevantItems.filter(item => item.returnRequestStatus === 'rejected').length;
-
-    if (pendingCount > 0 && (approvedCount > 0 || rejectedCount > 0)) {
-      return 'partial-pending';
-    }
-    if (pendingCount > 0) {
-      return 'pending';
-    }
-    if (approvedCount > 0 && rejectedCount === 0) {
-      return 'approved';
-    }
-    if (rejectedCount > 0 && approvedCount === 0) {
-      return 'rejected';
-    }
-    // Mixed approved and rejected with no pending – fall back to partial-pending so admin can review
-    return 'partial-pending';
-  }
-
   if (approved) {
     // Update order item with verification details
     orderItem.isReturned = true;
@@ -186,55 +152,58 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       (order.paymentMethod === 'COD' && order.isDelivered);
     
     if (shouldProcessRefund) {
-      // Calculate accurate refund with coupon rules
-      const remainingSubtotal = order.items.filter(it => !(it._id.toString() === itemId) && !it.isCancelled && !(it.isReturned && it.returnRequestStatus==='approved')).reduce((sum,it)=>sum + it.totalPrice,0);
-
-      let minSpend = 0;
-      if (order.coupon) {
-        const couponDoc = await Coupon.findById(order.coupon).select('minimumAmount');
-        if (couponDoc) minSpend = couponDoc.minimumAmount;
+      const user = await User.findById(order.user);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
-
-      const couponStillApplies = remainingSubtotal >= minSpend;
-      const newDiscount = couponStillApplies ? order.couponDiscount : 0;
-      const newPayable = remainingSubtotal - newDiscount;
-
-      const amountPaidOnline = order.totalPrice;
-      const alreadyRefunded = order.refundToWallet || 0;
-
-      let refundAmount = 0;
-      if (couponStillApplies) {
-        // Pro-rate the coupon discount to this item so customer only gets back what they actually paid
-        const discountShare = (orderItem.totalPrice / order.itemsPrice) * (order.couponDiscount || 0);
-        refundAmount = orderItem.totalPrice - discountShare;
-      } else {
-        // Coupon revoked – fall back to differential method
-        refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
+      
+      
+      if (!user.wallet) {
+        user.wallet = {
+          balance: 0,
+          transactions: []
+        };
       }
-
-      if (refundAmount > 0) {
-        await creditWallet(order.user, refundAmount, {
-          orderId: order._id,
-          source: 'refund',
-          description: `Refund for returned item ${orderItem.product}`,
-        });
-        order.refundToWallet = alreadyRefunded + refundAmount;
-      }
+      
+     
+      const refundAmount = orderItem.totalPrice;
+      
+      
+      user.wallet.balance += refundAmount;
+      
+      
+      user.wallet.transactions.push({
+        type: 'credit',
+        amount: refundAmount,
+        description: `Refund for returned item in order #${order.orderNumber}`,
+        date: Date.now()
+      });
+      
+      
+      await user.save();
     }
+    
     
     const allItemsReturned = order.items.every(item => 
       item.isCancelled || (item.isReturned && item.returnRequestStatus === 'approved')
     );
+    
     
     if (allItemsReturned) {
       order.status = 'returned';
       order.returnDate = Date.now();
     }
     
-    // Re-calculate order-level return status with new helper
-    order.returnRequestStatus = calculateOrderReturnStatus(order);
+    // Update the order's return request status
+    order.returnRequestStatus = order.items.every(item => 
+      item.isCancelled || 
+      !item.isReturned || 
+      (item.isReturned && (item.returnRequestStatus === 'approved' || item.returnRequestStatus === 'rejected'))
+    ) ? 'approved' : 'pending';
+    
     
     await order.save();
+    
     
     const populatedOrder = await Order.findById(orderId)
       .populate('user', 'username email')
@@ -254,10 +223,16 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     orderItem.returnNotes = notes || 'Return rejected';
     orderItem.returnRequestStatus = 'rejected';
     
-    // Re-calculate order-level return status with new helper
-    order.returnRequestStatus = calculateOrderReturnStatus(order);
+    // Update the order's return request status
+    order.returnRequestStatus = order.items.every(item => 
+      item.isCancelled || 
+      !item.isReturned || 
+      (item.isReturned && (item.returnRequestStatus === 'approved' || item.returnRequestStatus === 'rejected'))
+    ) ? 'rejected' : 'pending';
+    
     
     await order.save();
+    
     
     const populatedOrder = await Order.findById(orderId)
       .populate('user', 'username email')

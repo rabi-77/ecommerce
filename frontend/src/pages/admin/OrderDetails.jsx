@@ -267,29 +267,29 @@ const OrderDetails = () => {
                         Cancelled
                       </span>
                     )}
-                    {item.isReturned && item.returnRequestStatus === 'pending' && (
+                    {item.returnRequestStatus === 'pending' && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                         Return Requested
                       </span>
                     )}
-                    {item.isReturned && item.returnRequestStatus === 'approved' && (
+                    {item.returnRequestStatus === 'approved' && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         Return Approved
                       </span>
                     )}
-                    {item.isReturned && item.returnRequestStatus === 'rejected' && (
+                    {item.returnRequestStatus === 'rejected' && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                         Return Rejected
                       </span>
                     )}
-                    {!item.isCancelled && !item.isReturned && (
+                    {!item.isCancelled && !item.returnRequestStatus && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         Active
                       </span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {item.isReturned && item.returnRequestStatus === 'pending' && (
+                    {item.returnRequestStatus === 'pending' && (
                       <button
                         onClick={() => openReturnModal(item._id)}
                         className="text-indigo-600 hover:text-indigo-900"

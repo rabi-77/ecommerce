@@ -6,7 +6,7 @@ import Coupon from "../models/couponModel.js";
 // import fs from 'fs';
 // import path from 'path';
 import asyncHandler from "express-async-handler";
-
+import { creditWallet, debitWallet } from "../services/walletService.js";
 
 const createOrder = asyncHandler(async (req, res) => {
   const { address, paymentMethod = "COD" } = req.body;
@@ -14,7 +14,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const userId = req.user;
   console.log("so finally im here right", req.body, req.user.addresses, "ad");
-
 
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "items.product",
@@ -202,7 +201,28 @@ console.log(shippingAddress,'shippingAddress');
     return res.status(201).json({ success: true, order: createdOrder });
   }
 
-  // COD flow: clear cart & update coupon usage
+  // Wallet payment: attempt to debit and mark paid
+  if (paymentMethod === 'WALLET') {
+    try {
+      await debitWallet(userId, totalPrice, {
+        orderId: createdOrder._id,
+        source: 'order',
+        description: `Payment for order ${createdOrder.orderNumber}`,
+      });
+
+      createdOrder.isPaid = true;
+      createdOrder.paidAt = Date.now();
+      createdOrder.paymentMethod='WALLET'
+      createdOrder.paymentResult = { status: 'completed' };
+      await createdOrder.save();
+    } catch (err) {
+      // If wallet debit fails, delete the order to avoid orphan record
+      await Order.findByIdAndDelete(createdOrder._id);
+      return res.status(400).json({ success: false, message: err.message || 'Wallet payment failed' });
+    }
+  }
+
+  // COD or Wallet flow: clear cart & update coupon usage
   await Cart.findOneAndUpdate(
     { user: userId },
     {
@@ -335,6 +355,21 @@ const cancelOrder = asyncHandler(async (req, res) => {
     );
   }
 
+  // Wallet refund for full order cancellation
+  if (order.isPaid && order.paymentMethod !== 'COD') {
+    const alreadyRefunded = order.refundToWallet || 0;
+    const amountPaidOnline = order.totalPrice;
+    const refundAmount = amountPaidOnline - alreadyRefunded;
+    if (refundAmount > 0) {
+      await creditWallet(order.user, refundAmount, {
+        orderId: order._id,
+        source: 'refund',
+        description: 'Order cancelled refund',
+      });
+      order.refundToWallet = alreadyRefunded + refundAmount;
+    }
+  }
+
   const updatedOrder = await order.save();
 
   res.json({
@@ -396,6 +431,38 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
       $inc: { "variants.$.stock": item.quantity },
     }
   );
+
+  // Wallet refund for partial cancellation
+  if (order.isPaid && order.paymentMethod !== 'COD') {
+    const remainingSubtotal = order.items.filter(i => !i.isCancelled).reduce((sum,i)=>sum + i.totalPrice,0);
+    let minSpend = 0;
+    if (order.coupon) {
+      const couponDoc = await Coupon.findById(order.coupon).select('minimumAmount');
+      if (couponDoc) minSpend = couponDoc.minimumAmount;
+    }
+    const couponStillApplies = remainingSubtotal >= minSpend;
+    const newDiscount = couponStillApplies ? order.couponDiscount : 0;
+    const newPayable = remainingSubtotal - newDiscount;
+    const amountPaidOnline = order.totalPrice;
+    const alreadyRefunded = order.refundToWallet || 0;
+    let refundAmount = 0;
+    if (couponStillApplies) {
+      // Refund only what the user actually paid for this item by subtracting its share of the coupon discount
+      const discountShare = (item.totalPrice / order.itemsPrice) * (order.couponDiscount || 0);
+      refundAmount = item.totalPrice - discountShare;
+    } else {
+      // Coupon revoked – use differential calculation to avoid over-refund
+      refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
+    }
+    if (refundAmount > 0) {
+      await creditWallet(order.user, refundAmount, {
+        orderId: order._id,
+        source: 'refund',
+        description: `Refund for cancelling item ${itemId}`,
+      });
+      order.refundToWallet = alreadyRefunded + refundAmount;
+    }
+  }
 
   // Check if all items are cancelled, update order status if needed
   const allItemsCancelled = order.items.every((item) => item.isCancelled);

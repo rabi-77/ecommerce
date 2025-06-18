@@ -51,6 +51,7 @@ const Checkout = () => {
   } = useSelector((state) => state.cart);
   const { creatingOrder, orderCreated, order, error } = useSelector((state) => state.order);
   const { addresses, addressLoading, addressError } = useSelector(state => state.address);
+  const { balance: walletBalance } = useSelector(state => state.wallet);
   
   const [addressForm, setAddressForm] = useState({
     name: '',
@@ -158,7 +159,7 @@ const Checkout = () => {
       if (paymentMethod === 'RAZORPAY') {
         // Don't navigate yet, let the Razorpay button handle the payment
         return;
-      } else if (paymentMethod === 'COD') {
+      } else if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
         const orderId = order?._id || order._id;
         navigate(`/order/success/${orderId}`);
         dispatch(resetOrderCreated());
@@ -282,8 +283,8 @@ const Checkout = () => {
       // backend returns { success:true, order:{ _id: .. } }
       const orderId = result.order?._id || result._id;
 
-      // If payment method is COD, redirect to success page
-      if (paymentMethod === 'COD') {
+      // If payment method is COD or WALLET, redirect to success page
+      if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
         navigate(`/order/success/${orderId}`);
       }
       // For Razorpay, the payment will be handled by the RazorpayButton component
@@ -720,6 +721,32 @@ const Checkout = () => {
                 </div>
                 
                 <div 
+                  className={`p-4 rounded-lg border-2 ${paymentMethod === 'WALLET' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} cursor-pointer mb-3`}
+                  onClick={() => setPaymentMethod('WALLET')}
+                >
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        id="payment-wallet"
+                        name="payment-method"
+                        type="radio"
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        checked={paymentMethod === 'WALLET'}
+                        onChange={() => setPaymentMethod('WALLET')}
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="payment-wallet" className="font-medium text-gray-900 block">
+                        Pay with Wallet (Balance: ₹{walletBalance.toFixed(2)})
+                      </label>
+                      <p className="text-gray-500 mt-1">
+                        Instant payment using your store wallet balance
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div 
                   className={`p-4 rounded-lg border-2 ${paymentMethod === 'RAZORPAY' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} cursor-pointer mb-3`}
                   onClick={() => setPaymentMethod('RAZORPAY')}
                 >
@@ -896,7 +923,7 @@ const Checkout = () => {
                 
                 <div className="space-y-2">
                   <p className="text-gray-700">
-                    {paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment (Razorpay)'}
+                    {paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod === 'WALLET' ? 'Wallet Payment' : 'Online Payment (Razorpay)'}
                   </p>
                   
                   {paymentMethod === 'RAZORPAY' && order && (
@@ -974,6 +1001,10 @@ const Checkout = () => {
     );
   }
   
+  const payable = summary?.total || 0;
+  const walletShort   = paymentMethod==='WALLET' && walletBalance < payable;
+  const canPlaceOrder = !walletShort && selectedAddress && paymentMethod && !creatingOrder;
+
   return (
     <div className="container mx-auto px-4 py-8 mt-16 max-w-6xl">
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -1037,7 +1068,7 @@ const Checkout = () => {
                 <button
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   onClick={handleSubmitOrder}
-                  disabled={creatingOrder}
+                  disabled={!canPlaceOrder}
                 >
                   {creatingOrder ? (
                     <>
@@ -1092,6 +1123,9 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+      {walletShort && (
+        <p className="text-red-500 text-sm">Wallet balance is insufficient for this total. Apply coupon or choose another payment method.</p>
+      )}
     </div>
   );
 

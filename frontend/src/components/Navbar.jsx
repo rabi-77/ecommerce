@@ -14,7 +14,8 @@ import {
   ShoppingBag,
   Phone,
   Info,
-  Package
+  Package,
+  Wallet as WalletIcon
 } from "lucide-react";
 import { clearError, logoutThunk } from "../features/authSlice";
 import { toast } from "react-toastify";
@@ -256,6 +257,15 @@ export default function Navbar() {
                 
                 <button 
                   className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 w-full text-left cursor-pointer transition-colors"
+                  onClick={(e) => handleProfileNavigation(e, '/wallet')}
+                  type="button"
+                >
+                  <WalletIcon size={16} className="mr-3 text-gray-500" />
+                  <span className="font-medium">My Wallet</span>
+                </button>
+                
+                <button 
+                  className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 w-full text-left cursor-pointer transition-colors"
                   onClick={(e) => handleProfileNavigation(e, '/profile/edit')}
                   type="button"
                 >
@@ -341,6 +351,14 @@ export default function Navbar() {
               <Info size={20} className="mr-4 text-gray-500" />
               About
             </Link>
+            <Link 
+              to="/wallet" 
+              className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <WalletIcon size={18} className="mr-3" />
+              My Wallet
+            </Link>
           </nav>
           
           {/* User section in mobile menu */}
@@ -379,6 +397,15 @@ export default function Navbar() {
                   className="block w-full text-left px-3 py-2 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
                 >
                   My Orders
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/wallet');
+                  }}
+                  className="block w-full text-left px-3 py-2 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
+                >
+                  My Wallet
                 </button>
                 <button
                   onClick={() => {

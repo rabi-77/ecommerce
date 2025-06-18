@@ -16,6 +16,7 @@ import { addToWishlist, removeFromWishlist, getWishlist, checkWishlistItem, clea
 import { addToCart, updateCartItem, removeFromCart, getCart, clearCart, applyCoupon, removeCoupon,validateCoupon } from '../controllers/userCartController.js'
 import {validateAndApplyCoupon,removeCoupon as removecpn,getCouponDetails} from '../controllers/user/userCouponController.js'
 import {createRazorpayOrder,verifyPayment,getRazorpayKey} from '../controllers/razorpayController.js'
+import { getWalletBalance } from '../controllers/walletController.js';
 
 user.post('/register',register)
 user.post('/login',userLogin)
@@ -84,6 +85,9 @@ user.post('/cart/apply-coupon', verifyToken, applyCoupon);
 user.delete('/cart/coupon', verifyToken, removeCoupon);
 user.put('/cart/:cartItemId', verifyToken, updateCartItem)
 user.delete('/cart/:cartItemId', verifyToken, removeFromCart)
+
+// Wallet route
+user.get('/wallet', verifyToken, getWalletBalance);
 
 //change password setup
 user.post('/change-email-request',verifyToken,requestEmailChange)
