@@ -186,9 +186,11 @@ const Cart = () => {
     navigate('/checkout');
   };
 
-  // Calculate discounted price
-  const getDiscountedPrice = (price, discount) => {
-    return price * (1 - (discount || 0) / 100);
+  // Return price considering offer
+  const getEffectivePrice = (product) => {
+    console.log('koi',product);
+    
+    return product.effectivePrice ?? product.price;
   };
 
   // Check if an item is valid for checkout
@@ -350,13 +352,13 @@ const Cart = () => {
                               
                               <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto">
                                 <div className="text-right">
-                                  {item.product.discount > 0 && (
+                                  {item.product.effectivePrice && item.product.effectivePrice < item.product.price && (
                                     <span className="text-sm text-gray-500 line-through mr-2">
-                                      ${item.product.price.toFixed(2)}
+                                      ₹{item.product.price}
                                     </span>
                                   )}
                                   <span className={`text-lg font-semibold ${isValid ? 'text-gray-900' : 'text-gray-500'}`}>
-                                    ${getDiscountedPrice(item.product.price, item.product.discount).toFixed(2)}
+                                    ₹{getEffectivePrice(item.product)}
                                   </span>
                                 </div>
                                 
@@ -399,18 +401,30 @@ const Cart = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="text-gray-900">${summary.subtotal.toFixed(2)}</span>
+                    <span className="text-gray-900">₹{summary?.subtotal ? summary.subtotal.toFixed(2) : '0.00'}</span>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Discount</span>
-                    <span className="text-green-600">-${summary.discount.toFixed(2)}</span>
-                  </div>
+                  {((summary?.productDiscount || 0) > 0 || (summary?.couponDiscount || 0) > 0) && (
+                    <>
+                      {summary?.productDiscount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Offer Discount</span>
+                          <span className="text-green-600">-₹{summary.productDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {summary?.couponDiscount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Coupon Discount</span>
+                          <span className="text-green-600">-₹{summary.couponDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   
                   <div className="pt-4 border-t border-gray-200">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Total</span>
-                      <span className="text-xl font-bold text-gray-900">${summary.total.toFixed(2)}</span>
+                      <span className="text-xl font-bold text-gray-900">₹{summary?.total ? summary.total.toFixed(2) : '0.00'}</span>
                     </div>
                   </div>
                 </div>

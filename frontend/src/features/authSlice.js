@@ -158,6 +158,7 @@ const initialState = {
   showOtpModal: false,
   token: null,
   otpExpiresAt: null, // Added to track OTP expiration time
+  invalidReferral: localStorage.getItem('invalidReferral') === 'true',
   // Separate loading states for different actions
   verifyLoading: false,
   resendLoading: false,
@@ -283,12 +284,22 @@ const authSlice = createSlice({
         state.error = false;
         state.errormessage = null;
       })
-      .addCase(verifyOtp.fulfilled, (state) => {
+      .addCase(verifyOtp.fulfilled, (state, action) => {
         state.verifyLoading = false;
         state.success = true;
         state.isVerified = true;
         state.email = null;
         state.showOtpModal = false;
+
+        // Handle referral status
+        const status = action.payload?.referralStatus;
+        if (status === 'INVALID') {
+          state.invalidReferral = true;
+          localStorage.setItem('invalidReferral', 'true');
+        } else {
+          state.invalidReferral = false;
+          localStorage.removeItem('invalidReferral');
+        }
       })
       .addCase(verifyOtp.rejected, (state, action) => {
         state.verifyLoading = false;

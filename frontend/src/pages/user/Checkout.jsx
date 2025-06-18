@@ -71,7 +71,7 @@ const Checkout = () => {
     if (cartCoupon) {
       setAppliedCoupon({
         code: cartCoupon.code,
-        discountAmount: cartSummary?.discount || 0,
+        discountAmount: cartSummary?.couponDiscount || 0,
         type: cartCoupon.discountType
       });
     } else {
@@ -92,11 +92,11 @@ const Checkout = () => {
       const result = await dispatch(applyCoupon(couponCode.trim().toUpperCase()));
       
       if (applyCoupon.fulfilled.match(result)) {
-        const { coupon, discount } = result.payload;
+        const { coupon, summary } = result.payload;
         // redux state will trigger useEffect sync, but set local for immediate UI
         setAppliedCoupon({
           code: coupon.code,
-          discountAmount: discount,
+          discountAmount: summary.couponDiscount,
           type: coupon.discountType
         });
         toast.success('Coupon applied successfully!');
@@ -814,13 +814,13 @@ const Checkout = () => {
                         </p>
                         <p className="text-sm text-gray-700 mt-1">
                           <span className="font-medium">
-                            ${parseFloat(item.product.price || 0).toFixed(2)}
+                            ₹{parseFloat(item.product.price || 0).toFixed(2)}
                           </span> for each
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-base font-medium text-gray-900">
-                          ${(parseFloat(item.product.price || 0) * item.quantity).toFixed(2)}
+                          ₹{(parseFloat(item.product.price || 0) * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -835,7 +835,7 @@ const Checkout = () => {
               
                 <div className="flex justify-between py-2">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">${summary?.subtotal ? parseFloat(summary.subtotal).toFixed(2) : '0.00'}</span>
+                  <span className="font-medium">₹{summary?.subtotal ? parseFloat(summary.subtotal).toFixed(2) : '0.00'}</span>
                 </div>
               
                 {/* Coupon Form */}
@@ -856,7 +856,7 @@ const Checkout = () => {
                       </span>
                     </div>
                     <span className="font-medium text-green-600">
-                      -${parseFloat(appliedCoupon.discountAmount).toFixed(2)}
+                      -₹{parseFloat(appliedCoupon.discountAmount).toFixed(2)}
                     </span>
                   </div>
                 ) : (
@@ -880,7 +880,7 @@ const Checkout = () => {
                 <div className="flex justify-between py-2 font-semibold text-lg border-t border-gray-200 pt-3 mt-1">
                   <span>Total</span>
                   <span>
-                    ${summary?.total ? parseFloat(summary.total).toFixed(2) : '0.00'}
+                    ₹{summary?.total ? parseFloat(summary.total).toFixed(2) : '0.00'}
                   </span>
                 </div>
               </div>
@@ -1097,13 +1097,19 @@ const Checkout = () => {
               <div className="space-y-3">
                 <div className="flex justify-between text-base font-medium text-gray-900">
                   <p>Items ({cartCount || 0})</p>
-                  <p>${summary?.subtotal ? parseFloat(summary.subtotal).toFixed(2) : '0.00'}</p>
+                  <p>₹{summary?.subtotal ? parseFloat(summary.subtotal).toFixed(2) : '0.00'}</p>
                 </div>
                 
-                {summary?.discount > 0 && (
+                {summary?.productDiscount > 0 && (
                   <div className="flex justify-between text-base font-medium text-green-600 mt-2">
-                    <p>Discount</p>
-                    <p>-${parseFloat(summary.discount).toFixed(2)}</p>
+                    <p>Offer Discount</p>
+                    <p>-₹{parseFloat(summary.productDiscount).toFixed(2)}</p>
+                  </div>
+                )}
+                {summary?.couponDiscount > 0 && (
+                  <div className="flex justify-between text-base font-medium text-green-600 mt-2">
+                    <p>Coupon Discount</p>
+                    <p>-₹{parseFloat(summary.couponDiscount).toFixed(2)}</p>
                   </div>
                 )}
                 
@@ -1116,7 +1122,7 @@ const Checkout = () => {
                 
                 <div className="flex justify-between text-base font-medium text-gray-900 mt-2">
                   <p>Total</p>
-                  <p className="text-lg font-bold">${summary?.total ? parseFloat(summary.total).toFixed(2) : '0.00'}</p>
+                  <p className="text-lg font-bold">₹{summary?.total ? parseFloat(summary.total).toFixed(2) : '0.00'}</p>
                 </div>
               </div>
             </div>

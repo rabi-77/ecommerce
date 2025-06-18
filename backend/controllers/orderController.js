@@ -7,6 +7,7 @@ import Coupon from "../models/couponModel.js";
 // import path from 'path';
 import asyncHandler from "express-async-handler";
 import { creditWallet, debitWallet } from "../services/walletService.js";
+import { fetchActiveOffers, applyBestOffer } from "../services/offerService.js";
 
 const createOrder = asyncHandler(async (req, res) => {
   const { address, paymentMethod = "COD" } = req.body;
@@ -45,6 +46,10 @@ console.log(shippingAddress,'shippingAddress');
   }
 
   // Validate cart items and calculate prices
+  const productIdsForOffer = cart.items.map(ci => ci.product._id);
+  const categoryIdsForOffer = cart.items.map(ci => ci.product.category?._id).filter(Boolean);
+  const offerMaps = await fetchActiveOffers(productIdsForOffer, categoryIdsForOffer);
+
   let itemsPrice = 0;
   let discountAmount = 0;
   const orderItems = [];
@@ -75,10 +80,13 @@ console.log(shippingAddress,'shippingAddress');
     }
 
     // Calculate prices
+    const { effectivePrice, appliedOffer, discountPercent } = (() => {
+      const res = applyBestOffer(product, offerMaps);
+      return { effectivePrice: res.effectivePrice, appliedOffer: res.appliedOffer, discountPercent: res.discountPercent };
+    })();
     const price = product.price;
-    const discount = product.discount || 0;
-    const discountedPrice = price * (1 - discount / 100);
-    const itemTotal = discountedPrice * cartItem.quantity;
+    const discount = discountPercent;
+    const discountedPrice = effectivePrice;
 
     // Add to totals
     itemsPrice += price * cartItem.quantity;
@@ -95,7 +103,7 @@ console.log(shippingAddress,'shippingAddress');
       quantity: cartItem.quantity,
       price: price,
       discount: discount,
-      totalPrice: itemTotal,
+      totalPrice: discountedPrice,
     });
 
     // Update product stock

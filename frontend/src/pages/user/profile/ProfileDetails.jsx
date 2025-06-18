@@ -14,7 +14,9 @@ const ProfileDetails = () => {
   const { profileData, loading, errorMessage, error } = useSelector(
     (state) => state.profile
   );
-console.log(profileData,'and',user,'details')
+  const invalidReferral = useSelector((state) => state.auth.invalidReferral);
+  console.log(profileData, 'and', user, 'details')
+
   useEffect(() => {
     // Show error toast if there's an error
     if (error && errorMessage) {
@@ -22,11 +24,10 @@ console.log(profileData,'and',user,'details')
       dispatch(clearProfileErrors())
     }
     console.log('hrtres');
-    
-    
-    console.log(error,errorMessage);
-    
-  }, [error, errorMessage,dispatch]);
+    // console.log(profileData, 'and', user, 'details')
+    console.log(error, errorMessage);
+    // console.log(user, 'user')
+  }, [error, errorMessage, dispatch]);
 
   useEffect(() => {
     console.log("kjhgfd", user);
@@ -35,12 +36,11 @@ console.log(profileData,'and',user,'details')
   }, [dispatch]);
 
   // Use profile data if available, otherwise fall back to user data from auth state
-  const userData =  profileData || user;
-  
+  const userData = profileData || user;
   // Get the default address from the user data
   const defaultAddress = userData?.defaultAddress;
-  
-  console.log(profileData,'fdfghjk',user);
+  // console.log(userData, 'userData')
+  console.log(profileData, 'fdfghjk', user);
 
   if (loading) {
     return (
@@ -107,6 +107,33 @@ console.log(profileData,'and',user,'details')
                 {userData?.googleId ? "Google Account" : "Email & Password"}
               </p>
             </div>
+            {userData?.referralCode && (
+              <div className="md:col-span-2">
+                <p className="text-sm text-gray-500 mb-1">Your Referral Code</p>
+                <div className="flex items-center space-x-2">
+                  <p className="font-mono font-semibold text-lg tracking-wider bg-gray-100 px-3 py-1 rounded">
+                    {userData.referralCode}
+                  </p>
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    onClick={() => {
+                      navigator.clipboard.writeText(userData.referralCode);
+                      toast.success('Referral code copied!');
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            )}
+            {invalidReferral && (
+              <div className="md:col-span-2 bg-yellow-50 border border-yellow-300 rounded p-3">
+                <p className="text-yellow-800 text-sm">
+                  The referral code you entered during registration was invalid. You can still share your own code below.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

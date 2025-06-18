@@ -1,5 +1,5 @@
 import productModel from "../models/productModel.js";
-
+import { fetchActiveOffers, applyBestOffer } from '../services/offerService.js';
 
 const getProducts = async (req, res) => {
     console.log('jfng');
@@ -81,22 +81,32 @@ const getProducts = async (req, res) => {
 
     const total =await productModel.countDocuments(query);
 
+    const now = new Date();
+    const productIds = products.map(p => p._id);
+    const categoryIds = products.map(p => p.category?._id).filter(Boolean);
 
-    // const transformedProducts = products.map(product => ({
-    //     ...product,
-    //     category: product.category ? { 
-    //       _id: product.category._id, 
-    //       name: product.category.name 
-    //     } : null,
-    //     brand: product.brand ? { 
-    //       _id: product.brand._id, 
-    //       name: product.brand.name 
-    //     } : null
-    //   }));
+    const offerMaps = await fetchActiveOffers(productIds, categoryIds);
+
+    const transformedProducts = products.map(prod => {
+      const { effectivePrice, appliedOffer } = applyBestOffer(prod, offerMaps);
+      console.log(appliedOffer,'appliedOffer');
+      
+      return {
+        ...prod,
+        effectivePrice,
+        appliedOffer: appliedOffer ? {
+          _id: appliedOffer._id,
+          percentage: appliedOffer.percentage,
+          amount: appliedOffer.amount,
+          type: appliedOffer.type,
+        } : null,
+      };
+    });
+
     console.log('k');
     
     res.status(200).json({
-      products,
+      products: transformedProducts,
       totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
       totalProducts: total,

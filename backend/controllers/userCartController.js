@@ -2,6 +2,7 @@ import Cart from '../models/cartModel.js';
 import productModel from '../models/productModel.js';
 import wishlistModel from '../models/wishlistModel.js';
 import Coupon from '../models/couponModel.js';
+import { fetchActiveOffers, applyBestOffer } from '../services/offerService.js';
 
 // Maximum quantity allowed per product (across all variants)
 const MAX_QUANTITY_PER_PRODUCT = 10;
@@ -364,7 +365,7 @@ export const removeFromCart = async (req, res) => {
 export const getCart = async (req, res) => {
   try {
     const userId = req.user;
-
+    
     // Find the user's cart
     const cart = await Cart.findOne({ user: userId })
       .populate({
@@ -383,7 +384,8 @@ export const getCart = async (req, res) => {
         count: 0,
         summary: {
           subtotal: 0,
-          discount: 0,
+          productDiscount: 0,
+          couponDiscount: 0,
           total: 0
         }
       });
@@ -410,29 +412,70 @@ export const getCart = async (req, res) => {
              variant.stock >= item.quantity;
     });
 
-    // Calculate cart totals
+    // Collect product & category ids present in cart to fetch relevant offers
+    const productIds = availableCartItems.map(it => it.product._id);
+    const categoryIds = availableCartItems
+      .map(it => it.product.category?._id)
+      .filter(Boolean);
+
+    // Fetch active offers for these ids
+    const offerMaps = await fetchActiveOffers(productIds, categoryIds);
+
     let subtotal = 0;
-    let discount = 0;
+    let productDiscount = 0;
     let total = 0;
 
     availableCartItems.forEach(item => {
-      const itemPrice = item.product.price;
-      const itemDiscount = item.product.discount || 0;
-      const discountedPrice = itemPrice * (1 - itemDiscount / 100);
-      
-      subtotal += itemPrice * item.quantity;
-      discount += (itemPrice - discountedPrice) * item.quantity;
-      total += discountedPrice * item.quantity;
+      const productDoc = item.product;
+      const { effectivePrice, appliedOffer } = applyBestOffer(productDoc, offerMaps);
+
+      // attach computed fields for frontend
+      item.product = {
+        ...productDoc.toObject(),
+        effectivePrice,
+        appliedOffer: appliedOffer
+          ? {
+              _id: appliedOffer._id,
+              percentage: appliedOffer.percentage,
+              amount: appliedOffer.amount,
+              type: appliedOffer.type,
+            }
+          : null,
+      };
+
+      subtotal += productDoc.price * item.quantity;
+      productDiscount += (productDoc.price - effectivePrice) * item.quantity;
+      total += effectivePrice * item.quantity;
     });
+
+    // populate coupon for response
+    await cart.populate({
+      path: 'coupon',
+      select: 'code discountType discountValue maxDiscountAmount'
+    });
+
+    // If coupon already applied, use stored values
+    let couponDiscount = 0;
+    if (cart.coupon) {
+      couponDiscount = cart.discount || 0;
+      total = cart.total || total - couponDiscount;
+    }
 
     res.json({
       cartItems: availableCartItems,
       count: availableCartItems.length,
       summary: {
         subtotal: parseFloat(subtotal.toFixed(2)),
-        discount: parseFloat(discount.toFixed(2)),
+        productDiscount: parseFloat(productDiscount.toFixed(2)),
+        couponDiscount: parseFloat(couponDiscount.toFixed(2)),
         total: parseFloat(total.toFixed(2))
-      }
+      },
+      coupon: cart.coupon ? {
+        code: cart.coupon.code,
+        discountType: cart.coupon.discountType,
+        discountValue: cart.coupon.discountValue,
+        maxDiscountAmount: cart.coupon.maxDiscountAmount
+      } : null
     });
   } catch (err) {
     console.error('Error fetching cart:', err.message);
@@ -511,7 +554,7 @@ export const applyCoupon = async (req, res) => {
       });
     }
 
-    if(coupon.usedBy && coupon.usedBy.some(id=>id.toString()===userId.toString())){
+    if(coupon.usedBy&&coupon.usedBy.some(id=>id.toString()===userId.toString())){
       return res.status(400).json({success:false,message:"you have already used this coupon"})
     }
 
@@ -541,39 +584,36 @@ export const applyCoupon = async (req, res) => {
       });
     }
 
-    // Get user's cart with populated items
-    const cart = await Cart.findOne({ user: userId })
-    .populate('items.product')
-    .populate({
-      path: 'coupon',
-      select: 'code discountType discountValue maxDiscountAmount' // Only populate necessary fields
-    });
-  
-  console.log('Cart with populated coupon:', JSON.stringify({
-    _id: cart._id,
-    coupon: cart.coupon,
-    items: cart.items.map(i => i.product.name)
-  }, null, 2));
-  
-  // Instead of checking cart.coupon, check if coupon exists and is not null
-  if (cart.coupon && cart.coupon._id) {
-    console.log('Coupon already applied:', cart.coupon);
-    return res.status(400).json({
-      success: false,
-      message: 'A coupon is already applied to this cart',
-      coupon: {
-        code: cart.coupon.code,
-        type: cart.coupon.discountType
+    // Get user's cart to check minimum purchase amount
+    const cart = await Cart.findOne({ user: userId }).populate('items.product');
+    if (cart) {
+      const subtotal = cart.items.reduce((sum, item) => {
+        const price = item.product.discountedPrice || item.product.price;
+        return sum + (price * item.quantity);
+      }, 0);
+
+      if (subtotal < coupon.minPurchaseAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum purchase amount of $${coupon.minPurchaseAmount} required to use this coupon`,
+          minPurchaseAmount: coupon.minPurchaseAmount,
+          currentSubtotal: subtotal
+        });
       }
+    }
+
+    // Fetch offers relevant to items
+    const prodIds = cart.items.map(it => it.product._id);
+    const catIds = cart.items.map(it => it.product.category?._id).filter(Boolean);
+    const offerMaps = await fetchActiveOffers(prodIds, catIds);
+
+    // Calculate subtotal using effective price after offers
+    let subtotal = 0;
+    cart.items.forEach(item => {
+      const { effectivePrice } = applyBestOffer(item.product, offerMaps);
+      subtotal += effectivePrice * item.quantity;
     });
-  }
-console.log('coupon');
-    // Calculate subtotal
-    const subtotal = cart.items.reduce((sum, item) => {
-      const price = item.product.discountedPrice || item.product.price;
-      return sum + (price * item.quantity);
-    }, 0);
-console.log('subtotal',subtotal);
+
     // Check minimum purchase amount
     if (subtotal < coupon.minPurchaseAmount) {
       console.log('Minimum purchase amount not met');
@@ -582,29 +622,36 @@ console.log('subtotal',subtotal);
         message: `Minimum purchase amount of $${coupon.minPurchaseAmount} required to use this coupon`
       });
     }
-console.log('coupon',coupon);
-    // Calculate discount
-    let discount = 0;
+
+    // Calculate coupon discount
+    let couponDiscount = 0;
     if (coupon.discountType === 'percentage') {
-      discount = (subtotal * coupon.discountValue) / 100;
+      couponDiscount = (subtotal * coupon.discountValue) / 100;
       // Apply max discount if set
-      if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
-        discount = coupon.maxDiscountAmount;
+      if (coupon.maxDiscountAmount && couponDiscount > coupon.maxDiscountAmount) {
+        couponDiscount = coupon.maxDiscountAmount;
       }
     } else {
       // Fixed amount
-      discount = Math.min(coupon.discountValue, subtotal);
+      couponDiscount = Math.min(coupon.discountValue, subtotal);
     }
 
     // Update cart with coupon
     cart.coupon = coupon._id;
-    cart.discount = discount;
-    cart.total = subtotal - discount;
+    cart.discount = couponDiscount;
+    cart.total = subtotal - couponDiscount;
     
     await cart.save();
 
     // Populate the coupon details for the response
     await cart.populate('coupon');
+
+    // compute product-level discount again for summary
+    let productDiscount = 0;
+    cart.items.forEach(item => {
+      const { effectivePrice } = applyBestOffer(item.product, offerMaps);
+      productDiscount += (item.product.price - effectivePrice) * item.quantity;
+    });
 
     res.json({
       success: true,
@@ -614,8 +661,12 @@ console.log('coupon',coupon);
         discountValue: coupon.discountValue,
         maxDiscountAmount: coupon.maxDiscountAmount
       },
-      discount,
-      total: cart.total
+      summary: {
+        subtotal: parseFloat(subtotal.toFixed(2)),
+        productDiscount: parseFloat(productDiscount.toFixed(2)),
+        couponDiscount: parseFloat(couponDiscount.toFixed(2)),
+        total: parseFloat((subtotal - couponDiscount).toFixed(2))
+      }
     });
 
   } catch (error) {
@@ -655,11 +706,18 @@ export const removeCoupon = async (req, res) => {
       });
     }
 
-    // Calculate subtotal without coupon
-    const subtotal = cart.items.reduce((sum, item) => {
-      const price = item.product.discountedPrice || item.product.price;
-      return sum + (price * item.quantity);
-    }, 0);
+    // Recalculate subtotal using offers
+    const prodIds = cart.items.map(it => it.product._id);
+    const catIds = cart.items.map(it => it.product.category?._id).filter(Boolean);
+    const offerMaps = await fetchActiveOffers(prodIds, catIds);
+
+    let subtotal = 0;
+    let productDiscount = 0;
+    cart.items.forEach(it => {
+      const { effectivePrice } = applyBestOffer(it.product, offerMaps);
+      subtotal += effectivePrice * it.quantity;
+      productDiscount += (it.product.price - effectivePrice) * it.quantity;
+    });
 
     // Update cart
     cart.coupon = undefined;
@@ -670,8 +728,12 @@ export const removeCoupon = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Coupon removed successfully',
-      total: cart.total
+      summary: {
+        subtotal: parseFloat(subtotal.toFixed(2)),
+        productDiscount: parseFloat(productDiscount.toFixed(2)),
+        couponDiscount: 0,
+        total: parseFloat(subtotal.toFixed(2))
+      }
     });
 
   } catch (error) {

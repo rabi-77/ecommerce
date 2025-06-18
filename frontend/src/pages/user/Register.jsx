@@ -104,7 +104,12 @@ const Register = () => {
   }, [error, errormessage, isVerified, navigate, dispatch, resetForm, resetOtpForm]);
 
   const onRegisterSubmit = async (data) => {
-    dispatch(register(data));
+    // Ensure referralCode is sent even if empty string
+    const payload = {
+      ...data,
+      referralCode: data.referralCode?.trim() || undefined,
+    };
+    dispatch(register(payload));
   };
 
   const onOtpSubmit = async (data) => {
@@ -165,6 +170,14 @@ const Register = () => {
             disabled={loading}
           />
           {registerErrors.password && <p className="text-red-500 text-sm">{registerErrors.password.message}</p>}
+        </div>
+        <div>
+          <input
+            {...formRegister('referralCode')}
+            placeholder="Referral code (optional)"
+            className="w-full p-2 border rounded"
+            disabled={loading}
+          />
         </div>
         <button
           type="submit"

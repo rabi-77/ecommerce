@@ -17,6 +17,7 @@ import Category from "../pages/admin/Category";
 import AdminNotFound from "../pages/admin/NotFound";
 import ProtectedRoute from "./ProtectedRoutes";
 import AddEditCoupon from "../pages/admin/AddEditCoupon";
+import AddEditOffer from "../pages/admin/AddEditOffer";
 
 const AdminRoutes = () => {
   return (
@@ -33,7 +34,11 @@ const AdminRoutes = () => {
           <Route path="orders/:id" element={<OrderDetails />} />
           <Route path="users" element={<Users />} />
           <Route path="brands" element={<Brand />} />
-          <Route path="offers" element={<Offers />} />
+          <Route path="offers">
+            <Route index element={<Offers />} />
+            <Route path="add" element={<AddEditOffer />} />
+            <Route path="edit/:id" element={<AddEditOffer />} />
+          </Route>
           <Route path="settings" element={<Settings />} />
           <Route path="banner" element={<Banner />} />
           <Route path="coupons">

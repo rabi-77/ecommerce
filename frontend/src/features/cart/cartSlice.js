@@ -120,7 +120,8 @@ const initialState = {
   loading: false,
   error: null,
   coupon: null,
-  discount: 0,
+  productDiscount: 0,
+  couponDiscount: 0,
   subtotal: 0,
   total: 0,
   couponLoading: false,
@@ -128,7 +129,8 @@ const initialState = {
   couponError: null,
   summary: {
     subtotal: 0,
-    discount: 0,
+    productDiscount: 0,
+    couponDiscount: 0,
     total: 0
   },
   addingToCart: false,
@@ -164,13 +166,13 @@ const cartSlice = createSlice({
         // Update summary
         state.summary = {
           subtotal: action.payload.summary?.subtotal || 0,
-          discount: action.payload.summary?.discount || 0,
+          productDiscount: action.payload.summary?.productDiscount || 0,
+          couponDiscount: action.payload.summary?.couponDiscount || 0,
           total: action.payload.summary?.total || 0,
         };
         
         // Update coupon and discount
         state.coupon = action.payload.coupon || null;
-        state.discount = action.payload.summary?.discount || 0;
         state.subtotal = action.payload.summary?.subtotal || 0;
         state.total = action.payload.summary?.total || 0;
         
@@ -197,13 +199,13 @@ const cartSlice = createSlice({
         // Update summary
         state.summary = {
           subtotal: action.payload.summary?.subtotal || 0,
-          discount: action.payload.summary?.discount || 0,
+          productDiscount: action.payload.summary?.productDiscount || 0,
+          couponDiscount: action.payload.summary?.couponDiscount || 0,
           total: action.payload.summary?.total || 0,
         };
         
         // Update coupon and discount
         state.coupon = action.payload.coupon || state.coupon;
-        state.discount = action.payload.summary?.discount || 0;
         state.subtotal = action.payload.summary?.subtotal || 0;
         state.total = action.payload.summary?.total || 0;
       })
@@ -220,14 +222,17 @@ const cartSlice = createSlice({
       .addCase(updateCartItem.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload.items || [];
-        state.summary = action.payload.summary || state.summary;
+        if (action.payload.summary) {
+          state.summary = {
+            subtotal: action.payload.summary?.subtotal || 0,
+            productDiscount: action.payload.summary?.productDiscount || 0,
+            couponDiscount: action.payload.summary?.couponDiscount || 0,
+            total: action.payload.summary?.total || 0,
+          };
+        }
         // Update coupon and discount if present
         if (action.payload.coupon) {
           state.coupon = action.payload.coupon;
-          state.discount = action.payload.summary?.discount || 0;
-        } else if (action.payload.summary) {
-          // Update discount from summary if no coupon
-          state.discount = action.payload.summary.discount || 0;
         }
         state.subtotal = action.payload.summary?.subtotal || 0;
         state.total = action.payload.summary?.total || 0;
@@ -250,7 +255,6 @@ const cartSlice = createSlice({
         if (action.payload.summary) {
           state.summary = action.payload.summary;
           state.subtotal = action.payload.summary.subtotal || 0;
-          state.discount = action.payload.summary.discount || 0;
           state.total = action.payload.summary.total || 0;
         }
       })
@@ -270,11 +274,11 @@ const cartSlice = createSlice({
         state.count = 0;
         state.summary = {
           subtotal: 0,
-          discount: 0,
+          productDiscount: 0,
+          couponDiscount: 0,
           total: 0,
         };
         state.coupon = null;
-        state.discount = 0;
         state.subtotal = 0;
         state.total = 0;
       })
@@ -298,7 +302,7 @@ const cartSlice = createSlice({
         } else {
           state.summary = {
             ...state.summary,
-            discount: action.payload.discount || 0,
+            couponDiscount: action.payload.couponDiscount || 0,
             total:    action.payload.total    ?? state.summary.total,
           };
         }
@@ -318,7 +322,7 @@ const cartSlice = createSlice({
         state.coupon = null;
         state.summary = {
           ...state.summary,
-          discount: 0,
+          couponDiscount: 0,
           total: state.summary.subtotal    // revert to subtotal when coupon removed
         };
       })

@@ -4,6 +4,8 @@ import nodemailer from "nodemailer";
 import jwt from "jsonwebtoken";
 import passport from "passport";
 import { configDotenv } from "dotenv";
+import crypto from 'crypto';
+import { creditWallet } from '../services/walletService.js';
 configDotenv();
 
 const transporter = nodemailer.createTransport({
@@ -55,7 +57,7 @@ export const generateAndSendOtp = async (email) => {
 const register = async (req, res) => {
   console.log("hey");
 
-  const { username, email, password } = req.body;
+  const { username, email, password, referralCode: referralCodeInput } = req.body;
   console.log(req.body);
 
   try {
@@ -94,7 +96,7 @@ const register = async (req, res) => {
     console.log("hashing");
 
     const token = jwt.sign(
-      { username, email, password: hashedPassword, otp: hashedOtp, expiresAt },
+      { username, email, password: hashedPassword, otp: hashedOtp, expiresAt, referralCodeInput },
       process.env.JWT_SECRET,
       { expiresIn: "5m" }
     );
@@ -143,6 +145,30 @@ const verify = async (req, res) => {
     }
     console.log("OTP verified successfully");
 
+    // Helper to create unique referral code
+    const generateReferralCode = async () => {
+      let code;
+      let exists = true;
+      while (exists) {
+        code = crypto.randomBytes(4).toString('hex').toUpperCase();
+        exists = await userModel.exists({ referralCode: code });
+      }
+      return code;
+    };
+
+    // Process referral before creating user
+    let referrerId = null;
+    let referralStatus = 'NONE';
+    if (payload.referralCodeInput) {
+      const referrer = await userModel.findOne({ referralCode: payload.referralCodeInput.toUpperCase() });
+      if (referrer && referrer.email !== payload.email) {
+        referrerId = referrer._id;
+        referralStatus = 'SUCCESS';
+      } else {
+        referralStatus = 'INVALID';
+      }
+    }
+
     // Create new user
     const user = new userModel({
       username: payload.username,
@@ -151,12 +177,23 @@ const verify = async (req, res) => {
       authProvider: "email",
       role: "user",
       isVerified: true,
+      referralCode: await generateReferralCode(),
+      referredBy: referrerId,
     });
     console.log("Saving user to database");
 
     await user.save();
 
-    res.json({ message: "Account verified, please log in" });
+    // Credit wallet for referrer if applicable
+    if (referrerId) {
+      try {
+        await creditWallet(referrerId, 50, { source: 'REFERRAL', description: `Referral reward for inviting ${user.email}` });
+      } catch (e) {
+        console.error('Failed to credit wallet for referral:', e.message);
+      }
+    }
+
+    res.json({ message: "Account verified, please log in", referralStatus });
     console.log("Verification complete");
   } catch (error) {
     console.log(error.message, "Error during verification");

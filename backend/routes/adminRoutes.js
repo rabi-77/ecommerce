@@ -39,6 +39,7 @@ import {
   validateCoupon
 } from '../controllers/admin/manageCoupons.js'
 import { couponValidationRules, validateCouponRules } from '../validations/couponValidation.js';
+import { createOffer, getOffers, getOfferById, updateOffer, deleteOffer, toggleOfferActive } from '../controllers/admin/manageOffers.js'
 
 const admin = express.Router();
 
@@ -103,6 +104,14 @@ admin.get('/inventory', getInventory)
 admin.put('/inventory/:id', updateInventory)
 admin.get('/inventory/:id/history', getInventoryHistory)
 admin.get('/inventory/low-stock', getLowStockProducts)
+
+// Offer management
+admin.get('/offers', getOffers)
+admin.get('/offers/:id', getOfferById)
+admin.post('/offers', createOffer)
+admin.put('/offers/:id', updateOffer)
+admin.delete('/offers/:id', deleteOffer)
+admin.patch('/offers/:id/toggle', toggleOfferActive)
 
 // Coupon Management
 admin.get('/coupons', getAllCoupons);

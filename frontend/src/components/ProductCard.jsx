@@ -51,7 +51,19 @@ export const ProductCard = ({ product }) => {
           <span className="text-xs text-[var(--text-light)] ml-1">(0)</span>
         </div>
         <div className="mt-auto pt-4 border-t border-[var(--border-light)] flex justify-between items-center">
-          <span className="text-lg font-bold text-[var(--primary)]">${product.price}</span>
+          {product.effectivePrice && product.effectivePrice < product.price ? (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500 line-through">₹{product.price}</span>
+              <span className="text-lg font-bold text-[var(--primary)]">₹{product.effectivePrice}</span>
+              {product.appliedOffer && (
+                <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded">
+                  {product.appliedOffer.percentage ? `${product.appliedOffer.percentage}% OFF` : `₹${product.appliedOffer.amount} OFF`}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-lg font-bold text-[var(--primary)]">₹{product.price}</span>
+          )}
           <Link 
             to={`/products/${product._id}`} 
             className="px-3 py-1.5 bg-[var(--primary)] text-white text-sm font-medium rounded-md hover:bg-[var(--primary-dark)] transition-colors"
