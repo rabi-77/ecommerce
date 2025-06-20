@@ -58,6 +58,8 @@ const register = async (req, res) => {
   console.log("hey");
 
   const { username, email, password, referralCode: referralCodeInput } = req.body;
+  console.log('referal',referralCodeInput);
+  
   console.log(req.body);
 
   try {
@@ -127,6 +129,7 @@ const verify = async (req, res) => {
     } catch (error) {
       return res.status(400).json({ message: "Registration session expired" });
     }
+console.log("payload",payload);
 
     // Check if email matches and OTP hasn't expired
     if (payload.email !== email) {

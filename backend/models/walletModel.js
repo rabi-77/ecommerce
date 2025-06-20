@@ -6,7 +6,7 @@ const transactionSchema = new Schema(
     type: { type: String, enum: ['CREDIT', 'DEBIT'], required: true },
     amount: { type: Number, required: true },
     description: String,
-    source: { type: String, enum: ['refund', 'order', 'topup', 'admin'], default: 'refund' },
+    source: { type: String, enum: ['refund', 'order', 'topup', 'admin','REFERRAL'], default: 'refund' },
     order: { type: Schema.Types.ObjectId, ref: 'Order' },
     balanceAfter: Number,
   },

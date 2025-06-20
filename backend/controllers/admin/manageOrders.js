@@ -92,7 +92,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     order.isDelivered = true;
     order.deliveredAt = Date.now();
   } else if (status === 'cancelled') {
-    // If payment was already collected (wallet or razorpay), refund to user wallet
+    
     if (order.isPaid && ['WALLET', 'RAZORPAY'].includes(order.paymentMethod)) {
       await creditWallet(order.user, order.totalPrice, {
         orderId: order._id,

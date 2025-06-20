@@ -9,6 +9,7 @@ const Coupons = () => {
   const dispatch = useDispatch();
   const { coupons, loading, error, success, pagination } = useSelector((state) => state.coupons);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [couponToDelete, setCouponToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,6 +84,27 @@ const Coupons = () => {
     return <span className="px-2 py-1 text-xs font-semibold bg-green-200 text-green-700 rounded-full">Active</span>;
   };
 
+  // Helper to derive status string
+  const deriveStatus = (coupon) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDate = new Date(coupon.startDate);
+    const expiryDate = new Date(coupon.expiryDate);
+    startDate.setHours(0,0,0,0);
+    expiryDate.setHours(23,59,59,999);
+
+    if (!coupon.isActive) return 'INACTIVE';
+    if (now < startDate) return 'SCHEDULED';
+    if (now > expiryDate) return 'EXPIRED';
+    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) return 'USEDUP';
+    return 'ACTIVE';
+  };
+
+  const filteredCoupons = coupons.filter((c) => {
+    if (statusFilter === 'ALL') return true;
+    return deriveStatus(c) === statusFilter;
+  });
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
@@ -97,8 +119,8 @@ const Coupons = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
-        <div className="p-4 border-b border-gray-200">
-          <form onSubmit={handleSearch} className="flex">
+        <div className="p-4 border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <form onSubmit={handleSearch} className="flex w-full sm:w-auto">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaSearch className="h-5 w-5 text-gray-400" />
@@ -118,6 +140,20 @@ const Coupons = () => {
               Search
             </button>
           </form>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border-gray-300 rounded-md text-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-full sm:w-48"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="EXPIRED">Expired</option>
+            <option value="USEDUP">Used Up</option>
+          </select>
         </div>
 
         {loading ? (
@@ -125,7 +161,7 @@ const Coupons = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             <span className="ml-2">Loading...</span>
           </div>
-        ) : coupons.length === 0 ? (
+        ) : filteredCoupons.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No coupons found</p>
           </div>
@@ -155,7 +191,7 @@ const Coupons = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {coupons.map((coupon) => (
+                {filteredCoupons.map((coupon) => (
                   <tr key={coupon._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{coupon.code}</div>
@@ -289,4 +325,3 @@ const Coupons = () => {
 };
 
 export default Coupons;
-  

@@ -179,11 +179,17 @@ userSchema.virtual('defaultAddress').get(function() {
 
 userSchema.pre("save", async function (next) {
   if (this.isModified("password") && this.password) {
-    this.password = await bcrypt.hash(this.password, 10);
+    // Skip hashing if the password already looks like a bcrypt hash (prevents double-hashing)
+    if (!this.password.startsWith("$2b$") && !this.password.startsWith("$2a$")) {
+      this.password = await bcrypt.hash(this.password, 10);
+    }
   }
   
   if (this.isModified("otp.code") && this.otp && this.otp.code) {
-    this.otp.code = await bcrypt.hash(this.otp.code, 10);
+    // Skip hashing if the OTP already looks like a bcrypt hash
+    if (!this.otp.code.startsWith("$2b$") && !this.otp.code.startsWith("$2a$")) {
+      this.otp.code = await bcrypt.hash(this.otp.code, 10);
+    }
   }
   next();
 });

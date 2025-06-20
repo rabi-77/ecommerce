@@ -2,9 +2,6 @@ import Product from "../../models/productModel.js";
 import Order from "../../models/orderModel.js";
 import asyncHandler from "express-async-handler";
 
-// @desc    Get all products with inventory details
-// @route   GET /api/admin/inventory
-// @access  Admin
 export const getInventory = asyncHandler(async (req, res) => {
   const { page = 1, size = 10, search = "", sort = "name-asc" } = req.query;
   const pageNum = parseInt(page);
@@ -12,7 +9,6 @@ export const getInventory = asyncHandler(async (req, res) => {
 
   let query = {};
   
-  // Add search functionality
   if (search) {
     query = {
       $or: [
@@ -22,7 +18,6 @@ export const getInventory = asyncHandler(async (req, res) => {
     };
   }
   
-  // Set up sorting based on sort parameter
   let sortOption = {};
   switch (sort) {
     case "name-desc":
@@ -40,10 +35,8 @@ export const getInventory = asyncHandler(async (req, res) => {
       break;
   }
   
-  // Get total count for pagination
   const total = await Product.countDocuments(query);
   
-  // Get products with pagination
   const products = await Product.find(query)
     .populate("category", "name")
     .populate("brand", "name")
@@ -51,15 +44,12 @@ export const getInventory = asyncHandler(async (req, res) => {
     .skip((pageNum - 1) * sizeNum)
     .limit(sizeNum);
 
-  // Get sales data for each product
   const productsWithSales = await Promise.all(
     products.map(async (product) => {
       const productObj = product.toObject();
       
-      // Get total sold quantity for each variant
       const variantsWithSales = await Promise.all(
         productObj.variants.map(async (variant) => {
-          // Count sold items (delivered orders)
           const soldItems = await Order.aggregate([
             {
               $match: {
@@ -92,7 +82,6 @@ export const getInventory = asyncHandler(async (req, res) => {
         })
       );
       
-      // Calculate total sold
       const totalSold = variantsWithSales.reduce((sum, variant) => sum + variant.sold, 0);
       
       return {
@@ -113,10 +102,7 @@ export const getInventory = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Update product inventory
-// @route   PUT /api/admin/inventory/:id
-// @access  Admin
-export const updateInventory = asyncHandler(async (req, res) => {
+  export const updateInventory = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { variants } = req.body;
   
@@ -125,21 +111,18 @@ export const updateInventory = asyncHandler(async (req, res) => {
     throw new Error("Variants data is required and must be an array");
   }
   
-  // Find the product
   const product = await Product.findById(id);
   if (!product) {
     res.status(404);
     throw new Error("Product not found");
   }
   
-  // Update each variant's stock
   for (const updatedVariant of variants) {
     const variant = product.variants.id(updatedVariant._id);
     if (!variant) {
-      continue; // Skip if variant not found
+      continue; 
     }
     
-    // Ensure stock is a non-negative number
     const newStock = parseInt(updatedVariant.stock);
     if (isNaN(newStock) || newStock < 0) {
       res.status(400);
@@ -149,10 +132,8 @@ export const updateInventory = asyncHandler(async (req, res) => {
     variant.stock = newStock;
   }
   
-  // Recalculate total stock
   product.totalStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
   
-  // Save the updated product
   await product.save();
   
   res.json({
@@ -162,14 +143,10 @@ export const updateInventory = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get inventory history for a product
-// @route   GET /api/admin/inventory/:id/history
-// @access  Admin
 export const getInventoryHistory = asyncHandler(async (req, res) => {
   const { id } = req.params;
   console.log('hey');
   
-  // Find the product
   const product = await Product.findById(id)
     .populate("category", "name")
     .populate("brand", "name");
@@ -179,7 +156,6 @@ export const getInventoryHistory = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
   
-  // Get all orders that contain this product
   const orders = await Order.find({
     "items.product": id
   })
@@ -190,7 +166,6 @@ export const getInventoryHistory = asyncHandler(async (req, res) => {
   console.log(`Found ${orders.length} orders for product ${id}`);
   console.log('Order statuses:', orders.map(order => order.status));
   
-  // Extract inventory changes from orders
   const inventoryChanges = [];
   
   for (const order of orders) {
@@ -229,14 +204,10 @@ export const getInventoryHistory = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get low stock products
-// @route   GET /api/admin/inventory/low-stock
-// @access  Admin
 export const getLowStockProducts = asyncHandler(async (req, res) => {
   const { threshold = 5 } = req.query;
   const thresholdNum = parseInt(threshold);
   
-  // Find products with low total stock or variants with low stock
   const products = await Product.find({
     $or: [
       { totalStock: { $lte: thresholdNum } },
@@ -247,11 +218,9 @@ export const getLowStockProducts = asyncHandler(async (req, res) => {
   .populate("brand", "name")
   .sort({ totalStock: 1 });
   
-  // Filter to only include variants that are low in stock
   const productsWithLowStockVariants = products.map(product => {
     const productObj = product.toObject();
     
-    // Filter variants to only include those with low stock
     const lowStockVariants = productObj.variants.filter(variant => 
       variant.stock <= thresholdNum
     );

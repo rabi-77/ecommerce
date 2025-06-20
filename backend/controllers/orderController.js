@@ -140,16 +140,25 @@ console.log(shippingAddress,'shippingAddress');
       });
     }
 
-    // appliedCoupon = couponDoc._id;
-    // // Recalculate discount to be safe
-    // let subtotalWithoutProductLevelDiscount = 0;
-    // cart.items.forEach(item => {
-    //   subtotalWithoutProductLevelDiscount += item.price * item.quantity;
-    // });
+    // Re-validate minimum purchase amount requirement
+    // Calculate current subtotal AFTER product-level discounts but BEFORE coupon.
+    const currentSubtotal = itemsPrice - discountAmount; // discountAmount currently has only product-level discounts
+    if (currentSubtotal < couponDoc.minPurchaseAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Cart total must be at least ${couponDoc.minPurchaseAmount} to use this coupon. Please adjust your cart and try again.`
+      });
+    }
 
-    // Use existing cart.discount if already correctly calculated, else calculate
-    couponDiscount = cart.discount || 0;
+    // Recalculate coupon discount against the live subtotal to ensure accuracy
+    try {
+      couponDiscount = couponDoc.calculateDiscount(currentSubtotal);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
     discountAmount += couponDiscount;
+    appliedCoupon = couponDoc._id;
   }
 
   // Calculate final prices
@@ -647,7 +656,7 @@ console.log('is is cancelling',id);
   });
 
   if (!order) {
-    return res.status.json({ success: false, message: 'Unpaid order not found or already processed' });
+    return res.json({ success: false, message: 'Unpaid order not found or already processed' });
   }
 
   await order.deleteOne(); // Alternatively set status: 'cancelled-unpaid' to keep history

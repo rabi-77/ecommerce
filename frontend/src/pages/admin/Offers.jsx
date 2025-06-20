@@ -9,12 +9,13 @@ const Offers = () => {
   const dispatch = useDispatch();
   const { offers, loading, error, pagination } = useSelector((state) => state.offers);
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
   useEffect(() => {
-    dispatch(getOffers({ page: currentPage, limit }));
-  }, [dispatch, currentPage]);
+    dispatch(getOffers({ page: currentPage, limit, type: typeFilter !== 'ALL' ? typeFilter : '' }));
+  }, [dispatch, currentPage, typeFilter]);
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -37,17 +38,56 @@ const Offers = () => {
     return `₹${offer.amount}`;
   };
 
+  // Local filtering by search term
+  const filteredOffers = offers.filter((offer) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const targetName = offer.type === 'PRODUCT' ? offer.product?.name : offer.category?.name;
+    return (
+      offer.type.toLowerCase().includes(term) ||
+      (targetName && targetName.toLowerCase().includes(term))
+    );
+  });
+
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 w-full gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Offers</h2>
-        <Link
-          to="/admin/offers/add"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          <FaPlus className="mr-2" />
-          Add New Offer
-        </Link>
+
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search offers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Type filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="border-gray-300 rounded-md text-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+          >
+            <option value="ALL">All Types</option>
+            <option value="PRODUCT">Product</option>
+            <option value="CATEGORY">Category</option>
+          </select>
+
+          {/* Add button */}
+          <Link
+            to="/admin/offers/add"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <FaPlus className="mr-2" />
+            Add New Offer
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -56,7 +96,7 @@ const Offers = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             <span className="ml-2">Loading...</span>
           </div>
-        ) : offers.length === 0 ? (
+        ) : filteredOffers.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No offers found</p>
           </div>
@@ -74,7 +114,7 @@ const Offers = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {offers.map((offer) => (
+              {filteredOffers.map((offer) => (
                 <tr key={offer._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{offer.type}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

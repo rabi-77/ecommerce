@@ -13,6 +13,7 @@ const Sidebar = () => {
     { name: 'Settings', path: '/admin/settings' },
     { name: 'Banner', path: '/admin/banner' },
     { name: 'Coupons', path: '/admin/coupons' },
+    { name: 'Sales Report', path: '/admin/sales-report' },
   ];
 
   return (

@@ -48,11 +48,11 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
 
         console.log('Razorpay order options:', options);
 
-        // Create Razorpay order
+        
         const order = await razorpay.orders.create(options);
         console.log('Razorpay order created:', order.id);
 
-        // Update order with Razorpay order ID
+        
         await Order.findByIdAndUpdate(orderId, {
             paymentResult:{
                 razorpayOrderId: order.id,

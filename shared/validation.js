@@ -18,6 +18,14 @@ export const registerSchema = z.object({
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[^\s]+$/,
       "Password must include 1 uppercase, 1 lowercase, 1 number, 1 special character, and no spaces"
     ),
+  // Optional referral code – exactly 8 hex characters produced by backend
+  referralCode: z
+    .string()
+    .trim()
+    .length(8, "Referral code must be 8 characters")
+    .regex(/^[A-Fa-f0-9]{8}$/i, "Referral code must be hexadecimal")
+    .optional()
+    .or(z.literal("")),
 });
 
 export const verifyOtpSchema = z.object({

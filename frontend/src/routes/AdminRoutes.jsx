@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../Layouts/AdminLayout";
 import AdminLogin from "../pages/admin/Login";
 import Dashboard from "../pages/admin/Dashboard";
+import SalesReport from "../pages/admin/SalesReport";
 import Products from "../pages/admin/Products";
 import Orders from "../pages/admin/Orders";
 import OrderList from "../pages/admin/OrderList";
@@ -47,6 +48,7 @@ const AdminRoutes = () => {
             <Route path="edit/:id" element={<AddEditCoupon />} />
           </Route>
           <Route path="category" element={<Category />} />
+          <Route path="sales-report" element={<SalesReport />} />
         </Route>
       </Route>
       
