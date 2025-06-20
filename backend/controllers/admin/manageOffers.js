@@ -26,6 +26,15 @@ console.log(product,'h', typeof product);
     throw new Error('Offer must have either percentage or amount');
   }
 
+  // Prevent multiple offers on same product or category
+  const duplicateFilter = { type };
+  if (type === 'PRODUCT') duplicateFilter.product = product;
+  if (type === 'CATEGORY') duplicateFilter.category = category;
+  const existing = await Offer.findOne(duplicateFilter);
+  if (existing) {
+    return res.status(400).json({ message: 'An active offer already exists for this item' });
+  }
+
   const data = { type, percentage, amount, product, category, startDate, endDate };
   const offer = await Offer.create(data);
   res.status(201).json({ success: true, offer });

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Check, ChevronRight, X, Loader2 } from 'lucide-react';
-import { createOrder, resetOrderCreated, clearOrderDetails, markPaymentFailed, cancelUnpaidPending } from '../../features/order/orderSlice';
+import { createOrder, resetOrderCreated, clearOrderDetails, markPaymentFailed, cancelUnpaidPending,resetError } from '../../features/order/orderSlice';
 import { 
   fetchCart, 
   applyCoupon, 
@@ -178,14 +178,19 @@ const Checkout = () => {
 
   // Handle payment error callback from RazorpayButton
   const handlePaymentError = useCallback((errorMsg) => {
-    // If user simply dismissed the Razorpay modal, treat it as a cancellation – not a failure
     const isCancelledByUser = errorMsg && errorMsg.toLowerCase().includes('cancelled');
-
     toast.error(isCancelledByUser ? 'Payment cancelled' : (errorMsg || 'Payment failed. Please try again.'));
     setProcessingPayment(false);
 
-    // Only mark failure / redirect when it's an actual payment failure
-    if (!isCancelledByUser) {
+    if (isCancelledByUser) {
+      // User closed modal, simply reset state and optionally cancel unpaid order on backend
+      if (order?._id) {
+        dispatch(cancelUnpaidPending(order._id));
+      }
+      dispatch(resetOrderCreated());
+      dispatch(clearOrderDetails());
+    } else {
+      // Actual payment failure
       if (order?._id) {
         dispatch(markPaymentFailed(order._id)).finally(() => {
           navigate(`/order/failure/${order._id}`);
@@ -292,6 +297,7 @@ const Checkout = () => {
     } catch (error) {
       console.error('Error creating order:', error);
       toast.error(error.message || 'Failed to create order');
+      dispatch(resetError());
       setProcessingPayment(false);
     }
   };

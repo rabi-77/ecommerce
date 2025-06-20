@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaEdit, FaTrash, FaEye, FaPlus, FaSearch, FaToggleOn, FaToggleOff, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { getCoupons, deleteCoupon, toggleStatus, resetCouponState } from '../../features/admin/adminCoupons/couponSlice';
+import ReactPaginate from 'react-paginate';
 
 const Coupons = () => {
   const dispatch = useDispatch();
@@ -45,6 +46,12 @@ const Coupons = () => {
     if (!error) {
       toast.success(`Coupon ${currentStatus ? 'deactivated' : 'activated'} successfully`);
     }
+  };
+
+  const handlePageChange = ({ selected }) => {
+    const newPage = selected + 1;
+    setCurrentPage(newPage);
+    dispatch(getCoupons({ page: newPage, limit, search: searchTerm }));
   };
 
   const formatDate = (dateString) => {
@@ -261,51 +268,25 @@ const Coupons = () => {
           </div>
         )}
 
-        {pagination && pagination.totalPages > 1 && (
+        {/* Pagination */}
+        {pagination && pagination.pages > 1 && (
           <div className="flex justify-center mt-6">
-            <nav className="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
-                <span className="sr-only">Previous</span>
-                <FaChevronLeft className="h-5 w-5" aria-hidden="true" />
-              </button>
-              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                let pageNum;
-                if (pagination.totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= pagination.totalPages - 2) {
-                  pageNum = pagination.totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                      currentPage === pageNum
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
-                disabled={currentPage === pagination.totalPages}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${currentPage === pagination.totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
-                <span className="sr-only">Next</span>
-                <FaChevronRight className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </nav>
+            <ReactPaginate
+              previousLabel="Previous"
+              nextLabel="Next"
+              breakLabel="..."
+              pageCount={pagination.pages}
+              marginPagesDisplayed={2}
+              pageRangeDisplayed={3}
+              onPageChange={handlePageChange}
+              forcePage={currentPage - 1}
+              containerClassName="flex items-center gap-2"
+              pageClassName="px-3 py-2 border rounded hover:bg-gray-100"
+              activeClassName="bg-blue-600 text-white"
+              previousClassName="px-3 py-2 border rounded hover:bg-gray-100"
+              nextClassName="px-3 py-2 border rounded hover:bg-gray-100"
+              disabledClassName="opacity-50 cursor-not-allowed"
+            />
           </div>
         )}
       </div>

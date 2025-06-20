@@ -19,9 +19,9 @@ const initialState = {
 // Get all orders with pagination and search
 export const getAllOrders = createAsyncThunk(
   'adminOrders/getAll',
-  async ({ keyword = '', status = '', sort = 'newest' } = {}, thunkAPI) => {
+  async ({ page = 1, size = 10, keyword = '', status = '', sort = 'newest' } = {}, thunkAPI) => {
     try {
-      const response = await adminOrderService.getAllOrders(keyword, status, sort);
+      const response = await adminOrderService.getAllOrders({ page, size, keyword, status, sort });
       return response.data;
     } catch (error) {
       const message = 

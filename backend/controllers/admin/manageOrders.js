@@ -125,6 +125,8 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
   const { approved, notes } = req.body;
   
   const order = await Order.findById(orderId);
+  console.log('is there ant coupon',order.coupon);
+  
   if (!order) {
     return res.status(404).json({ message: "Order not found" });
   }
@@ -177,7 +179,7 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         "variants._id": orderItem.variant._id,
       },
       {
-        $inc: { "variants.$.stock": orderItem.quantity },
+        $inc: { "variants.$.stock": orderItem.quantity, totalStock: orderItem.quantity },
       }
     );
     
@@ -191,32 +193,45 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
 
       let minSpend = 0;
       if (order.coupon) {
-        const couponDoc = await Coupon.findById(order.coupon).select('minimumAmount');
-        if (couponDoc) minSpend = couponDoc.minimumAmount;
+        console.log('order coupon',order.coupon);
+        
+        const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
+        if (couponDoc) minSpend = couponDoc.minPurchaseAmount;
       }
+console.log('minispend',minSpend);
 
       const couponStillApplies = remainingSubtotal >= minSpend;
       const newDiscount = couponStillApplies ? order.couponDiscount : 0;
       const newPayable = remainingSubtotal - newDiscount;
+console.log('couponstillapplies',couponStillApplies);
 
       const amountPaidOnline = order.totalPrice;
       const alreadyRefunded = order.refundToWallet || 0;
 
       let refundAmount = 0;
+      // if (couponStillApplies) {
+      //   // Coupon remains valid after this return, so refund the item's full paid amount (its discounted price).
+      //   refundAmount = orderItem.totalPrice;
+      // } else {
+      //   // Coupon revoked – fall back to differential method
+      //   refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
+      // }
       if (couponStillApplies) {
-        // Pro-rate the coupon discount to this item so customer only gets back what they actually paid
-        const discountShare = (orderItem.totalPrice / order.itemsPrice) * (order.couponDiscount || 0);
-        refundAmount = orderItem.totalPrice - discountShare;
+        // Refund only what the user actually paid for this item by subtracting its share of the coupon discount
+        const discountShare = (orderItem.price / order.itemsPrice) * (order.couponDiscount || 0);
+        refundAmount = orderItem.price - discountShare;
+console.log('refundAmount',refundAmount,discountShare,'dsc',order.totalPrice,'ttl',order.itemsPrice,'ko',orderItem.price,'orderitem');
       } else {
-        // Coupon revoked – fall back to differential method
+        // Coupon revoked – use differential calculation to avoid over-refund
         refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
+console.log('refundAmountelse',refundAmount);
       }
 
       if (refundAmount > 0) {
         await creditWallet(order.user, refundAmount, {
           orderId: order._id,
           source: 'refund',
-          description: `Refund for returned item ${orderItem.product}`,
+          description: `Refund for returned item ${orderItem.product} for the order ${order._id}`,
         });
         order.refundToWallet = alreadyRefunded + refundAmount;
       }

@@ -40,6 +40,10 @@ export default function Navbar() {
   useEffect(() => {
     // Fetch cart and wishlist data only when user is logged in
     if (user) {
+      console.log('user umage',user.image);
+      console.log('user',user);
+      
+      
       dispatch(fetchCart());
       dispatch(fetchWishlist());
     }

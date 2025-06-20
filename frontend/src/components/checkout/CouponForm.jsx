@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch,useSelector } from 'react-redux';
 import { FaTimes, FaCheck } from 'react-icons/fa';
 import { applyCoupon, removeCoupon } from '../../features/cart/cartSlice';
 import { toast } from 'react-toastify';
+import api from '../../apis/user/api';
 
 const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
   const [couponCode, setCouponCode] = useState('');
+  const [activeCoupons, setActiveCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   
@@ -61,6 +64,28 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
   const handleChange = (e) => {
     setCouponCode(e.target.value);
   };
+
+  const handleCouponClick = (code) => {
+    setCouponCode(code);
+  };
+
+  // Fetch active coupons that user can still use
+  useEffect(() => {
+    const fetchActiveCoupons = async () => {
+      setLoadingCoupons(true);
+      try {
+        const res = await api.get('/coupons/active');
+        console.log('is coupon coming here',res.data);
+        
+        setActiveCoupons(res.data.coupons || []);
+      } catch (err) {
+        console.error('Error fetching coupons', err);
+      } finally {
+        setLoadingCoupons(false);
+      }
+    };
+    fetchActiveCoupons();
+  }, []);
 
   if (appliedCoupon) {
     return (
@@ -122,9 +147,30 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
         <p className="mt-2 text-sm text-red-600">{couponValidation.message}</p>
       )}
       
-      <p className="mt-2 text-xs text-gray-500">
-        Enter your coupon code if you have one
-      </p>
+      {/* Active coupon list */}
+      <div className="mt-4">
+        <p className="text-sm font-medium mb-2">Available Coupons:</p>
+        {loadingCoupons ? (
+          <p className="text-xs text-gray-500">Loading...</p>
+        ) : activeCoupons.length === 0 ? (
+          <p className="text-xs text-gray-500">No coupons available</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {activeCoupons.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => handleCouponClick(c.code)}
+                className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded"
+              >
+                {c.code}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="mt-2 text-xs text-gray-500">Enter your coupon code or click one of the available coupons above</p>
     </div>
   );
 };

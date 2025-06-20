@@ -61,5 +61,8 @@ export async function debitWallet(userId, amount, { orderId = null, source = 'or
 
 export async function getWallet(userId) {
   const wallet = await Wallet.findOne({ user: userId }) || { balance: 0, transactions: [] };
+  if (wallet.transactions && wallet.transactions.length) {
+    wallet.transactions.sort((a, b) => b.createdAt - a.createdAt);
+  }
   return wallet;
 }
