@@ -113,7 +113,10 @@ console.log(shippingAddress,'shippingAddress');
         "variants._id": variant._id,
       },
       {
-        $inc: { "variants.$.stock": -cartItem.quantity },
+        $inc: {
+          "variants.$.stock": -cartItem.quantity,
+          totalStock: -cartItem.quantity,
+        },
       }
     );
   }
@@ -121,8 +124,14 @@ console.log(shippingAddress,'shippingAddress');
   // Include coupon discount if applied on cart, but re-validate to ensure it is still eligible
   let couponDiscount = 0;
   let appliedCoupon = null;
+  console.log('heyyyyy',cart.coupon);
+  
   if (cart.coupon) {
+    console.log('heyy true',cart.coupon);
+
     const couponDoc = await Coupon.findById(cart.coupon);
+    console.log(couponDoc,'doc');
+    
     const now = new Date();
 
     const stillValid =
@@ -159,6 +168,8 @@ console.log(shippingAddress,'shippingAddress');
 
     discountAmount += couponDiscount;
     appliedCoupon = couponDoc._id;
+    console.log('applied acoupon and discamount',appliedCoupon,discountAmount);
+    
   }
 
   // Calculate final prices
@@ -209,7 +220,7 @@ console.log(shippingAddress,'shippingAddress');
     isPaid: false, 
   });
   console.log("is it saved?");
-
+console.log(order.coupon,order.couponDiscount)
   const createdOrder = await order.save();
   console.log("err");
 
@@ -367,7 +378,10 @@ const cancelOrder = asyncHandler(async (req, res) => {
         "variants._id": item.variant._id,
       },
       {
-        $inc: { "variants.$.stock": item.quantity },
+        $inc: {
+          "variants.$.stock": item.quantity,
+          totalStock: item.quantity,
+        },
       }
     );
   }
@@ -445,7 +459,10 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
       "variants._id": item.variant._id,
     },
     {
-      $inc: { "variants.$.stock": item.quantity },
+      $inc: {
+        "variants.$.stock": item.quantity,
+        totalStock: item.quantity,
+      },
     }
   );
 
@@ -454,8 +471,8 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     const remainingSubtotal = order.items.filter(i => !i.isCancelled).reduce((sum,i)=>sum + i.totalPrice,0);
     let minSpend = 0;
     if (order.coupon) {
-      const couponDoc = await Coupon.findById(order.coupon).select('minimumAmount');
-      if (couponDoc) minSpend = couponDoc.minimumAmount;
+      const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
+      if (couponDoc) minSpend = couponDoc.minPurchaseAmount;
     }
     const couponStillApplies = remainingSubtotal >= minSpend;
     const newDiscount = couponStillApplies ? order.couponDiscount : 0;
@@ -465,8 +482,8 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     let refundAmount = 0;
     if (couponStillApplies) {
       // Refund only what the user actually paid for this item by subtracting its share of the coupon discount
-      const discountShare = (item.totalPrice / order.itemsPrice) * (order.couponDiscount || 0);
-      refundAmount = item.totalPrice - discountShare;
+      const discountShare = (item.price / order.itemsPrice) * (order.couponDiscount || 0);
+      refundAmount = item.price - discountShare;
     } else {
       // Coupon revoked – use differential calculation to avoid over-refund
       refundAmount = amountPaidOnline - newPayable - alreadyRefunded;

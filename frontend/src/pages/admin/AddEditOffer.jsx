@@ -61,6 +61,7 @@ const AddEditOffer = () => {
 
   useEffect(() => {
     if (error) toast.error(error);
+    dispatch(resetOfferState());
     if (success) {
       toast.success(isEditMode ? 'Offer updated' : 'Offer created');
       navigate('/admin/offers');

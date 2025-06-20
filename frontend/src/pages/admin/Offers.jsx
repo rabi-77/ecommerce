@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { FaPlus, FaSearch, FaToggleOn, FaToggleOff, FaTrash, FaEdit } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { getOffers, deleteOffer, toggleStatus } from '../../features/admin/adminOffers/offerSlice';
+import { getOffers, deleteOffer, toggleStatus, resetOfferState } from '../../features/admin/adminOffers/offerSlice';
 
 const Offers = () => {
   const dispatch = useDispatch();
@@ -19,6 +19,7 @@ const Offers = () => {
 
   useEffect(() => {
     if (error) toast.error(error);
+    dispatch(resetOfferState());
   }, [error]);
 
   const handleToggleStatus = async (id) => {
@@ -141,6 +142,26 @@ const Offers = () => {
             </tbody>
           </table>
         )}
+         {pagination && pagination.pages > 1 && (
+            <div className="flex justify-center mt-6">
+              <ReactPaginate
+                previousLabel="Previous"
+                nextLabel="Next"
+                breakLabel="..."
+                pageCount={pagination.pages}
+                marginPagesDisplayed={2}
+                pageRangeDisplayed={3}
+                onPageChange={handlePageChange}
+                forcePage={currentPage - 1}
+                containerClassName="flex items-center gap-2"
+                pageClassName="px-3 py-2 border rounded hover:bg-gray-100"
+                activeClassName="bg-blue-600 text-white"
+                previousClassName="px-3 py-2 border rounded hover:bg-gray-100"
+                nextClassName="px-3 py-2 border rounded hover:bg-gray-100"
+                disabledClassName="opacity-50 cursor-not-allowed"
+              />
+           </div>
+         )}
       </div>
     </div>
   );

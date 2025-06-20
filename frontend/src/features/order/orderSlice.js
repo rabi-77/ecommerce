@@ -240,6 +240,9 @@ export const orderSlice = createSlice({
     },
     clearOrderDetails: (state) => {
       state.order = null;
+    },
+    resetError:(state)=>{
+      state.error=null;
     }
   },
   extraReducers: (builder) => {
@@ -418,5 +421,5 @@ export const orderSlice = createSlice({
   }
 });
 
-export const { resetOrderState, resetOrderCreated, clearOrderDetails } = orderSlice.actions;
+export const { resetOrderState, resetOrderCreated, clearOrderDetails,resetError } = orderSlice.actions;
 export default orderSlice.reducer;

@@ -78,7 +78,7 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
       
       // Create Razorpay order
       const resultAction = await dispatch(razorpayOrderThunk({
-        amount: Math.round(order.totalPrice * 100), // Convert to paise
+        amount: Math.round(order.totalPrice), // Amount in INR; backend converts to paise
         orderId: order._id,
         currency: 'INR',
         receipt: `order_${order._id}`

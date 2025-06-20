@@ -55,7 +55,9 @@ export const getInventory = asyncHandler(async (req, res) => {
               $match: {
                 "items.product": product._id,
                 "items.variant._id": variant._id,
-                "status": "delivered"
+                "status": { $in: ["pending","processing","shipped","out for delivery","delivered"] },
+                "items.isCancelled": { $ne: true },
+                "items.isReturned": { $ne: true }
               }
             },
             {
@@ -176,13 +178,11 @@ export const getInventoryHistory = asyncHandler(async (req, res) => {
         
         if (order.status === "cancelled" || item.isCancelled) {
           changeType = "Cancelled Order";
-        } else if (item.isReturned && item.returnRequestStatus === "approved") {
+        } else if (item.isReturned) {
           changeType = "Return";
-        } else if (["pending", "processing","shipped", "out for delivery", "delivered"].includes(order.status)) {
+        } else if (["pending", "processing", "shipped", "out for delivery", "delivered"].includes(order.status)) {
           changeType = "Sale";
           quantity = -quantity; // Negative for sales (stock reduction)
-        } else {
-          changeType = "Pending Order";
         }
         
         inventoryChanges.push({

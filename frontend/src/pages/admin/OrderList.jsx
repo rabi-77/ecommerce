@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaEye, FaSpinner } from 'react-icons/fa';
 import { getAllOrders, resetAdminOrderState } from '../../features/admin/adminOrders/adminOrderSlice';
+import ReactPaginate from 'react-paginate';
 
 const OrderList = () => {
   const dispatch = useDispatch();
@@ -12,17 +13,20 @@ const OrderList = () => {
     loading, 
     error, 
     statusUpdateSuccess,
-    verifyReturnSuccess
+    verifyReturnSuccess,
+    totalPages
   } = useSelector(state => state.adminOrders);
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOption, setSortOption] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 10;
 
-  // Load orders on component mount
+  // Load orders on component mount & when page/filter/search changes
   useEffect(() => {
-    dispatch(getAllOrders({ keyword: '', status: 'all', sort: 'newest' }));
-  }, [dispatch]);
+    dispatch(getAllOrders({ page: currentPage, size: limit, keyword: searchKeyword, status: statusFilter, sort: sortOption }));
+  }, [dispatch, currentPage, searchKeyword, statusFilter, sortOption]);
 
   // Handle errors and success messages
   useEffect(() => {
@@ -43,12 +47,14 @@ const OrderList = () => {
   }, [error, statusUpdateSuccess, verifyReturnSuccess, dispatch]);
 
   const handleSearch = () => {
-    dispatch(getAllOrders({ keyword: searchKeyword, status: statusFilter, sort: sortOption }));
+    setCurrentPage(1);
+    dispatch(getAllOrders({ page: 1, size: limit, keyword: searchKeyword, status: statusFilter, sort: sortOption }));
   };
 
   const clearSearch = () => {
     setSearchKeyword('');
-    dispatch(getAllOrders({ keyword: '', status: statusFilter, sort: sortOption }));
+    setCurrentPage(1);
+    dispatch(getAllOrders({ page: 1, size: limit, keyword: '', status: statusFilter, sort: sortOption }));
   };
 
   const handleKeyPress = (e) => {
@@ -59,12 +65,14 @@ const OrderList = () => {
   
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
-    dispatch(getAllOrders({ keyword: searchKeyword, status: e.target.value, sort: sortOption }));
+    setCurrentPage(1);
+    dispatch(getAllOrders({ page: 1, size: limit, keyword: searchKeyword, status: e.target.value, sort: sortOption }));
   };
   
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
-    dispatch(getAllOrders({ keyword: searchKeyword, status: statusFilter, sort: e.target.value }));
+    setCurrentPage(1);
+    dispatch(getAllOrders({ page: 1, size: limit, keyword: searchKeyword, status: statusFilter, sort: e.target.value }));
   };
 
   const formatDate = (dateString) => {
@@ -248,6 +256,28 @@ const OrderList = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-6">
+              <ReactPaginate
+                previousLabel="Previous"
+                nextLabel="Next"
+                breakLabel="..."
+                pageCount={totalPages}
+                marginPagesDisplayed={2}
+                pageRangeDisplayed={3}
+                onPageChange={({ selected }) => setCurrentPage(selected + 1)}
+                forcePage={currentPage - 1}
+                containerClassName="flex items-center gap-2"
+                pageClassName="px-3 py-2 border rounded hover:bg-gray-100"
+                activeClassName="bg-blue-600 text-white"
+                previousClassName="px-3 py-2 border rounded hover:bg-gray-100"
+                nextClassName="px-3 py-2 border rounded hover:bg-gray-100"
+                disabledClassName="opacity-50 cursor-not-allowed"
+              />
+            </div>
+          )}
         </>
       )}
     </div>
