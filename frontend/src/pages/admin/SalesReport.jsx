@@ -126,17 +126,17 @@ const SalesReport = () => {
           />
           <StatCard 
             title="Gross Sales" 
-            value={`₹${data?.data.grossSales || 0}`} 
+            value={`₹${Math.ceil(data?.data.grossSales || 0)}`} 
             className="border-l-4 border-green-500"
           />
           <StatCard 
             title="Total Discounts" 
-            value={`₹${data?.data.totalDiscount || 0}`} 
+            value={`₹${Math.ceil(data?.data.totalDiscount || 0)}`} 
             className="border-l-4 border-yellow-500"
           />
           <StatCard 
             title="Net Revenue" 
-            value={`₹${data ? (data.data.grossSales - (data.data.totalDiscount || 0)) : 0}`} 
+            value={`₹${Math.ceil(data ? (data.data.grossSales - (data.data.totalDiscount || 0)) : 0)}`} 
             className="border-l-4 border-purple-500 bg-purple-50"
           />
         </div>

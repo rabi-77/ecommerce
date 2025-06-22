@@ -20,7 +20,7 @@ const ProductDetails = () => {
     (state) => state.userProduct
   );
   const newProduct = products.find((p) => p._id === id);
-  console.log(newProduct, "newProduct");
+  console.log('new product',newProduct);
 
   const relateIds = relatedProducts.map((p) => p._id);
 
@@ -94,7 +94,7 @@ const ProductDetails = () => {
   };
 
   const renderPrice = () => {
-    if (newProduct.effectivePrice) {
+    if (newProduct && newProduct.effectivePrice && newProduct.appliedOffer) {
       return (
         <div className="flex items-center space-x-3">
           <span className="text-gray-500 line-through text-xl">
@@ -115,7 +115,7 @@ const ProductDetails = () => {
     }
     return (
       <span className="text-3xl font-bold text-gray-900">
-        ₹{product.price}lol
+        ₹{product.price}
       </span>
     );
   };

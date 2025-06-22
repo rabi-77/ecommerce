@@ -15,6 +15,7 @@ import { fetchUserProfile } from '../../features/userprofile/profileSlice';
 import RazorpayButton from '../../components/checkout/RazorpayButton';
 import CouponForm from '../../components/checkout/CouponForm';
 import { clearPaymentState } from '../../features/razorpay/paymentSlice';
+import { fetchWallet } from '../../features/wallet/walletSlice';
 import api from '../../apis/user/api';
 
 const steps = [
@@ -151,6 +152,8 @@ const Checkout = () => {
   useEffect(() => {
     dispatch(clearOrderDetails());
     dispatch(resetOrderCreated());
+    // Ensure wallet balance is up-to-date when user opens checkout
+    dispatch(fetchWallet());
   }, [dispatch]);
   
   // Handle order creation success - separate effect
@@ -273,8 +276,8 @@ const Checkout = () => {
           price: item.product.price
         })),
         itemsPrice: summary.subtotal,
-        taxPrice: 0, // Add tax calculation if needed
-        shippingPrice: 0, // Add shipping calculation if needed
+        taxPrice: summary.tax,
+        shippingPrice: summary.shipping,
         totalPrice: summary.total,
         coupon: appliedCoupon ? {
           code: appliedCoupon.code,
@@ -698,6 +701,38 @@ const Checkout = () => {
               Payment Method
             </h2>
             
+            {/* Coupon section at payment step */}
+            <div className="mb-6">
+              {appliedCoupon ? (
+                <div className="flex justify-between items-center bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-center text-sm text-gray-700">
+                    Applied Coupon:
+                    <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center gap-1">
+                      {appliedCoupon.code}
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="text-red-600 hover:text-red-800 ml-1"
+                        title="Remove coupon"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-green-600">
+                    -₹{parseFloat(appliedCoupon.discountAmount).toFixed(2)}
+                  </span>
+                </div>
+              ) : (
+                <CouponForm
+                  onApplyCoupon={handleApplyCoupon}
+                  onRemoveCoupon={handleRemoveCoupon}
+                  appliedCoupon={appliedCoupon}
+                  isLoading={isCouponValidating}
+                />
+              )}
+            </div>
+
             <div className="mt-4">
               <div className="space-y-4">
                 <div 
@@ -878,11 +913,19 @@ const Checkout = () => {
               
                 <div className="border-t border-gray-200 my-4"></div>
               
-                <div className="flex justify-between py-2">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">$0.00</span>
-                </div>
-              
+                {summary?.tax !== undefined && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-600">Tax</span>
+                    <span className="font-medium">₹{parseFloat(summary.tax || 0).toFixed(2)}</span>
+                  </div>
+                )}
+                {summary?.shipping !== undefined && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-600">Shipping</span>
+                    <span className="font-medium">{summary.shipping === 0 ? 'Free' : `₹${parseFloat(summary.shipping).toFixed(2)}`}</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between py-2 font-semibold text-lg border-t border-gray-200 pt-3 mt-1">
                   <span>Total</span>
                   <span>
@@ -1119,10 +1162,18 @@ const Checkout = () => {
                   </div>
                 )}
                 
-                <div className="flex justify-between text-base font-medium text-gray-900 mt-2">
-                  <p>Shipping</p>
-                  <p>$0.00</p>
-                </div>
+                {summary?.tax !== undefined && (
+                  <div className="flex justify-between text-base font-medium text-gray-900 mt-2">
+                    <p>Tax</p>
+                    <p>₹{parseFloat(summary.tax || 0).toFixed(2)}</p>
+                  </div>
+                )}
+                {summary?.shipping !== undefined && (
+                  <div className="flex justify-between text-base font-medium text-gray-900 mt-2">
+                    <p>Shipping</p>
+                    <p>{summary.shipping === 0 ? 'Free' : `₹${parseFloat(summary.shipping).toFixed(2)}`}</p>
+                  </div>
+                )}
                 
                 <div className="border-t border-gray-200 my-2"></div>
                 

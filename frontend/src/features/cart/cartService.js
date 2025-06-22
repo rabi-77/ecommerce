@@ -31,6 +31,15 @@ export const removeCouponFromCart = async () => {
   }
 };
 
+export const getAvailableCoupons = async () => {
+  try {
+    const response = await api.get('/coupons/active');
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // ======================
 // Cart Item Functions
 // ======================

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch,useSelector } from 'react-redux';
 import { FaTimes, FaCheck } from 'react-icons/fa';
-import { applyCoupon, removeCoupon } from '../../features/cart/cartSlice';
+import { applyCoupon, removeCoupon, fetchAvailableCoupons } from '../../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import api from '../../apis/user/api';
 
@@ -16,6 +16,8 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
     couponValidation: state.cart.couponValidation,
     loading: state.cart.loading,
   }));
+
+  const { availableCoupons, loading: loadingAvailableCoupons } = useSelector(state => state.cart);
 
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
@@ -84,8 +86,12 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
         setLoadingCoupons(false);
       }
     };
-    fetchActiveCoupons();
-  }, []);
+    if (availableCoupons.length === 0 && !loadingAvailableCoupons) {
+      dispatch(fetchAvailableCoupons());
+    } else {
+      setActiveCoupons(availableCoupons);
+    }
+  }, [dispatch, availableCoupons.length, loadingAvailableCoupons]);
 
   if (appliedCoupon) {
     return (
@@ -150,13 +156,13 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
       {/* Active coupon list */}
       <div className="mt-4">
         <p className="text-sm font-medium mb-2">Available Coupons:</p>
-        {loadingCoupons ? (
+        {loadingAvailableCoupons ? (
           <p className="text-xs text-gray-500">Loading...</p>
-        ) : activeCoupons.length === 0 ? (
+        ) : availableCoupons.length === 0 ? (
           <p className="text-xs text-gray-500">No coupons available</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {activeCoupons.map((c) => (
+            {availableCoupons.map((c) => (
               <button
                 key={c.code}
                 type="button"

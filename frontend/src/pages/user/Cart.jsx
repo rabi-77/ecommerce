@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ChevronRight, AlertTriangle } from 'lucide-react';
 import { fetchCart, updateCartItem, removeFromCart, clearCart, clearCartError } from '../../features/cart/cartSlice';
+import CouponForm from '../../components/checkout/CouponForm';
 import Loader from '../../components/common/Loader';
 
 // Maximum quantity allowed per product (across all variants)
@@ -25,7 +26,8 @@ const Cart = () => {
     error, 
     updatingCart, 
     removingFromCart, 
-    clearingCart 
+    clearingCart, 
+    coupon 
   } = useSelector((state) => state.cart);
 
   // Track which items are valid for checkout
@@ -206,6 +208,16 @@ const Cart = () => {
            variant && 
            variant.stock >= item.quantity;
   };
+
+  // Derive applied coupon object for CouponForm success banner
+  const appliedCouponObj = coupon ? {
+    code: coupon.code,
+    discountAmount: summary?.couponDiscount || 0,
+    type: coupon.discountType
+  } : null;
+
+  const handleCouponApplied = () => {/* nothing extra here, redux already holds summary */};
+  const handleCouponRemoved = () => {/* nothing extra here */};
 
   if (loading) {
     return (
@@ -396,9 +408,17 @@ const Cart = () => {
             {/* Order Summary */}
             <div className="lg:w-1/3">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-                <h2 className="text-xl font-semibold text-gray-800 mb-6">Order Summary</h2>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Order Summary</h2>
                 
-                <div className="space-y-4 mb-6">
+                {/* Coupon form */}
+                <CouponForm 
+                  onApplyCoupon={handleCouponApplied}
+                  onRemoveCoupon={handleCouponRemoved}
+                  appliedCoupon={appliedCouponObj}
+                />
+                
+                {/* Price summary */}
+                <div className="space-y-4 mb-6 mt-6">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
                     <span className="text-gray-900">₹{summary?.subtotal ? summary.subtotal.toFixed(2) : '0.00'}</span>
@@ -419,6 +439,22 @@ const Cart = () => {
                         </div>
                       )}
                     </>
+                  )}
+                  
+                  {/* Tax */}
+                  {summary?.tax !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tax</span>
+                      <span className="text-gray-900">₹{summary.tax.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Shipping */}
+                  {summary?.shipping !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Shipping</span>
+                      <span className="text-gray-900">{summary.shipping === 0 ? 'Free' : `₹${summary.shipping.toFixed(2)}`}</span>
+                    </div>
                   )}
                   
                   <div className="pt-4 border-t border-gray-200">

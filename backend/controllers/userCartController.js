@@ -3,14 +3,21 @@ import productModel from '../models/productModel.js';
 import wishlistModel from '../models/wishlistModel.js';
 import Coupon from '../models/couponModel.js';
 import { fetchActiveOffers, applyBestOffer } from '../services/offerService.js';
+import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/pricing.js';
 
 const MAX_QUANTITY_PER_PRODUCT = 10;
+
+// Pricing constants (move to config if needed)
 
 const calculateCartTotals = async (cart) => {
   let subtotal = 0;
   let productDiscount = 0;
   let couponDiscount = 0;
-  let total = 0;
+  let totalAfterProductDisc = 0;
+  let totalAfterCoupon = 0; // before tax & shipping
+  let tax = 0;
+  let shipping = 0;
+  let grandTotal = 0;
 
   cart.items.forEach(item => {
     const itemPrice = item.product.price;
@@ -19,29 +26,41 @@ const calculateCartTotals = async (cart) => {
     
     subtotal += itemPrice * item.quantity;
     productDiscount += (itemPrice - discountedPrice) * item.quantity;
-    total += discountedPrice * item.quantity;
+    totalAfterProductDisc += discountedPrice * item.quantity;
   });
 
   if (cart.coupon) {
     const coupon = await Coupon.findById(cart.coupon);
     if (coupon) {
       if (coupon.discountType === 'percentage') {
-        couponDiscount = (total * coupon.discountValue) / 100;
+        couponDiscount = (totalAfterProductDisc * coupon.discountValue) / 100;
         if (coupon.maxDiscountAmount) {
           couponDiscount = Math.min(couponDiscount, coupon.maxDiscountAmount);
         }
       } else {
-        couponDiscount = Math.min(coupon.discountValue, total);
+        couponDiscount = Math.min(coupon.discountValue, totalAfterProductDisc);
       }
-      total = Math.max(0, total - couponDiscount);
+      totalAfterCoupon = Math.max(0, totalAfterProductDisc - couponDiscount);
     }
+  } else {
+    totalAfterCoupon = totalAfterProductDisc;
   }
+
+  // Calculate tax on net amount after discounts
+  tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
+
+  // Shipping charge should be decided BEFORE coupon discount is applied
+  shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+  grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
 
   return {
     subtotal: parseFloat(subtotal.toFixed(2)),
     productDiscount: parseFloat(productDiscount.toFixed(2)),
     couponDiscount: parseFloat(couponDiscount.toFixed(2)),
-    total: parseFloat(total.toFixed(2))
+    tax,
+    shipping,
+    total: grandTotal
   };
 };
 
@@ -148,6 +167,8 @@ export const addToCart = async (req, res) => {
     const totals = await calculateCartTotals(populatedCart);
 
     populatedCart.discount = totals.couponDiscount;
+    populatedCart.tax = totals.tax;
+    populatedCart.shipping = totals.shipping;
     populatedCart.total = totals.total;
     await populatedCart.save();
 
@@ -159,6 +180,8 @@ export const addToCart = async (req, res) => {
         subtotal: totals.subtotal,
         productDiscount: totals.productDiscount,
         couponDiscount: totals.couponDiscount,
+        tax: totals.tax,
+        shipping: totals.shipping,
         total: totals.total
       }
     });
@@ -244,6 +267,8 @@ export const updateCartItem = async (req, res) => {
     const totals = await calculateCartTotals(populatedCart);
 
     populatedCart.discount = totals.couponDiscount;
+    populatedCart.tax = totals.tax;
+    populatedCart.shipping = totals.shipping;
     populatedCart.total = totals.total;
     await populatedCart.save();
 
@@ -255,6 +280,8 @@ export const updateCartItem = async (req, res) => {
         subtotal: totals.subtotal,
         productDiscount: totals.productDiscount,
         couponDiscount: totals.couponDiscount,
+        tax: totals.tax,
+        shipping: totals.shipping,
         total: totals.total
       }
     });
@@ -299,10 +326,14 @@ export const removeFromCart = async (req, res) => {
     if (populatedCart.items.length === 0 && populatedCart.coupon) {
       populatedCart.coupon = null;
       populatedCart.discount = 0;
+      populatedCart.tax = 0;
+      populatedCart.shipping = 0;
       populatedCart.total = 0;
       await populatedCart.save();
     } else {
       populatedCart.discount = totals.couponDiscount;
+      populatedCart.tax = totals.tax;
+      populatedCart.shipping = totals.shipping;
       populatedCart.total = totals.total;
       await populatedCart.save();
     }
@@ -315,6 +346,8 @@ export const removeFromCart = async (req, res) => {
         subtotal: totals.subtotal,
         productDiscount: totals.productDiscount,
         couponDiscount: totals.couponDiscount,
+        tax: totals.tax,
+        shipping: totals.shipping,
         total: totals.total
       }
     });
@@ -346,6 +379,8 @@ export const getCart = async (req, res) => {
           subtotal: 0,
           productDiscount: 0,
           couponDiscount: 0,
+          tax: 0,
+          shipping: 0,
           total: 0
         }
       });
@@ -379,7 +414,11 @@ export const getCart = async (req, res) => {
 
     let subtotal = 0;
     let productDiscount = 0;
-    let total = 0;
+    let totalAfterProductDisc = 0;
+    let totalAfterCoupon = 0; // before tax & shipping
+    let tax = 0;
+    let shipping = 0;
+    let grandTotal = 0;
 
     availableCartItems.forEach(item => {
       const productDoc = item.product;
@@ -400,7 +439,7 @@ export const getCart = async (req, res) => {
 
       subtotal += productDoc.price * item.quantity;
       productDiscount += (productDoc.price - effectivePrice) * item.quantity;
-      total += effectivePrice * item.quantity;
+      totalAfterProductDisc += effectivePrice * item.quantity;
     });
 
     await cart.populate({
@@ -410,8 +449,18 @@ export const getCart = async (req, res) => {
     let couponDiscount = 0;
     if (cart.coupon) {
       couponDiscount = cart.discount || 0;
-      total = cart.total || total - couponDiscount;
+      totalAfterCoupon = Math.max(0, totalAfterProductDisc - couponDiscount);
+    } else {
+      totalAfterCoupon = totalAfterProductDisc;
     }
+
+    // Calculate tax on net amount after discounts
+    tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
+
+    // Shipping charge should be decided BEFORE coupon discount is applied
+    shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+    grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
 
     res.json({
       cartItems: availableCartItems,
@@ -420,7 +469,9 @@ export const getCart = async (req, res) => {
         subtotal: parseFloat(subtotal.toFixed(2)),
         productDiscount: parseFloat(productDiscount.toFixed(2)),
         couponDiscount: parseFloat(couponDiscount.toFixed(2)),
-        total: parseFloat(total.toFixed(2))
+        tax,
+        shipping,
+        total: grandTotal
       },
       coupon: cart.coupon ? {
         code: cart.coupon.code,
@@ -446,6 +497,8 @@ export const clearCart = async (req, res) => {
           items: [],
           coupon: null,
           discount: 0,
+          tax: 0,
+          shipping: 0,
           total: 0 
         } 
       },
@@ -501,34 +554,6 @@ export const applyCoupon = async (req, res) => {
       });
     }
 
-    if(coupon.usedBy&&coupon.usedBy.some(id=>id.toString()===userId.toString())){
-      return res.status(400).json({success:false,message:"you have already used this coupon"})
-    }
-
-    const startDate = new Date(coupon.startDate);
-    const expiryDate = new Date(coupon.expiryDate);
-    
-    if (now < startDate) {
-      return res.status(400).json({
-        success: false,
-        message: `This coupon is not valid until ${startDate.toLocaleDateString()}`
-      });
-    }
-
-    if (now > expiryDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'This coupon has expired'
-      });
-    }
-
-    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
-      return res.status(400).json({
-        success: false,
-        message: 'This coupon has reached its maximum usage limit'
-      });
-    }
-
     const cart = await Cart.findOne({ user: userId }).populate('items.product');
     if (cart) {
       const subtotal = cart.items.reduce((sum, item) => {
@@ -549,10 +574,20 @@ export const applyCoupon = async (req, res) => {
     const prodIds = cart.items.map(it => it.product._id);
     const catIds = cart.items.map(it => it.product.category?._id).filter(Boolean);
     const offerMaps = await fetchActiveOffers(prodIds, catIds);
+
     let subtotal = 0;
+    let productDiscount = 0;
+    let totalAfterProductDisc = 0;
+    let totalAfterCoupon = 0; // before tax & shipping
+    let tax = 0;
+    let shipping = 0;
+    let grandTotal = 0;
+
     cart.items.forEach(item => {
       const { effectivePrice } = applyBestOffer(item.product, offerMaps);
-      subtotal += effectivePrice * item.quantity;
+      subtotal += item.product.price * item.quantity;
+      productDiscount += (item.product.price - effectivePrice) * item.quantity;
+      totalAfterProductDisc += effectivePrice * item.quantity;
     });
 
     if (subtotal < coupon.minPurchaseAmount) {
@@ -565,27 +600,33 @@ export const applyCoupon = async (req, res) => {
 
     let couponDiscount = 0;
     if (coupon.discountType === 'percentage') {
-      couponDiscount = (subtotal * coupon.discountValue) / 100;
+      couponDiscount = (totalAfterProductDisc * coupon.discountValue) / 100;
       if (coupon.maxDiscountAmount && couponDiscount > coupon.maxDiscountAmount) {
         couponDiscount = coupon.maxDiscountAmount;
       }
     } else {
-      couponDiscount = Math.min(coupon.discountValue, subtotal);
+      couponDiscount = Math.min(coupon.discountValue, totalAfterProductDisc);
     }
+
+    totalAfterCoupon = Math.max(0, totalAfterProductDisc - couponDiscount);
+
+    // Calculate tax on net amount after discounts
+    tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
+
+    // Shipping charge should be decided BEFORE coupon discount is applied
+    shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+    grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
 
     cart.coupon = coupon._id;
     cart.discount = couponDiscount;
-    cart.total = subtotal - couponDiscount;
+    cart.tax = tax;
+    cart.shipping = shipping;
+    cart.total = grandTotal;
     
     await cart.save();
 
     await cart.populate('coupon');
-
-    let productDiscount = 0;
-    cart.items.forEach(item => {
-      const { effectivePrice } = applyBestOffer(item.product, offerMaps);
-      productDiscount += (item.product.price - effectivePrice) * item.quantity;
-    });
 
     res.json({
       success: true,
@@ -599,7 +640,9 @@ export const applyCoupon = async (req, res) => {
         subtotal: parseFloat(subtotal.toFixed(2)),
         productDiscount: parseFloat(productDiscount.toFixed(2)),
         couponDiscount: parseFloat(couponDiscount.toFixed(2)),
-        total: parseFloat((subtotal - couponDiscount).toFixed(2))
+        tax,
+        shipping,
+        total: grandTotal
       }
     });
 
@@ -643,16 +686,35 @@ export const removeCoupon = async (req, res) => {
 
     let subtotal = 0;
     let productDiscount = 0;
+    let totalAfterProductDisc = 0;
+    let totalAfterCoupon = 0; // before tax & shipping
+    let tax = 0;
+    let shipping = 0;
+    let grandTotal = 0;
+
     cart.items.forEach(it => {
       const { effectivePrice } = applyBestOffer(it.product, offerMaps);
-      subtotal += effectivePrice * it.quantity;
+      subtotal += it.product.price * it.quantity;
       productDiscount += (it.product.price - effectivePrice) * it.quantity;
+      totalAfterProductDisc += effectivePrice * it.quantity;
     });
+
+    totalAfterCoupon = totalAfterProductDisc;
+
+    // Calculate tax on net amount after discounts
+    tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
+
+    // Shipping charge should be decided BEFORE coupon discount is applied
+    shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+    grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
 
     // Update cart
     cart.coupon = undefined;
     cart.discount = 0;
-    cart.total = subtotal;
+    cart.tax = tax;
+    cart.shipping = shipping;
+    cart.total = grandTotal;
     
     await cart.save();
 
@@ -662,7 +724,9 @@ export const removeCoupon = async (req, res) => {
         subtotal: parseFloat(subtotal.toFixed(2)),
         productDiscount: parseFloat(productDiscount.toFixed(2)),
         couponDiscount: 0,
-        total: parseFloat(subtotal.toFixed(2))
+        tax,
+        shipping,
+        total: grandTotal
       }
     });
 
@@ -694,7 +758,7 @@ export const validateCoupon = async (req, res) => {
     if (!coupon) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalidm or expired coupon code' 
+        message: 'Invalid or expired coupon code' 
       });
     }
 
@@ -733,5 +797,31 @@ export const validateCoupon = async (req, res) => {
       success: false, 
       message: 'Server error while validating coupon' 
     });
+  }
+};
+
+// ======= Fetch Available Coupons =======
+export const getAvailableCoupons = async (req, res) => {
+  try {
+    const userId = req.user;
+
+    const now = new Date();
+
+    // Find coupons that are active, in valid date range, not exhausted, and not already used by this user
+    const coupons = await Coupon.find({
+      isActive: true,
+      startDate: { $lte: now },
+      expiryDate: { $gte: now },
+      $or: [
+        { maxUses: { $exists: false } },
+        { $expr: { $gt: [ '$maxUses', '$usedCount' ] } }
+      ],
+      usedBy: { $ne: userId },
+    }).select('code discountType discountValue minPurchaseAmount maxDiscountAmount expiryDate');
+
+    res.json({ success: true, coupons });
+  } catch (error) {
+    console.error('Error fetching available coupons:', error);
+    res.status(500).json({ success: false, message: 'Server error while fetching coupons' });
   }
 };

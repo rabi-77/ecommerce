@@ -8,6 +8,7 @@ import {
   validateCoupon as validateCouponService,
   applyCouponToCart,
   removeCouponFromCart,
+  getAvailableCoupons,
 } from './cartService';
 import { toast } from 'react-toastify';
 
@@ -72,8 +73,6 @@ export const clearCart = createAsyncThunk(
   }
 );
 
-
-
 export const applyCoupon = createAsyncThunk(
   'cart/applyCoupon',
   async (couponCode, { rejectWithValue }) => {
@@ -92,9 +91,8 @@ export const removeCoupon = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const { data } = await removeCouponFromCart();
-      return {
-        total: data.total || 0
-      };
+      // backend returns summary
+      return data; // { summary, cartItems, ... }
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to remove coupon');
     }
@@ -113,6 +111,18 @@ export const validateCoupon = createAsyncThunk(
   }
 );
 
+export const fetchAvailableCoupons = createAsyncThunk(
+  'cart/fetchAvailableCoupons',
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await getAvailableCoupons();
+      return res.data.coupons || [];
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to load coupons');
+    }
+  }
+);
+
 // Initial state
 const initialState = {
   items: [],
@@ -123,6 +133,8 @@ const initialState = {
   productDiscount: 0,
   couponDiscount: 0,
   subtotal: 0,
+  tax: 0,
+  shipping: 0,
   total: 0,
   couponLoading: false,
   removingCoupon: false,
@@ -131,12 +143,17 @@ const initialState = {
     subtotal: 0,
     productDiscount: 0,
     couponDiscount: 0,
+    tax: 0,
+    shipping: 0,
     total: 0
   },
   addingToCart: false,
   updatingCart: false,
   removingFromCart: false,
-  clearingCart: false
+  clearingCart: false,
+  availableCoupons: [],
+  loadingCoupons: false,
+  couponsError: null,
 };
 
 const cartSlice = createSlice({
@@ -168,12 +185,16 @@ const cartSlice = createSlice({
           subtotal: action.payload.summary?.subtotal || 0,
           productDiscount: action.payload.summary?.productDiscount || 0,
           couponDiscount: action.payload.summary?.couponDiscount || 0,
+          tax: action.payload.summary?.tax || 0,
+          shipping: action.payload.summary?.shipping || 0,
           total: action.payload.summary?.total || 0,
         };
         
         // Update coupon and discount
         state.coupon = action.payload.coupon || null;
         state.subtotal = action.payload.summary?.subtotal || 0;
+        state.tax = action.payload.summary?.tax || 0;
+        state.shipping = action.payload.summary?.shipping || 0;
         state.total = action.payload.summary?.total || 0;
         
         // Reset coupon loading states
@@ -201,12 +222,16 @@ const cartSlice = createSlice({
           subtotal: action.payload.summary?.subtotal || 0,
           productDiscount: action.payload.summary?.productDiscount || 0,
           couponDiscount: action.payload.summary?.couponDiscount || 0,
+          tax: action.payload.summary?.tax || 0,
+          shipping: action.payload.summary?.shipping || 0,
           total: action.payload.summary?.total || 0,
         };
         
         // Update coupon and discount
         state.coupon = action.payload.coupon || state.coupon;
         state.subtotal = action.payload.summary?.subtotal || 0;
+        state.tax = action.payload.summary?.tax || 0;
+        state.shipping = action.payload.summary?.shipping || 0;
         state.total = action.payload.summary?.total || 0;
       })
       .addCase(addToCart.rejected, (state, action) => {
@@ -227,6 +252,8 @@ const cartSlice = createSlice({
             subtotal: action.payload.summary?.subtotal || 0,
             productDiscount: action.payload.summary?.productDiscount || 0,
             couponDiscount: action.payload.summary?.couponDiscount || 0,
+            tax: action.payload.summary?.tax || 0,
+            shipping: action.payload.summary?.shipping || 0,
             total: action.payload.summary?.total || 0,
           };
         }
@@ -235,6 +262,8 @@ const cartSlice = createSlice({
           state.coupon = action.payload.coupon;
         }
         state.subtotal = action.payload.summary?.subtotal || 0;
+        state.tax = action.payload.summary?.tax || 0;
+        state.shipping = action.payload.summary?.shipping || 0;
         state.total = action.payload.summary?.total || 0;
       })
       .addCase(updateCartItem.rejected, (state, action) => {
@@ -255,6 +284,8 @@ const cartSlice = createSlice({
         if (action.payload.summary) {
           state.summary = action.payload.summary;
           state.subtotal = action.payload.summary.subtotal || 0;
+          state.tax = action.payload.summary.tax || 0;
+          state.shipping = action.payload.summary.shipping || 0;
           state.total = action.payload.summary.total || 0;
         }
       })
@@ -276,10 +307,14 @@ const cartSlice = createSlice({
           subtotal: 0,
           productDiscount: 0,
           couponDiscount: 0,
+          tax: 0,
+          shipping: 0,
           total: 0,
         };
         state.coupon = null;
         state.subtotal = 0;
+        state.tax = 0;
+        state.shipping = 0;
         state.total = 0;
       })
       .addCase(clearCart.rejected, (state, action) => {
@@ -303,6 +338,8 @@ const cartSlice = createSlice({
           state.summary = {
             ...state.summary,
             couponDiscount: action.payload.couponDiscount || 0,
+            tax: action.payload.tax || 0,
+            shipping: action.payload.shipping || 0,
             total:    action.payload.total    ?? state.summary.total,
           };
         }
@@ -317,18 +354,39 @@ const cartSlice = createSlice({
         state.removingCoupon = true;
         state.couponError = null;
       })
-      .addCase(removeCoupon.fulfilled, (state) => {
+      .addCase(removeCoupon.fulfilled, (state, action) => {
         state.removingCoupon = false;
         state.coupon = null;
-        state.summary = {
-          ...state.summary,
-          couponDiscount: 0,
-          total: state.summary.subtotal    // revert to subtotal when coupon removed
-        };
+
+        if (action.payload && action.payload.summary) {
+          state.summary = action.payload.summary;
+        } else {
+          state.summary = {
+            ...state.summary,
+            couponDiscount: 0,
+            tax: action.payload?.summary?.tax ?? 0,
+            shipping: action.payload?.summary?.shipping ?? 0,
+            total: action.payload?.summary?.total ?? state.summary.subtotal,
+          };
+        }
       })
       .addCase(removeCoupon.rejected, (state, action) => {
         state.removingCoupon = false;
         state.couponError = action.payload || 'Failed to remove coupon';
+      })
+
+      // Available coupons
+      .addCase(fetchAvailableCoupons.pending, (state) => {
+        state.loadingCoupons = true;
+        state.couponsError = null;
+      })
+      .addCase(fetchAvailableCoupons.fulfilled, (state, action) => {
+        state.loadingCoupons = false;
+        state.availableCoupons = action.payload;
+      })
+      .addCase(fetchAvailableCoupons.rejected, (state, action) => {
+        state.loadingCoupons = false;
+        state.couponsError = action.payload;
       });
   }
 });

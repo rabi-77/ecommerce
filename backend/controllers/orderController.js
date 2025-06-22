@@ -8,6 +8,7 @@ import Coupon from "../models/couponModel.js";
 import asyncHandler from "express-async-handler";
 import { creditWallet, debitWallet } from "../services/walletService.js";
 import { fetchActiveOffers, applyBestOffer } from "../services/offerService.js";
+import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/pricing.js';
 
 const createOrder = asyncHandler(async (req, res) => {
   const { address, paymentMethod = "COD" } = req.body;
@@ -173,9 +174,16 @@ console.log(shippingAddress,'shippingAddress');
   }
 
   // Calculate final prices
-  const taxPrice = 0; // Tax is included in price for now
-  const shippingPrice = 0; // Free shipping for now
-  const totalPrice = itemsPrice - discountAmount + taxPrice + shippingPrice;
+  const netAmount = itemsPrice - discountAmount; // after product + coupon discounts, before tax / shipping
+
+  // Shipping: decision based on amount BEFORE coupon discount
+  const baseForShipping = netAmount + couponDiscount; // total after product-level discounts, before coupon
+  const shippingPrice = baseForShipping >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+  // Tax: 18% of net amount (GST)
+  const taxPrice = parseFloat((netAmount * TAX_RATE).toFixed(2));
+
+  const totalPrice = netAmount + taxPrice + shippingPrice;
 
   // Prevent duplicate unpaid Razorpay orders
   if (paymentMethod === 'RAZORPAY') {
@@ -466,35 +474,120 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     }
   );
 
-  // Wallet refund for partial cancellation
-  if (order.isPaid && order.paymentMethod !== 'COD') {
-    const remainingSubtotal = order.items.filter(i => !i.isCancelled).reduce((sum,i)=>sum + i.totalPrice,0);
-    let minSpend = 0;
+  // Recalculate payable amounts for COD orders
+  if (order.paymentMethod === 'COD') {
+    // Calculate subtotal of active (non-cancelled) items
+    const activeItems = order.items.filter(i => !i.isCancelled);
+    const activeSubtotal = activeItems.reduce((sum, i) => sum + (i.totalPrice || i.price), 0);
+
+    // Validate coupon min-spend
+    let couponStillValid = true;
     if (order.coupon) {
       const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
-      if (couponDoc) minSpend = couponDoc.minPurchaseAmount;
+      const minSpend = couponDoc?.minPurchaseAmount ?? 0;
+      couponStillValid = activeSubtotal >= minSpend;
     }
-    const couponStillApplies = remainingSubtotal >= minSpend;
-    const newDiscount = couponStillApplies ? order.couponDiscount : 0;
-    const newPayable = remainingSubtotal - newDiscount;
-    const amountPaidOnline = order.totalPrice;
-    const alreadyRefunded = order.refundToWallet || 0;
+
+    if (!couponStillValid) {
+      order.couponDiscount = 0;
+    }
+
+    const netAfterCoupon = activeSubtotal - (order.couponDiscount || 0);
+
+    // Recompute tax & shipping using shared constants
+    order.itemsPrice = activeSubtotal;
+    order.shippingPrice = activeSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+    order.taxPrice = parseFloat((netAfterCoupon * TAX_RATE).toFixed(2));
+    order.totalPrice = netAfterCoupon + order.shippingPrice + order.taxPrice;
+  }
+
+  // Wallet refund for partial cancellation
+  if (order.isPaid && order.paymentMethod !== 'COD') {
+
+    // Snapshot total before any recalculation
+    const prevTotal = order.totalPrice;
+
+    // Calculate key figures for the cancelled item & remaining order
+    const subtotalBefore = order.itemsPrice; // authoritative before update
+    const itemNetPrice = item.price * (1 - item.discount / 100);
+    const remainingSubtotal = subtotalBefore - itemNetPrice;
+
+    const isLastActive = remainingSubtotal === 0;
+
+    // Coupon qualifying check (only needed for orders with coupon)
+    let couponStillApplies = true;
+    if (order.coupon) {
+      const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
+      const minSpend = couponDoc?.minPurchaseAmount ?? 0;
+      couponStillApplies = remainingSubtotal >= minSpend;
+    }
+
     let refundAmount = 0;
-    if (couponStillApplies) {
-      // Refund only what the user actually paid for this item by subtracting its share of the coupon discount
-      const discountShare = (item.price / order.itemsPrice) * (order.couponDiscount || 0);
-      refundAmount = item.price - discountShare;
+
+    if (!order.coupon) {
+      // ===== No-coupon order =====
+      if (isLastActive) {
+        refundAmount = prevTotal; // full remaining including shipping
+        order.itemsPrice = 0;
+        order.shippingPrice = 0;
+        order.taxPrice = 0;
+        order.totalPrice = 0;
+      } else {
+        // proportional refund: item net + tax (helper ensures parity)
+        refundAmount = _calculateItemRefund(order, item, false);
+
+        order.itemsPrice -= itemNetPrice;
+        const taxPart = refundAmount - itemNetPrice;
+        order.taxPrice = parseFloat((order.taxPrice - taxPart).toFixed(2));
+        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
+      }
     } else {
-      // Coupon revoked – use differential calculation to avoid over-refund
-      refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
+      // ===== Coupon order =====
+      if (isLastActive) {
+        refundAmount = prevTotal; // full remaining with shipping & coupon
+        order.itemsPrice = 0;
+        order.couponDiscount = 0;
+        order.shippingPrice = 0;
+        order.taxPrice = 0;
+        order.totalPrice = 0;
+      } else if (couponStillApplies) {
+        // Coupon still valid → remove just this item's share
+        const couponShare = parseFloat(((itemNetPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
+        const priceAfterCoupon = itemNetPrice - couponShare;
+        const itemTax = parseFloat((priceAfterCoupon * TAX_RATE).toFixed(2));
+
+        refundAmount = priceAfterCoupon + itemTax; // no shipping
+
+        order.itemsPrice -= itemNetPrice;
+        order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
+        order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
+        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
+        // shipping unchanged
+      } else {
+        // Coupon revoked → recalc payable without coupon & refund diff
+        order.itemsPrice = remainingSubtotal;
+        order.couponDiscount = 0;
+        const newShipping = remainingSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE; // shipping stays if items remain
+        order.shippingPrice = newShipping;
+        const newTax = parseFloat((remainingSubtotal * TAX_RATE).toFixed(2));
+        order.taxPrice = newTax;
+        const newPayable = remainingSubtotal + newShipping + newTax;
+
+        refundAmount = prevTotal - newPayable;
+        order.totalPrice = newPayable;
+      }
     }
+
+    // Safety clamp against negative due to float errors
+    if (refundAmount < 0) refundAmount = 0;
+
     if (refundAmount > 0) {
       await creditWallet(order.user, refundAmount, {
         orderId: order._id,
         source: 'refund',
         description: `Refund for cancelling item ${itemId}`,
       });
-      order.refundToWallet = alreadyRefunded + refundAmount;
+      order.refundToWallet = (order.refundToWallet || 0) + refundAmount;
     }
   }
 
@@ -876,6 +969,15 @@ const markPaymentFailed = asyncHandler(async (req, res) => {
 
   return res.json({ success: true });
 });
+
+// Helper function to calculate refund amount for a cancelled item
+function _calculateItemRefund(order, item, isLastActive) {
+  const itemPrice = item.price * (1 - item.discount / 100);
+  const itemTax = parseFloat((itemPrice * TAX_RATE).toFixed(2));
+  const itemShipping = isLastActive ? order.shippingPrice : 0;
+
+  return itemPrice + itemTax + itemShipping;
+}
 
 export {
   createOrder,
