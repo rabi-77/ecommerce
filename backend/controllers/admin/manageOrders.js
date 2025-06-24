@@ -188,52 +188,90 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       (order.paymentMethod === 'COD' && order.isDelivered);
     
     if (shouldProcessRefund) {
-      // Calculate accurate refund with coupon rules
-      const remainingSubtotal = order.items.filter(it => !(it._id.toString() === itemId) && !it.isCancelled && !(it.isReturned && it.returnRequestStatus==='approved')).reduce((sum,it)=>sum + it.totalPrice,0);
+      // Unified refund logic (mirrors cancelOrderItem)
+      const prevTotal = order.totalPrice;
 
+      const subtotalBefore = order.itemsPrice; // includes the item being returned
+      const itemNetPrice = orderItem.price * (1 - orderItem.discount / 100);
+      const remainingSubtotal = subtotalBefore - itemNetPrice;
+      const isLastActive = remainingSubtotal === 0;
+
+      // Determine coupon validity after return
+      let couponStillApplies = true;
       let minSpend = 0;
       if (order.coupon) {
-        console.log('order coupon',order.coupon);
-        
         const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
-        if (couponDoc) minSpend = couponDoc.minPurchaseAmount;
+        minSpend = couponDoc?.minPurchaseAmount ?? 0;
+        couponStillApplies = remainingSubtotal >= minSpend;
       }
-console.log('minispend',minSpend);
-
-      const couponStillApplies = remainingSubtotal >= minSpend;
-      const newDiscount = couponStillApplies ? order.couponDiscount : 0;
-      const newPayable = remainingSubtotal - newDiscount;
-console.log('couponstillapplies',couponStillApplies);
-
-      const amountPaidOnline = order.totalPrice;
-      const alreadyRefunded = order.refundToWallet || 0;
 
       let refundAmount = 0;
-      // if (couponStillApplies) {
-      //   // Coupon remains valid after this return, so refund the item's full paid amount (its discounted price).
-      //   refundAmount = orderItem.totalPrice;
-      // } else {
-      //   // Coupon revoked – fall back to differential method
-      //   refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
-      // }
-      if (couponStillApplies) {
-        // Refund only what the user actually paid for this item by subtracting its share of the coupon discount
-        const discountShare = (orderItem.price / order.itemsPrice) * (order.couponDiscount || 0);
-        refundAmount = orderItem.price - discountShare;
-console.log('refundAmount',refundAmount,discountShare,'dsc',order.totalPrice,'ttl',order.itemsPrice,'ko',orderItem.price,'orderitem');
+
+      if (!order.coupon) {
+        // --- No-coupon order ---
+        if (isLastActive) {
+          refundAmount = prevTotal;
+          order.itemsPrice = 0;
+          order.shippingPrice = 0;
+          order.taxPrice = 0;
+          order.totalPrice = 0;
+        } else {
+          // price + tax (+ shipping only on last item)
+          const itemTax = parseFloat((itemNetPrice * TAX_RATE).toFixed(2));
+          const itemShipping = isLastActive ? order.shippingPrice : 0;
+          refundAmount = itemNetPrice + itemTax + itemShipping;
+
+          order.itemsPrice -= itemNetPrice;
+          order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
+          if (isLastActive) order.shippingPrice = 0;
+          order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
+        }
       } else {
-        // Coupon revoked – use differential calculation to avoid over-refund
-        refundAmount = amountPaidOnline - newPayable - alreadyRefunded;
-console.log('refundAmountelse',refundAmount);
+        // --- Coupon order ---
+        if (isLastActive) {
+          refundAmount = prevTotal;
+          order.itemsPrice = 0;
+          order.couponDiscount = 0;
+          order.shippingPrice = 0;
+          order.taxPrice = 0;
+          order.totalPrice = 0;
+        } else if (couponStillApplies) {
+          const couponShare = parseFloat(((itemNetPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
+          const priceAfterCoupon = itemNetPrice - couponShare;
+          const itemTax = parseFloat((priceAfterCoupon * TAX_RATE).toFixed(2));
+          const itemShipping = isLastActive ? order.shippingPrice : 0;
+
+          refundAmount = priceAfterCoupon + itemTax + itemShipping;
+
+          order.itemsPrice -= itemNetPrice;
+          order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
+          order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
+          if (isLastActive) order.shippingPrice = 0;
+          order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
+        } else {
+          // Coupon revoked – differential refund
+          order.itemsPrice = remainingSubtotal;
+          order.couponDiscount = 0;
+          const newShipping = remainingSubtotal === 0 ? 0 : (remainingSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE);
+          order.shippingPrice = newShipping;
+          const newTax = parseFloat((remainingSubtotal * TAX_RATE).toFixed(2));
+          order.taxPrice = newTax;
+          const newPayable = remainingSubtotal + newShipping + newTax;
+
+          refundAmount = prevTotal - newPayable;
+          order.totalPrice = newPayable;
+        }
       }
+
+      if (refundAmount < 0) refundAmount = 0;
 
       if (refundAmount > 0) {
         await creditWallet(order.user, refundAmount, {
           orderId: order._id,
           source: 'refund',
-          description: `Refund for returned item ${orderItem.product} for the order ${order._id}`,
+          description: `Refund for returned item ${orderItem.product} (order ${order._id})`,
         });
-        order.refundToWallet = alreadyRefunded + refundAmount;
+        order.refundToWallet = (order.refundToWallet || 0) + refundAmount;
       }
     }
     
