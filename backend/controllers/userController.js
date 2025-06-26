@@ -340,7 +340,7 @@ const googleAuthCallback = async (req, res) => {
       return res.status(400).json({ message: "invalid credentials" });
     }
     const tokenAccess = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "30d",
+      expiresIn: "30m",
     });
 
     const tokenRefresh = jwt.sign(
@@ -374,6 +374,8 @@ const googleAuthCallback = async (req, res) => {
 
 const refreshAccessToken = async (req, res) => {
   try {
+    console.log('user refresh');
+    
     const { refreshToken } = req.body;
     if (!refreshToken) {
       return res.status(400).json({ message: "refresh token is required" });
@@ -389,7 +391,7 @@ const refreshAccessToken = async (req, res) => {
       return res.status(401).json({ message: "invalid refresh token" });
     }
     const tokenAccess = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "20m",
+      expiresIn: "30m",
     });
     res.json({ tokenAccess });
   } catch (err) {

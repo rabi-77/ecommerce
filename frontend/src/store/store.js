@@ -22,6 +22,7 @@ import userProduct from '../features/userHomeSlice'
 import walletReducer from '../features/wallet/walletSlice'
 import offerReducer from '../features/admin/adminOffers/offerSlice'
 import salesReportReducer from '../features/admin/salesReportSlice'
+import dashboardReducer from '../features/admin/adminDashboard/dashboardSlice'
 // storage.removeItem('persist:root');
 const persistConfig = {
   key: 'root',
@@ -50,7 +51,8 @@ const rootReducer=combineReducers({
   coupons:couponReducer,
   wallet:walletReducer,
   offers:offerReducer,
-  salesReport:salesReportReducer
+  salesReport:salesReportReducer,
+  adminDashboard:dashboardReducer
 })
 
 const persistedReducer = persistReducer(persistConfig,rootReducer);

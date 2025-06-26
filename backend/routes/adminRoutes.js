@@ -41,6 +41,7 @@ import {
 import { couponValidationRules, validateCouponRules } from '../validations/couponValidation.js';
 import { createOffer, getOffers, getOfferById, updateOffer, deleteOffer, toggleOfferActive } from '../controllers/admin/manageOffers.js'
 import { getSalesReport } from '../controllers/admin/manageSalesReport.js'
+import { getDashboardStats } from '../controllers/admin/dashboardController.js'
 
 const admin = express.Router();
 
@@ -108,6 +109,9 @@ admin.get('/inventory/low-stock', getLowStockProducts)
 
 // sales report
 admin.get('/sales-report', getSalesReport)
+
+// dashboard stats
+admin.get('/dashboard-stats', getDashboardStats)
 
 // Offer management
 admin.get('/offers', getOffers)

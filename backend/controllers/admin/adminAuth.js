@@ -14,7 +14,7 @@ export const adminLogin = async (req, res) => {
   if (!isMatch) return res.status(400).json({ message: "invalid credentials" });
 
   const tokenAccess = jwt.sign({ adminId: admin._id }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
+    expiresIn: "60m",
   });
 
   const tokenRefresh = jwt.sign(
@@ -25,6 +25,7 @@ export const adminLogin = async (req, res) => {
 
   admin.refreshToken = tokenRefresh;
   await admin.save();
+console.log('tokenAccess for just',tokenAccess);
 
   res.json({ tokenAccess, tokenRefresh, admin });
 };
@@ -46,7 +47,7 @@ export const refreshAccessToken = async (req, res) => {
     const newAccessToken = jwt.sign(
       { adminId: admin._id },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "60m" }
     );
 
     res.json({ accessToken: newAccessToken });
