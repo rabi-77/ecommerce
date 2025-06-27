@@ -7,7 +7,6 @@ import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/prici
 
 const MAX_QUANTITY_PER_PRODUCT = 10;
 
-// Pricing constants (move to config if needed)
 
 const calculateCartTotals = async (cart) => {
   let subtotal = 0;
@@ -46,10 +45,8 @@ const calculateCartTotals = async (cart) => {
     totalAfterCoupon = totalAfterProductDisc;
   }
 
-  // Calculate tax on net amount after discounts
   tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
 
-  // Shipping charge should be decided BEFORE coupon discount is applied
   shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
   grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));

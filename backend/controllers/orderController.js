@@ -122,6 +122,18 @@ console.log(shippingAddress,'shippingAddress');
     );
   }
 
+  // ----- COD payment restriction (subtotal before coupon) -----
+  if (paymentMethod === 'COD') {
+    const subtotalBeforeCoupon = itemsPrice - discountAmount; // only product-level discounts applied
+    if (subtotalBeforeCoupon > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cash on Delivery is available only for orders up to ₹1000. Please choose an online payment method.'
+      });
+    }
+  }
+  // ------------------------------------------------------------
+
   // Include coupon discount if applied on cart, but re-validate to ensure it is still eligible
   let couponDiscount = 0;
   let appliedCoupon = null;

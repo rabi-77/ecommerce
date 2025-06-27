@@ -736,8 +736,12 @@ const Checkout = () => {
             <div className="mt-4">
               <div className="space-y-4">
                 <div 
-                  className={`p-4 rounded-lg border-2 ${paymentMethod === 'COD' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} cursor-pointer mb-3`}
-                  onClick={() => setPaymentMethod('COD')}
+                  className={`p-4 rounded-lg border-2 mb-3 ${
+                    paymentMethod === 'COD' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                  } ${codDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                  onClick={() => {
+                    if (!codDisabled) setPaymentMethod('COD');
+                  }}
                 >
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
@@ -748,11 +752,12 @@ const Checkout = () => {
                         className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         checked={paymentMethod === 'COD'}
                         onChange={() => setPaymentMethod('COD')}
+                        disabled={codDisabled}
                       />
                     </div>
                     <div className="ml-3 text-sm">
                       <label htmlFor="payment-cod" className="font-medium text-gray-900 block">
-                        Cash on Delivery
+                        Cash on Delivery {codDisabled && <span className="text-red-600 text-xs">(Not available for orders over ₹1000)</span>}
                       </label>
                       <p className="text-gray-500 mt-1">
                         Pay when your order is delivered
@@ -1052,6 +1057,7 @@ const Checkout = () => {
   
   const payable = summary?.total || 0;
   const walletShort   = paymentMethod==='WALLET' && walletBalance < payable;
+  const codDisabled = cartSummary?.subtotal > 1000;
   const canPlaceOrder = !walletShort && selectedAddress && paymentMethod && !creatingOrder;
 
   return (

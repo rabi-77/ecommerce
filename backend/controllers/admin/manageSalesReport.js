@@ -63,7 +63,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
     matchStage.createdAt = dateMatch;
   }
 
-  // Aggregate sales data
+  
   const [summary] = await Order.aggregate([
     { $match: matchStage },
     {
@@ -83,7 +83,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
     },
   ]);
 
-  // If no orders, set defaults
+  
   const data = summary || {
     totalOrders: 0,
     totalSales: 0,
@@ -93,7 +93,6 @@ export const getSalesReport = asyncHandler(async (req, res) => {
     grossSales: 0,
   };
 
-  // Fetch detailed paid orders matching filters
   const orders = await Order.find(matchStage)
     .select('orderNumber itemsPrice discountAmount couponDiscount taxPrice shippingPrice totalPrice paymentMethod isPaid paidAt')
     .sort({ createdAt: -1 });
@@ -199,7 +198,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
     return;
   }
 
-  // Default JSON response
+  
   res.json({ range, from, to, summary: data, orders });
 });
 
