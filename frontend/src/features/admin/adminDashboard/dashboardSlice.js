@@ -20,7 +20,7 @@ const dashboardSlice = createSlice({
     data: null,
     error: false,
     errorMessage: null,
-    filters: { range: 'today' },
+    filters: { range: 'year' },
   },
   reducers: {
     setFilters(state, action) {

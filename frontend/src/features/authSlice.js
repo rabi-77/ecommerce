@@ -4,6 +4,7 @@ import {
   buildCreateSlice,
 } from "@reduxjs/toolkit";
 import { registerUser, verifyUser, resendOtp, loginUser, requestPasswordReset, resendPasswordResetOtp, resetPassword ,logoutUser,refreshAccessToken} from "../services/authServices";
+import { updateProfile } from "./userprofile/profileSlice"; // <-- new import
 // import { build } from "vite";
 
 export const login = createAsyncThunk(
@@ -462,6 +463,13 @@ const authSlice = createSlice({
         state.user = null;
         state.isVerified = false;
       })
+      // Keep auth slice in sync with profile updates
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        // action.payload.user contains the latest user info
+        if (action.payload && action.payload.user) {
+          state.user = action.payload.user;
+        }
+      });
   },
 });
 

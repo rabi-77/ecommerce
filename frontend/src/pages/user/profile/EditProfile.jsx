@@ -95,6 +95,13 @@ const EditProfile = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // --- Phone validation (Indian numbers) ---
+    const phonePattern = /^(?:\+91[-\s]?)?[6-9]\d{9}$/; // supports optional +91 and spaces/hyphen
+    if (formData.phone && !phonePattern.test(formData.phone)) {
+      toast.error('Please enter a valid 10-digit Indian mobile number');
+      return;
+    }
+
     const formDataToSend = new FormData();
     formDataToSend.append("name", formData.name);
     if (formData.phone) {

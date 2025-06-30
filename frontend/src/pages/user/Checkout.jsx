@@ -917,6 +917,20 @@ const Checkout = () => {
                 )}
               
                 <div className="border-t border-gray-200 my-4"></div>
+
+                {summary?.productDiscount !== undefined && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-600">Offer Discount</span>
+                    <span className="font-medium text-green-600">-₹{parseFloat(summary.productDiscount || 0).toFixed(2)}</span>
+                  </div>
+                )}
+
+                {/* {summary?.couponDiscount !== undefined && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-600">Coupon Discount</span>
+                    <span className="font-medium">₹{parseFloat(summary.couponDiscount || 0).toFixed(2)}</span>
+                  </div>
+                )} */}
               
                 {summary?.tax !== undefined && (
                   <div className="flex justify-between py-2">
@@ -1157,7 +1171,7 @@ const Checkout = () => {
                 
                 {summary?.productDiscount > 0 && (
                   <div className="flex justify-between text-base font-medium text-green-600 mt-2">
-                    <p>Offer Discount</p>
+                    <p>Offer Discouznt</p>
                     <p>-₹{parseFloat(summary.productDiscount).toFixed(2)}</p>
                   </div>
                 )}

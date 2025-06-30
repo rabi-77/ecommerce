@@ -1,6 +1,7 @@
 import { body } from 'express-validator';
 
-export const couponValidationRules = [
+// --- refactor: separate create & update rules + normalize dates ---
+export const couponCreateValidationRules = [
   body('code')
     .trim()
     .notEmpty()
@@ -47,16 +48,14 @@ export const couponValidationRules = [
 
   body('startDate')
     .isISO8601()
-    .withMessage('Invalid start date format. Use ISO 8601 format (YYYY-MM-DD)')
+    .withMessage('Invalid start date format. Use YYYY-MM-DD')
     .custom((value) => {
-      const inputDate = new Date(value);
+      const input = new Date(value);
       const today = new Date();
-
-      // Set both dates to midnight (00:00:00)
-      inputDate.setHours(0, 0, 0, 0);
+      // Compare by date only (ignore time) so coupons become valid from 00:00 local time
+      input.setHours(0, 0, 0, 0);
       today.setHours(0, 0, 0, 0);
-
-      if (inputDate < today) {
+      if (input < today) {
         throw new Error('Start date cannot be in the past');
       }
       return true;
@@ -64,12 +63,9 @@ export const couponValidationRules = [
 
   body('expiryDate')
     .isISO8601()
-    .withMessage('Invalid expiry date format. Use ISO 8601 format (YYYY-MM-DD)')
+    .withMessage('Invalid expiry date format. Use YYYY-MM-DD')
     .custom((value, { req }) => {
-      if (new Date(value) <= new Date(req.body.startDate)) {
-        throw new Error('Expiry date must be after start date');
-      }
-      return true;
+      return new Date(value) > new Date(req.body.startDate);
     }),
 
   body('maxUses')
@@ -78,12 +74,39 @@ export const couponValidationRules = [
     .withMessage('Max uses must be a positive integer'),
 ];
 
+export const couponUpdateValidationRules = [
+  body('code').optional().trim().isLength({ min: 4, max: 20 }).matches(/^[A-Z0-9]+$/),
+  body('description').optional().trim().isLength({ max: 500 }),
+  body('discountType').optional().isIn(['percentage', 'fixed']),
+  body('discountValue').optional().isFloat({ gt: 0 }),
+  body('minPurchaseAmount').optional().isFloat({ min: 0 }),
+  body('maxDiscountAmount').optional().isFloat({ min: 0 }),
+  body('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid start date format. Use YYYY-MM-DD'),
+  body('expiryDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid expiry date format. Use YYYY-MM-DD')
+    .custom((value, { req }) => {
+      if (req.body.startDate) {
+        return new Date(value) > new Date(req.body.startDate);
+      }
+      return true;
+    }),
+  body('maxUses').optional().isInt({ min: 1 }),
+];
+
+// keep original export names for backward compatibility
+export { couponCreateValidationRules as couponValidationRules };
+
 export const validateCouponRules = [
   body('code')
     .trim()
     .notEmpty()
     .withMessage('Coupon code is required'),
-  
+
   body('amount')
     .isFloat({ min: 0 })
     .withMessage('Amount must be a valid number'),

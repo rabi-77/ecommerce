@@ -51,80 +51,83 @@ const Users = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">User Management</h2>
-      
-      <div className="flex justify-between items-center">
-        <div className="flex space-x-2">
+      <h2 className="text-xl sm:text-2xl font-bold">User Management</h2>
+
+      {/* Search + controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <input
             type="text"
             value={search}
             onChange={handleSearch}
             placeholder="Search users..."
-            className="p-2 border rounded-md w-64"
+            className="p-2 border rounded-md w-full sm:w-64"
           />
           <button
             onClick={clearSearch}
-            className="p-2 bg-gray-500 text-white rounded-md"
+            className="p-2 bg-gray-500 text-white rounded-md self-start sm:self-auto"
           >
             Clear
           </button>
         </div>
       </div>
-      
+
       {loading ? (
         <p>Loading...</p>
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : (
         <>
-          <table className="w-full border-collapse bg-white rounded-lg shadow">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="p-3 text-left">Username</th>
-                <th className="p-3 text-left">Email</th>
-                <th className="p-3 text-left">Status</th>
-                <th className="p-3 text-left">Joined Date</th>
-                <th className="p-3 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users && users.length > 0 ? (
-                users.map((user) => (
-                  <tr key={user._id} className="border-b">
-                    <td className="p-3">{user.username}</td>
-                    <td className="p-3">{user.email}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${user.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                        {user.isBlocked ? 'Blocked' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="p-3">{new Date(user.createdAt).toLocaleDateString()}</td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => handleToggleBlock(user._id)}
-                        className={`px-3 py-1 rounded text-sm font-medium ${
-                          !user.isBlocked
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        }`}
-                      >
-                        {!user.isBlocked ? 'Active' : 'Blocked'}
-                      </button>
+          <div className="w-full overflow-x-auto">
+            <table className="min-w-full border-collapse bg-white rounded-lg shadow text-sm">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="p-3 text-left">Username</th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Joined Date</th>
+                  <th className="p-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users && users.length > 0 ? (
+                  users.map((user) => (
+                    <tr key={user._id} className="border-b">
+                      <td className="p-3">{user.username}</td>
+                      <td className="p-3">{user.email}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${user.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                          {user.isBlocked ? 'Blocked' : 'Active'}
+                        </span>
+                      </td>
+                      <td className="p-3">{new Date(user.createdAt).toLocaleDateString()}</td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => handleToggleBlock(user._id)}
+                          className={`px-3 py-1 rounded text-sm font-medium ${
+                            !user.isBlocked
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          }`}
+                        >
+                          {!user.isBlocked ? 'Active' : 'Blocked'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="p-3 text-center text-gray-500">
+                      No users found
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="p-3 text-center text-gray-500">
-                    No users found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          
+                )}
+              </tbody>
+            </table>
+          </div>
+
           {total > size && (
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center mt-6 overflow-x-auto">
               <ReactPaginate
                 previousLabel="Previous"
                 nextLabel="Next"
@@ -148,4 +151,3 @@ const Users = () => {
 };
 
 export default Users;
-  

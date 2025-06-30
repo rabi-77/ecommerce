@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 
-const Sidebar = () => {
+const Sidebar = ({ onLinkClick = () => {} }) => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard' },
     { name: 'Users', path: '/admin/users' },
@@ -10,14 +10,13 @@ const Sidebar = () => {
     { name: 'Category', path: '/admin/category' },
     { name: 'Orders', path: '/admin/orders' },
     { name: 'Offers', path: '/admin/offers' },
-    { name: 'Settings', path: '/admin/settings' },
     { name: 'Banner', path: '/admin/banner' },
     { name: 'Coupons', path: '/admin/coupons' },
     { name: 'Sales Report', path: '/admin/sales-report' },
   ];
 
   return (
-    <div className="w-64 min-h-screen bg-gray-800 text-white p-6">
+    <div className="w-64 md:w-64 min-h-screen bg-gray-800 text-white p-6">
       <h1 className="text-xl font-bold mb-8 text-white border-b border-gray-700 pb-4">Vercetti</h1>
       <nav className="space-y-2">
         {navItems.map(item => (
@@ -29,6 +28,7 @@ const Sidebar = () => {
                 isActive ? 'bg-gray-700 text-white border-l-4 border-gray-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`
             }
+            onClick={onLinkClick}
           >
             {item.name}
           </NavLink>

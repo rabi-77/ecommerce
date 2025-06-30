@@ -38,7 +38,7 @@ import {
   toggleCouponStatus,
   validateCoupon
 } from '../controllers/admin/manageCoupons.js'
-import { couponValidationRules, validateCouponRules } from '../validations/couponValidation.js';
+import { couponValidationRules as couponCreateValidationRules, couponUpdateValidationRules } from '../validations/couponValidation.js';
 import { createOffer, getOffers, getOfferById, updateOffer, deleteOffer, toggleOfferActive } from '../controllers/admin/manageOffers.js'
 import { getSalesReport } from '../controllers/admin/manageSalesReport.js'
 import { getDashboardStats } from '../controllers/admin/dashboardController.js'
@@ -124,12 +124,10 @@ admin.patch('/offers/:id/toggle', toggleOfferActive)
 // Coupon Management
 admin.get('/coupons', getAllCoupons);
 admin.get('/coupons/:id', getCouponById);
-admin.post('/coupons',(req,res,next)=>{console.log(req.body)
-  console.log('fef')
-  next()},couponValidationRules, createCoupon);
-admin.put('/coupons/:id', couponValidationRules, updateCoupon);
+admin.post('/coupons', couponCreateValidationRules, createCoupon);
+admin.put('/coupons/:id', couponUpdateValidationRules, updateCoupon);
 admin.delete('/coupons/:id', deleteCoupon);
 admin.patch('/coupons/:id/toggle', toggleCouponStatus);
-admin.post('/coupons/validate', validate(validateCouponRules), validateCoupon);
+// admin.post('/coupons/validate', validate(validateCouponRules), validateCoupon);
 
 export default admin;

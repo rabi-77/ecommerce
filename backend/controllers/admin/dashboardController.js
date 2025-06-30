@@ -3,6 +3,7 @@ import Order from '../../models/orderModel.js';
 import Product from '../../models/productModel.js';
 import Category from '../../models/categoryModel.js';
 import Brand from '../../models/brandModel.js';
+import User from '../../models/userModel.js';
 import PDFDocument from 'pdfkit';
 
 // util copied from manageSalesReport
@@ -149,6 +150,28 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     { $sort: { date: -1 } },
   ]);
 
+  // --------- Global Counts ---------
+  const [totalUsers, totalProducts, totalCategories, totalBrands, totalOrders] = await Promise.all([
+    User.countDocuments(),
+    Product.countDocuments(),
+    Category.countDocuments(),
+    Brand.countDocuments(),
+    Order.countDocuments(),
+  ]);
+
+  // --------- Latest 5 Orders ---------
+  const latestOrders = await Order.find()
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select('orderNumber user totalPrice status createdAt')
+    .populate({ path: 'user', select: 'username email' });
+
+  // --------- Latest 5 Users ---------
+  const latestUsers = await User.find()
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select('username email createdAt');
+
   // If client requests PDF ledger, stream it and return early
   if (format === 'pdf') {
     const doc = new PDFDocument({ margin: 30, size: 'A4' });
@@ -185,7 +208,24 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     return;
   }
 
-  res.json({ range, from, to, topProducts, topCategories, topBrands, ledger });
+  res.json({
+    range,
+    from,
+    to,
+    counts: {
+      users: totalUsers,
+      products: totalProducts,
+      categories: totalCategories,
+      brands: totalBrands,
+      orders: totalOrders,
+    },
+    topProducts,
+    topCategories,
+    topBrands,
+    ledger,
+    latestOrders,
+    latestUsers,
+  });
 });
 
 export default { getDashboardStats };

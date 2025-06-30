@@ -4,6 +4,7 @@ import wishlistModel from '../models/wishlistModel.js';
 import Coupon from '../models/couponModel.js';
 import { fetchActiveOffers, applyBestOffer } from '../services/offerService.js';
 import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/pricing.js';
+import mongoose from 'mongoose';
 
 const MAX_QUANTITY_PER_PRODUCT = 10;
 
@@ -524,8 +525,7 @@ export const applyCoupon = async (req, res) => {
     const { code } = req.body;
     const userId = req.user;
 
-    const now = new Date();
-    console.log("Current server time:", now);
+    const userIdStr = userId.toString();
 
     const coupon = await Coupon.findOne({
       code: code.toUpperCase().trim(),
@@ -539,15 +539,22 @@ export const applyCoupon = async (req, res) => {
       expiryDate: coupon.expiryDate,
       maxUses: coupon.maxUses,
       usedCount: coupon.usedCount,
-      currentTime: now,
-      isBeforeStart: now < new Date(coupon.startDate),
-      isAfterExpiry: now > new Date(coupon.expiryDate)
+      currentTime: new Date(),
+      isBeforeStart: new Date() < new Date(coupon.startDate),
+      isAfterExpiry: new Date() > new Date(coupon.expiryDate)
     } : 'No active coupon found with this code');
 
     if (!coupon) {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid or inactive coupon code' 
+      });
+    }
+
+    if (coupon && coupon.usedBy.some(id => id.toString() === userIdStr)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already used this coupon'
       });
     }
 
@@ -800,7 +807,13 @@ export const validateCoupon = async (req, res) => {
 // ======= Fetch Available Coupons =======
 export const getAvailableCoupons = async (req, res) => {
   try {
-    const userId = req.user;
+    console.log('hey');
+    
+    const userId =  req.user;
+    console.log(userId,'hey');
+    
+    const userIdStr = userId.toString();
+    const userObjId = new mongoose.Types.ObjectId(userIdStr);
 
     const now = new Date();
 
@@ -813,7 +826,7 @@ export const getAvailableCoupons = async (req, res) => {
         { maxUses: { $exists: false } },
         { $expr: { $gt: [ '$maxUses', '$usedCount' ] } }
       ],
-      usedBy: { $ne: userId },
+      usedBy: { $nin: [userIdStr, userObjId] },
     }).select('code discountType discountValue minPurchaseAmount maxDiscountAmount expiryDate');
 
     res.json({ success: true, coupons });

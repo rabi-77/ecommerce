@@ -188,12 +188,26 @@ console.log(shippingAddress,'shippingAddress');
   // Calculate final prices
   const netAmount = itemsPrice - discountAmount; // after product + coupon discounts, before tax / shipping
 
+  // ---- Allocate couponShare & taxShare per item ----
+  if (itemsPrice > 0) {
+    orderItems.forEach((itm) => {
+      const lineOriginal = itm.price * itm.quantity; // before any discount
+      const couponShare = parseFloat(((lineOriginal / itemsPrice) * couponDiscount).toFixed(2));
+      const priceAfterDiscounts = (itm.totalPrice * itm.quantity) - couponShare;
+      const taxShare = parseFloat((priceAfterDiscounts * TAX_RATE).toFixed(2));
+
+      itm.couponShare = couponShare;
+      itm.taxShare = taxShare;
+    });
+  }
+  // -----------------------------------------------
+
   // Shipping: decision based on amount BEFORE coupon discount
   const baseForShipping = netAmount + couponDiscount; // total after product-level discounts, before coupon
   const shippingPrice = baseForShipping >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
-  // Tax: 18% of net amount (GST)
-  const taxPrice = parseFloat((netAmount * TAX_RATE).toFixed(2));
+  // Sum of item taxShares is authoritative
+  const taxPrice = orderItems.reduce((sum, i) => sum + (i.taxShare || 0), 0);
 
   const totalPrice = netAmount + taxPrice + shippingPrice;
 
@@ -211,7 +225,7 @@ console.log(shippingAddress,'shippingAddress');
   }
 
   // Create order
-  console.log("before saving");
+  console.log("before saving, allocating shares done");
 
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2);
@@ -490,7 +504,16 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
   if (order.paymentMethod === 'COD') {
     // Calculate subtotal of active (non-cancelled) items
     const activeItems = order.items.filter(i => !i.isCancelled);
-    const activeSubtotal = activeItems.reduce((sum, i) => sum + (i.totalPrice || i.price), 0);
+    const activeSubtotal = activeItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+    // Compute per-item product-level discount to maintain discountAmount when items are cancelled
+    const unitBefore = item.price;
+    const unitAfter = item.totalPrice || (item.price * (1 - item.discount / 100));
+    const cancelledItemDiscount = (unitBefore - unitAfter) * item.quantity;
+
+    if (order.discountAmount) {
+      order.discountAmount = parseFloat(Math.max(order.discountAmount - cancelledItemDiscount, 0).toFixed(2));
+    }
 
     // Validate coupon min-spend
     let couponStillValid = true;
@@ -501,16 +524,20 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     }
 
     if (!couponStillValid) {
+      const prevCouponDiscount = order.couponDiscount || 0;
       order.couponDiscount = 0;
+      // discountAmount currently includes the coupon component; remove it
+      order.discountAmount = parseFloat((order.discountAmount - prevCouponDiscount).toFixed(2));
     }
 
-    const netAfterCoupon = activeSubtotal - (order.couponDiscount || 0);
+    // Net payable for tax after ALL discounts (product offers + coupon)
+    const netAfterDiscounts = activeSubtotal - (order.discountAmount || 0);
 
     // Recompute tax & shipping using shared constants
     order.itemsPrice = activeSubtotal;
-    order.shippingPrice = activeSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-    order.taxPrice = parseFloat((netAfterCoupon * TAX_RATE).toFixed(2));
-    order.totalPrice = netAfterCoupon + order.shippingPrice + order.taxPrice;
+    order.shippingPrice = activeSubtotal === 0 ? 0 : (activeSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE);
+    order.taxPrice = activeSubtotal === 0 ? 0 : parseFloat((netAfterDiscounts * TAX_RATE).toFixed(2));
+    order.totalPrice = activeSubtotal === 0 ? 0 : (netAfterDiscounts + order.shippingPrice + order.taxPrice);
   }
 
   // Wallet refund for partial cancellation
@@ -520,9 +547,10 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     const prevTotal = order.totalPrice;
 
     // Calculate key figures for the cancelled item & remaining order
-    const subtotalBefore = order.itemsPrice; // authoritative before update
-    const itemNetPrice = item.price * (1 - item.discount / 100);
-    const remainingSubtotal = subtotalBefore - itemNetPrice;
+    const subtotalBefore = order.itemsPrice; // authoritative before update (original prices sum)
+    const itemOriginalPrice = item.price * item.quantity; // before any offer discount
+    const itemPaidPrice = (item.totalPrice || item.price) * item.quantity; // after offer discount
+    const remainingSubtotal = subtotalBefore - itemOriginalPrice;
 
     const isLastActive = remainingSubtotal === 0;
 
@@ -536,58 +564,31 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
 
     let refundAmount = 0;
 
-    if (!order.coupon) {
-      // ===== No-coupon order =====
-      if (isLastActive) {
-        refundAmount = prevTotal; // full remaining including shipping
-        order.itemsPrice = 0;
-        order.shippingPrice = 0;
-        order.taxPrice = 0;
-        order.totalPrice = 0;
-      } else {
-        // proportional refund: item net + tax (helper ensures parity)
-        refundAmount = _calculateItemRefund(order, item, false);
+    if (isLastActive) {
+      // Refund everything that remains (includes shipping & any coupon/tax)
+      refundAmount = prevTotal;
 
-        order.itemsPrice -= itemNetPrice;
-        const taxPart = refundAmount - itemNetPrice;
-        order.taxPrice = parseFloat((order.taxPrice - taxPart).toFixed(2));
-        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
-      }
+      order.itemsPrice = 0;
+      order.couponDiscount = 0;
+      order.discountAmount = 0;
+      order.shippingPrice = 0;
+      order.taxPrice = 0;
+      order.totalPrice = 0;
     } else {
-      // ===== Coupon order =====
-      if (isLastActive) {
-        refundAmount = prevTotal; // full remaining with shipping & coupon
-        order.itemsPrice = 0;
-        order.couponDiscount = 0;
-        order.shippingPrice = 0;
-        order.taxPrice = 0;
-        order.totalPrice = 0;
-      } else if (couponStillApplies) {
-        // Coupon still valid → remove just this item's share
-        const couponShare = parseFloat(((itemNetPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
-        const priceAfterCoupon = itemNetPrice - couponShare;
-        const itemTax = parseFloat((priceAfterCoupon * TAX_RATE).toFixed(2));
+      // Proportional refund for this item using stored shares
+      const couponShare = item.couponShare || 0;
+      const itemTax = item.taxShare || 0;
+      const priceAfterCoupon = itemPaidPrice - couponShare;
 
-        refundAmount = priceAfterCoupon + itemTax; // no shipping
+      refundAmount = priceAfterCoupon + itemTax; // shipping only on last item
 
-        order.itemsPrice -= itemNetPrice;
-        order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
-        order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
-        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
-        // shipping unchanged
-      } else {
-        // Coupon revoked → recalc payable without coupon & refund diff
-        order.itemsPrice = remainingSubtotal;
-        order.couponDiscount = 0;
-        const newShipping = remainingSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE; // shipping stays if items remain
-        order.shippingPrice = newShipping;
-        const newTax = parseFloat((remainingSubtotal * TAX_RATE).toFixed(2));
-        order.taxPrice = newTax;
-        const newPayable = remainingSubtotal + newShipping + newTax;
-
-        refundAmount = prevTotal - newPayable;
-        order.totalPrice = newPayable;
-      }
+      // Update order monetary fields
+      order.itemsPrice -= itemOriginalPrice;
+      order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
+      order.discountAmount = parseFloat((order.discountAmount - couponShare - ((item.price - item.totalPrice) * item.quantity)).toFixed(2));
+      order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
+      // shipping unchanged (handled in last item branch)
+      order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
     }
 
     // Safety clamp against negative due to float errors
@@ -984,7 +985,7 @@ const markPaymentFailed = asyncHandler(async (req, res) => {
 
 // Helper function to calculate refund amount for a cancelled item
 function _calculateItemRefund(order, item, isLastActive) {
-  const itemPrice = item.price * (1 - item.discount / 100);
+  const itemPrice = item.totalPrice;
   const itemTax = parseFloat((itemPrice * TAX_RATE).toFixed(2));
   const itemShipping = isLastActive ? order.shippingPrice : 0;
 

@@ -159,6 +159,19 @@ const Addresses = () => {
           return;
         }
       }
+
+      // --- Phone validation (Indian numbers) ---
+      const phonePattern = /^(?:\+91[-\s]?)?[6-9]\d{9}$/;
+      if (!phonePattern.test(addressForm.phoneNumber)) {
+        toast.error('Please enter a valid 10-digit Indian mobile number');
+        setFormLoading(false);
+        return;
+      }
+      if (addressForm.alternativePhoneNumber && !phonePattern.test(addressForm.alternativePhoneNumber)) {
+        toast.error('Please enter a valid alternative Indian mobile number');
+        setFormLoading(false);
+        return;
+      }
       
       if (editingAddressId) {
         // Update existing address

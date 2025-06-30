@@ -37,6 +37,20 @@ const OrderDetails = () => {
     returned: []
   };
 
+  // ---- Price helpers ----
+  const getEffectiveUnitPrice = (item) => {
+    const original = item.price;
+    return (
+      item.effectivePrice ??
+      (item.totalPrice && item.totalPrice < original ? item.totalPrice : null) ??
+      (item.discount > 0 ? original * (1 - item.discount / 100) : original)
+    );
+  };
+
+  const offerDiscount = (order?.discountAmount ?? 0) - (order?.couponDiscount ?? 0);
+  const itemsPriceAfterOffer = (order?.itemsPrice ?? 0) - offerDiscount;
+  const couponDiscount = order?.couponDiscount ?? 0;
+
   useEffect(() => {
     dispatch(getAllOrders({}));
   }, [dispatch]);
@@ -217,6 +231,9 @@ const OrderDetails = () => {
                   Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Offer Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Quantity
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -253,13 +270,22 @@ const OrderDetails = () => {
                     {item.variant?.size || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ₹{item.price?.toFixed(2)}
+                    ₹{item.price.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {(() => {
+                      const effective = getEffectiveUnitPrice(item);
+                      return effective < item.price ? `₹${effective.toFixed(2)}` : '—';
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {item.quantity}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ₹{item.totalPrice?.toFixed(2)}
+                    {(() => {
+                      const effective = getEffectiveUnitPrice(item);
+                      return `₹${(effective * item.quantity).toFixed(2)}`;
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {item.isCancelled && (
@@ -310,7 +336,7 @@ const OrderDetails = () => {
         <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
         <div className="flex justify-between border-b pb-2 mb-2">
           <span>Subtotal</span>
-          <span>₹{order.itemsPrice?.toFixed(2)}</span>
+          <span>₹{itemsPriceAfterOffer.toFixed(2)}</span>
         </div>
         <div className="flex justify-between border-b pb-2 mb-2">
           <span>Shipping</span>
@@ -320,10 +346,10 @@ const OrderDetails = () => {
           <span>Tax</span>
           <span>₹{order.taxPrice?.toFixed(2)}</span>
         </div>
-        {order.discountAmount > 0 && (
+        {couponDiscount > 0 && (
           <div className="flex justify-between border-b pb-2 mb-2 text-green-600">
-            <span>Discount</span>
-            <span>-₹{order.discountAmount?.toFixed(2)}</span>
+            <span>Coupon Discount</span>
+            <span>-₹{couponDiscount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between font-bold text-lg mt-2">

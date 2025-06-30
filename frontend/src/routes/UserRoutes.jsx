@@ -64,6 +64,7 @@ const UserRoutes = () => {
           <Route path="password" element={<ChangePassword />} />
           <Route path="email" element={<ChangeEmail />} />
           <Route path="addresses" element={<Addresses />} />
+          <Route path="orders" element={<Orders />} />
         </Route>
       </Route>
       

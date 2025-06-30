@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setFilters, getDashboardStatsThunk } from '../../features/admin/adminDashboard/dashboardSlice';
 import { FaUsers, FaBoxOpen, FaShoppingCart, FaTag } from 'react-icons/fa';
+import { MdCategory } from 'react-icons/md';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { downloadLedgerPdf } from '../../features/admin/adminDashboard/dashboardService';
@@ -18,6 +19,8 @@ const Dashboard = () => {
 
   // helpers
   const statsLoading = loading || !data;
+
+  const counts = data?.counts || {};
 
   const productChartData = useMemo(() => {
     if (!data) return { labels: [], datasets: [] };
@@ -83,82 +86,125 @@ const Dashboard = () => {
             <h2 className="text-3xl font-bold text-indigo-900">Dashboard Overview</h2>
             <p className="text-indigo-600">Welcome back! Here's what's happening with your store.</p>
           </div>
-          <div className="mt-4 md:mt-0 flex items-center space-x-4">
-            <select
-              className="px-4 py-2 bg-white border-2 border-indigo-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-indigo-800 font-medium"
-              value={filters.range}
-              onChange={(e) => dispatch(setFilters({ range: e.target.value }))}
-            >
-              <option value="today" className="text-indigo-800">Today</option>
-              <option value="week" className="text-indigo-800">Last 7 days</option>
-              <option value="month" className="text-indigo-800">This month</option>
-              <option value="year" className="text-indigo-800">This year</option>
-            </select>
-            <button
-              onClick={async () => {
-                try {
-                  const response = await downloadLedgerPdf(filters);
-                  const url = window.URL.createObjectURL(new Blob([response.data]));
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.setAttribute('download', 'ledger.pdf');
-                  document.body.appendChild(link);
-                  link.click();
-                  link.parentNode.removeChild(link);
-                } catch (err) {
-                  console.error('Ledger download failed', err);
-                }
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md transition-all duration-200 flex items-center text-sm font-medium"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export Ledger
-            </button>
+        </div>
+
+        {/* Totals Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {[ 
+            { label: 'Total Users', value: counts.users, icon: <FaUsers className="text-2xl" />, colors: 'from-indigo-50 to-blue-50 border-indigo-100 text-indigo-700 text-indigo-900' },
+            { label: 'Total Products', value: counts.products, icon: <FaBoxOpen className="text-2xl" />, colors: 'from-purple-50 to-pink-50 border-purple-100 text-purple-700 text-purple-900' },
+            { label: 'Total Categories', value: counts.categories, icon: <MdCategory className="text-2xl" />, colors: 'from-pink-50 to-rose-50 border-pink-100 text-pink-700 text-pink-900' },
+            { label: 'Total Brands', value: counts.brands, icon: <FaTag className="text-2xl" />, colors: 'from-rose-50 to-orange-50 border-rose-100 text-rose-700 text-rose-900' },
+            { label: 'Total Orders', value: counts.orders, icon: <FaShoppingCart className="text-2xl" />, colors: 'from-indigo-50 to-purple-50 border-indigo-100 text-indigo-700 text-indigo-900' },
+          ].map((c, idx) => (
+            <div key={idx} className={`bg-gradient-to-br ${c.colors.split(' ')[0]} ${c.colors.split(' ')[1]} rounded-2xl shadow-md border-2 ${c.colors.split(' ')[2]} p-6 transition-all hover:shadow-lg hover:-translate-y-1`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${c.colors.split(' ')[3]}`}>{c.label}</p>
+                  <p className={`text-2xl font-bold ${c.colors.split(' ')[4]} mt-1`}>{c.value ?? '—'}</p>
+                </div>
+                <div className={`p-3 rounded-xl ${c.colors.split(' ')[2].replace('border-', 'bg-')} text-current`}>
+                  {c.icon}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Latest Orders & Users */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+          {/* Latest Orders */}
+          <div className="bg-white rounded-2xl shadow-md border-2 border-indigo-50 p-6">
+            <h3 className="text-lg font-semibold text-indigo-900 mb-4">Latest Orders</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm text-left">
+                <thead>
+                  <tr className="text-indigo-600">
+                    <th className="px-4 py-2">Order #</th>
+                    <th className="px-4 py-2">Customer</th>
+                    <th className="px-4 py-2">Amount</th>
+                    <th className="px-4 py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.latestOrders?.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-2 whitespace-nowrap" colSpan={4}>No orders found</td>
+                    </tr>
+                  )}
+                  {data?.latestOrders?.map(o => (
+                    <tr key={o._id} className="border-t">
+                      <td className="px-4 py-2 whitespace-nowrap">{o.orderNumber}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{o.user?.username || '—'}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">₹{o.totalPrice.toFixed(2)}</td>
+                      <td className="px-4 py-2 whitespace-nowrap capitalize">{o.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Latest Users */}
+          <div className="bg-white rounded-2xl shadow-md border-2 border-indigo-50 p-6">
+            <h3 className="text-lg font-semibold text-indigo-900 mb-4">Newest Users</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm text-left">
+                <thead>
+                  <tr className="text-indigo-600">
+                    <th className="px-4 py-2">Name</th>
+                    <th className="px-4 py-2">Email</th>
+                    <th className="px-4 py-2">Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.latestUsers?.map(u => (
+                    <tr key={u._id} className="border-t">
+                      <td className="px-4 py-2 whitespace-nowrap">{u.name || u.username}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{u.email}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl shadow-md border-2 border-indigo-100 p-6 transition-all hover:shadow-lg hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-indigo-700">Top Products</p>
-                <p className="text-2xl font-bold text-indigo-900 mt-1">{data?.topProducts?.length || 0}</p>
-                {/* <p className="text-xs text-indigo-500 mt-1">+12% from last month</p> */}
-              </div>
-              <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600">
-                <FaBoxOpen className="text-2xl" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-md border-2 border-purple-100 p-6 transition-all hover:shadow-lg hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Top Categories</p>
-                <p className="text-2xl font-bold text-purple-900 mt-1">{data?.topCategories?.length || 0}</p>
-                {/* <p className="text-xs text-purple-500 mt-1">+8% from last month</p> */}
-              </div>
-              <div className="p-3 rounded-xl bg-purple-100 text-purple-600">
-                <FaTag className="text-2xl" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl shadow-md border-2 border-pink-100 p-6 transition-all hover:shadow-lg hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-pink-700">Top Brands</p>
-                <p className="text-2xl font-bold text-pink-900 mt-1">{data?.topBrands?.length || 0}</p>
-                {/* <p className="text-xs text-pink-500 mt-1">+15% from last month</p> */}
-              </div>
-              <div className="p-3 rounded-xl bg-pink-100 text-pink-600">
-                <FaShoppingCart className="text-2xl" />
-              </div>
-            </div>
-          </div>
+        {/* Filters & Ledger */}
+        <div className="flex flex-col md:flex-row md:items-center justify-end mb-6 space-y-4 md:space-y-0 md:space-x-4">
+          <select
+            className="px-4 py-2 bg-white border-2 border-indigo-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-indigo-800 font-medium"
+            value={filters.range}
+            onChange={(e) => dispatch(setFilters({ range: e.target.value }))}
+          >
+            <option value="today" className="text-indigo-800">Today</option>
+            <option value="week" className="text-indigo-800">Last 7 days</option>
+            <option value="month" className="text-indigo-800">This month</option>
+            <option value="year" className="text-indigo-800">This year</option>
+          </select>
+          <button
+            onClick={async () => {
+              try {
+                const response = await downloadLedgerPdf(filters);
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'ledger.pdf');
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+              } catch (err) {
+                console.error('Ledger download failed', err);
+              }
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md transition-all duration-200 flex items-center text-sm font-medium"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Ledger
+          </button>
         </div>
 
         {/* Chart Section */}

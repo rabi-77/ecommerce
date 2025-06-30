@@ -4,7 +4,7 @@ import Product from "../../models/productModel.js";
 import asyncHandler from "express-async-handler";
 import { creditWallet } from "../../services/walletService.js";
 import Coupon from "../../models/couponModel.js";
-
+import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from "../../config/pricing.js";
 export const getAllOrders = asyncHandler(async (req, res) => {
   const { page = 1, size = 10, keyword = "", status = "all", sort = "newest" } = req.query;
   const pageNum = parseInt(page);
@@ -52,9 +52,9 @@ export const getAllOrders = asyncHandler(async (req, res) => {
     .skip((pageNum - 1) * sizeNum)
     .limit(sizeNum);
 
-  if (orders.length === 0 && total === 0) {
-    return res.status(404).json({ message: "No orders are available" });
-  }
+  // if (orders.length === 0 && total === 0) {
+  //   return res.status(404).json({ message: "No orders are available" });
+  // }
 
   res.json({
     success: true,
@@ -192,18 +192,10 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       const prevTotal = order.totalPrice;
 
       const subtotalBefore = order.itemsPrice; // includes the item being returned
-      const itemNetPrice = orderItem.price * (1 - orderItem.discount / 100);
+      // Use line-item total (price × quantity after per-item discount) to account for multi-quantity returns
+      const itemNetPrice = orderItem.totalPrice;
       const remainingSubtotal = subtotalBefore - itemNetPrice;
       const isLastActive = remainingSubtotal === 0;
-
-      // Determine coupon validity after return
-      let couponStillApplies = true;
-      let minSpend = 0;
-      if (order.coupon) {
-        const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
-        minSpend = couponDoc?.minPurchaseAmount ?? 0;
-        couponStillApplies = remainingSubtotal >= minSpend;
-      }
 
       let refundAmount = 0;
 
@@ -212,6 +204,7 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         if (isLastActive) {
           refundAmount = prevTotal;
           order.itemsPrice = 0;
+          order.discountAmount = 0;
           order.shippingPrice = 0;
           order.taxPrice = 0;
           order.totalPrice = 0;
@@ -222,6 +215,8 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
           refundAmount = itemNetPrice + itemTax + itemShipping;
 
           order.itemsPrice -= itemNetPrice;
+          // subtract product-level discount share from discountAmount
+          order.discountAmount = parseFloat((order.discountAmount - (orderItem.price - (orderItem.totalPrice / orderItem.quantity)) * orderItem.quantity).toFixed(2));
           order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
           if (isLastActive) order.shippingPrice = 0;
           order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
@@ -231,11 +226,12 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
         if (isLastActive) {
           refundAmount = prevTotal;
           order.itemsPrice = 0;
+          order.discountAmount = 0;
           order.couponDiscount = 0;
           order.shippingPrice = 0;
           order.taxPrice = 0;
           order.totalPrice = 0;
-        } else if (couponStillApplies) {
+        } else {
           const couponShare = parseFloat(((itemNetPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
           const priceAfterCoupon = itemNetPrice - couponShare;
           const itemTax = parseFloat((priceAfterCoupon * TAX_RATE).toFixed(2));
@@ -244,22 +240,11 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
           refundAmount = priceAfterCoupon + itemTax + itemShipping;
 
           order.itemsPrice -= itemNetPrice;
+          order.discountAmount = parseFloat((order.discountAmount - (orderItem.price - (orderItem.totalPrice / orderItem.quantity)) * orderItem.quantity).toFixed(2));
           order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
           order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
           if (isLastActive) order.shippingPrice = 0;
           order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
-        } else {
-          // Coupon revoked – differential refund
-          order.itemsPrice = remainingSubtotal;
-          order.couponDiscount = 0;
-          const newShipping = remainingSubtotal === 0 ? 0 : (remainingSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE);
-          order.shippingPrice = newShipping;
-          const newTax = parseFloat((remainingSubtotal * TAX_RATE).toFixed(2));
-          order.taxPrice = newTax;
-          const newPayable = remainingSubtotal + newShipping + newTax;
-
-          refundAmount = prevTotal - newPayable;
-          order.totalPrice = newPayable;
         }
       }
 

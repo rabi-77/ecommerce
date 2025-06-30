@@ -210,6 +210,12 @@ const OrderDetails = () => {
     return steps;
   };
 
+  // ---- Summary calculations derived from backend fields ----
+  const offerDiscount = (order?.discountAmount ?? 0) - (order?.couponDiscount ?? 0);
+  const itemsPriceBeforeDiscount = order?.itemsPrice ?? 0; // original prices sum
+  const subtotalAfterOffer = itemsPriceBeforeDiscount - offerDiscount;
+  const couponDiscount = order?.couponDiscount ?? 0;
+
   if (fetchingOrderDetails || !order) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -331,21 +337,38 @@ const OrderDetails = () => {
                         Size: {item.variant.size} | Quantity: {item.quantity}
                       </p>
                       <div className="flex items-center mb-2">
-                        <span className="text-sm text-gray-500 line-through mr-2">
-                          ${item.price.toFixed(2)}
-                        </span>
-                        <span className="text-blue-600 font-medium">
-                          ${(item.price * (1 - item.discount / 100)).toFixed(2)}
-                        </span>
-                        {item.discount > 0 && (
-                          <span className="ml-2 px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
-                            {item.discount}% OFF
-                          </span>
-                        )}
+                        {(() => {
+                          const original = item.price;
+                          const effective = (
+                            item.effectivePrice ??
+                            (item.totalPrice && item.totalPrice < original ? item.totalPrice : null) ??
+                            (item.discount > 0 ? original * (1 - item.discount / 100) : original)
+                          );
+                          return (
+                            <>
+                              {effective < original && (
+                                <span className="text-sm text-gray-500 line-through mr-2">${original.toFixed(2)}</span>
+                              )}
+                              <span className="text-blue-600 font-medium">${effective.toFixed(2)}</span>
+                              {effective < original && (
+                                <span className="ml-2 px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                                  {item.discount ? `${item.discount}% OFF` : 'OFFER'}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                       <div className="flex justify-between items-center mt-auto">
                         <span className="font-bold">
-                          Total: ${item.totalPrice.toFixed(2)}
+                          {(() => {
+                            const effective = (
+                              item.effectivePrice ??
+                              (item.totalPrice && item.totalPrice < item.price ? item.totalPrice : null) ??
+                              (item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price)
+                            );
+                            return `Total: $${(effective * item.quantity).toFixed(2)}`;
+                          })()}
                         </span>
                         <div className="flex space-x-2">
                           {!item.isCancelled && !item.isReturned && ['pending', 'processing', 'shipped', 'out for delivery'].includes(order.status) && (
@@ -404,12 +427,20 @@ const OrderDetails = () => {
             <div className="space-y-3">
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">Items Price</span>
-                <span className="font-medium">${order.itemsPrice.toFixed(2)}</span>
+                <span className="font-medium">${itemsPriceBeforeDiscount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between py-2">
-                <span className="text-gray-600">Discount</span>
-                <span className="text-red-600">-${order.discountAmount.toFixed(2)}</span>
-              </div>
+              {offerDiscount > 0 && (
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">Offer Discount</span>
+                  <span className="text-red-600">-${offerDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              {couponDiscount > 0 && (
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">Coupon Discount</span>
+                  <span className="text-red-600">-${couponDiscount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">Shipping</span>
                 <span className="font-medium">${order.shippingPrice.toFixed(2)}</span>

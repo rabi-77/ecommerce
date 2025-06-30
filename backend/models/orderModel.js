@@ -31,6 +31,15 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  // Proportional values pre-computed at checkout to simplify refunds
+  couponShare: {
+    type: Number,
+    default: 0
+  },
+  taxShare: {
+    type: Number,
+    default: 0
+  },
   isCancelled: {
     type: Boolean,
     default: false
