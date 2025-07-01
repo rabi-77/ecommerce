@@ -7,6 +7,7 @@ import { setAuthToken, login, resetAuthState, resetPasswordState, clearPasswordR
 import ForgotPasswordModal from "../../components/auth/ForgotPasswordModal";
 import OtpVerificationModal from "../../components/auth/OtpVerificationModal";
 import ResetPasswordModal from "../../components/auth/ResetPasswordModal";
+import { API_URL } from "../../config";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ const Login = () => {
   }, [error, errormessage, token, loading, navigate, dispatch]);
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5050/user/google";
+    window.location.href = `${API_URL}/user/google`;
   };
 
   const handleChange = (e) => {

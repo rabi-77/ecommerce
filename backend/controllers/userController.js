@@ -11,8 +11,8 @@ configDotenv();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",
-    pass: process.env.NODE_MAILER_PASSWORD || "viqt sxjn hmzb lyno",
+    user: process.env.NODE_MAILER_EMAIL,
+    pass: process.env.NODE_MAILER_PASSWORD,
   },
 });
 
@@ -34,7 +34,7 @@ export const generateAndSendOtp = async (email) => {
     console.log("Generated OTP:", otp);
     
     await transporter.sendMail({
-      from: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",
+      from: process.env.NODE_MAILER_EMAIL ,
       to: email,
       subject: "Password Reset - Verification Code",
       text: `Your password reset verification code is ${otp}. It expires in 5 minutes.\n\nIf you did not request this code, please ignore this email.`,

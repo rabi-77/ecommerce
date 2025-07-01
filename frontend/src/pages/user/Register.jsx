@@ -7,7 +7,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { register, verifyOtp, resend, resetAuthState, setShowOtpModal, clearError } from '../../features/authSlice';
 import { registerSchema, verifyOtpSchema } from '../../../../shared/validation';
-
+import { API_URL } from '../../../../config';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -136,7 +136,7 @@ const Register = () => {
     setResendDisabled(true)
   };
   const handleGoogleLogin=()=>{
-    window.location.href = "http://localhost:5050/user/google";
+    window.location.href = `${API_URL}/user/google`;
   }
 
   return (

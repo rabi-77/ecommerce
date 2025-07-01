@@ -1,8 +1,9 @@
 // src/services/api/publicApi.js
 import axios from "axios";
+import { API_URL } from "../../config";
 
 const publicApi = axios.create({
-  baseURL: "http://localhost:5050/user",
+  baseURL: `${API_URL}/user`,
 });
 
 export default publicApi;

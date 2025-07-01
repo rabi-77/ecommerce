@@ -10,8 +10,8 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",
-    pass: process.env.NODE_MAILER_PASSWORD || "viqt sxjn hmzb lyno",
+    user: process.env.NODE_MAILER_EMAIL ,
+    pass: process.env.NODE_MAILER_PASSWORD 
   },
 });
 
@@ -91,7 +91,8 @@ export const requestEmailChange = async (req, res) => {
     });
 
     // Create verification URL
-    const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
+    
+    const frontendURL = process.env.FRONTEND_URL ;
     const verificationURL = `${frontendURL}/verify-email?token=${token}`;
 
     if (process.env.NODE_ENV !== "production") {
@@ -102,7 +103,7 @@ export const requestEmailChange = async (req, res) => {
 
     // Send verification email
     await transporter.sendMail({
-      from: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",
+      from: process.env.NODE_MAILER_EMAIL ,
       to: newEmail,
       subject: "Verify Your New Email Address",
       html: `
@@ -179,7 +180,7 @@ export const verifyEmailChange = async (req, res) => {
 
     // Send confirmation email to old address
     await transporter.sendMail({
-      from: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",
+      from: process.env.NODE_MAILER_EMAIL ,
       to: previousEmail,
       subject: "Your email address has been changed",
       html: `
@@ -279,7 +280,7 @@ export const changePassword = async (req, res) => {
     
     try {
       const mailOptions = {
-        from: process.env.NODE_MAILER_EMAIL || "mymailer66@gmail.com",
+        from: process.env.NODE_MAILER_EMAIL ,
         to: user.email,
         subject: "Your Password Has Been Changed",
         html: `

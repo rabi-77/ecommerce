@@ -1,9 +1,10 @@
 import axios from "axios";
 import {store} from "../../store/store";
 import { refreshTokenThunk } from "../../features/admin/adminAuth/adminAuthSlice";
+import { API_URL } from "../../config";
 
 const api= axios.create({
-    baseURL:"http://localhost:5050/admin",
+    baseURL:`${API_URL}/admin`,
 })
 
 api.interceptors.request.use(
