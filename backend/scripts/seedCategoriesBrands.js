@@ -18,7 +18,6 @@ import Category from '../models/categoryModel.js';
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error);
     process.exit(1);
@@ -109,23 +108,17 @@ const seedCategoriesAndBrands = async () => {
     await Brand.deleteMany({});
     await Category.deleteMany({});
     
-    console.log('Cleared existing categories and brands');
     
     // Insert categories
     const createdCategories = await Category.insertMany(categories);
-    console.log(`Added ${createdCategories.length} categories:`);
     createdCategories.forEach(category => {
-      console.log(`- ${category.name}`);
     });
     
     // Insert brands
     const createdBrands = await Brand.insertMany(brands);
-    console.log(`Added ${createdBrands.length} brands:`);
     createdBrands.forEach(brand => {
-      console.log(`- ${brand.name}`);
     });
     
-    console.log('Categories and brands added successfully!');
     process.exit(0);
   } catch (error) {
     console.error('Error seeding categories and brands:', error);

@@ -4,11 +4,7 @@ import userModel from "../../models/userModel.js";
 
 // authentication
 export const authenticateUser = async (req, res, next) => {
-    console.log(req.headers);
-
   const token = req.header("Authorization")?.replace("Bearer ", "");
-    console.log(token,'auth');
-
   if (!token) {
     return res
       .status(401)
@@ -23,7 +19,6 @@ export const authenticateUser = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.log(error.message, "in the user authentication");
     res.status(500).json({ message: "failed to authenticate" });
   }
 };

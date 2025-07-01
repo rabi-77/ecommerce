@@ -10,8 +10,6 @@ cloudinary.config({
 
 const uploadImagesToCloudinary = async (files, folder) => {
   const imageUrls = [];
-console.log('reaching',);
-
   // Upload each image to Cloudinary
   for (const file of files) {
     const base64Data = file.buffer.toString('base64')
@@ -23,7 +21,6 @@ console.log('reaching',);
     });
     imageUrls.push(uploadedImage.secure_url);  // Store the Cloudinary URL of the uploaded image
   }
-  console.log(imageUrls,'hey');
   
   return imageUrls;  // Return the URLs of the uploaded images
 };

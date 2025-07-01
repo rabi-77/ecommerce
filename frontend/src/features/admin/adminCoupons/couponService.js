@@ -11,7 +11,6 @@ export const getCoupon = async (id) => {
 };
 
 export const createCoupon = async (couponData) => {
-  console.log('couponData',couponData);
   
   const response = await api.post('/coupons', couponData);
   return response.data;

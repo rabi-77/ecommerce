@@ -30,13 +30,11 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        console.log("Token expired, attempting to refresh...");
         // Use Redux store to dispatch the refresh token action
         const result = await store.dispatch(refreshAccessTokenThunk());
         
         // Check if the refresh was successful
         if (result.type.endsWith('/fulfilled')) {
-          console.log("Token refresh successful, retrying original request");
           // Update the original request with the new token
           const newToken = localStorage.getItem("tokenAccess");
           originalRequest.headers.Authorization = `Bearer ${newToken}`;

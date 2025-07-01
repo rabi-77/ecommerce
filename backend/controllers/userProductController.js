@@ -2,7 +2,6 @@ import productModel from "../models/productModel.js";
 import { fetchActiveOffers, applyBestOffer } from '../services/offerService.js';
 
 const getProducts = async (req, res) => {
-    console.log('jfng');
     
   try {
     const {
@@ -89,7 +88,6 @@ const getProducts = async (req, res) => {
 
     const transformedProducts = products.map(prod => {
       const { effectivePrice, appliedOffer } = applyBestOffer(prod, offerMaps);
-      console.log(appliedOffer,'appliedOffer');
       
       return {
         ...prod,
@@ -103,7 +101,6 @@ const getProducts = async (req, res) => {
       };
     });
 
-    console.log('k');
     
     res.status(200).json({
       products: transformedProducts,
@@ -112,7 +109,6 @@ const getProducts = async (req, res) => {
       totalProducts: total,
     });
   } catch (err) {
-    console.log(err.message);
     
     res.status(500).json({ message: "Server error" });
   }
@@ -134,11 +130,9 @@ const getProductById = async (req, res) => {
         .status(404)
         .json({ message: "Product not found or unavailable" });
     }
-    console.log(product);
     
     res.status(200).json(product);
   } catch (err) {
-    console.log(err.message);
     
     res.status(500).json({ message: "Server error" });
   }
@@ -168,7 +162,6 @@ const getRelatedProducts = async (req, res) => {
         .populate("category", "name")
         .populate("brand", "name")
         .limit(4);
-      console.log(relatedProducts,'relatedProducts');
       
       res.status(200).json(relatedProducts);
     } catch (err) {

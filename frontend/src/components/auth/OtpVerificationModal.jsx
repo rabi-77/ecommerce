@@ -33,7 +33,6 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
     if (isOpen) {
       setCountdown(60);
       // Log the email for debugging
-      console.log('OtpVerificationModal opened with email:', passwordResetEmail);
       
       // We're not resetting the password state here to preserve the email
       // Only clear error messages if needed
@@ -77,8 +76,6 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
     dispatch(clearPasswordResetErrors());
     
     // Log the email and OTP for debugging
-    console.log('Verifying OTP for email:', passwordResetEmail);
-    console.log('OTP entered:', otp);
     
     if (!passwordResetEmail) {
       toast.error("Email information is missing. Please start over.");

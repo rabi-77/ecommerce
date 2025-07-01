@@ -44,13 +44,11 @@ const Login = () => {
     const refreshTokenValue = tokenRefresh || refreshToken;
 
     if (accessToken) {
-      console.log('Login detected with token');
       
       // Process user data if available
       if (userDataParam) {
         try {
           const userData = JSON.parse(decodeURIComponent(userDataParam));
-          console.log('Google login user data:', userData);
           
           // Dispatch login success action directly to update Redux state
           // This mimics the exact same action that happens during regular login
@@ -137,7 +135,6 @@ const Login = () => {
   };
 
   const handleOtpSent = (email) => {
-    console.log('Email received in handleOtpSent:', email);
     // Store the email in component state
     setResetEmail(email);
     setShowForgotPasswordModal(false);
@@ -145,7 +142,6 @@ const Login = () => {
   };
 
   const handleOtpVerify = (otp) => {
-    console.log('OTP received in handleOtpVerify:', otp);
     setOtpCode(otp);
     setShowOtpModal(false);
     setShowResetPasswordModal(true);

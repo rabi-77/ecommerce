@@ -25,7 +25,6 @@ const GoogleAuthHandler = () => {
         
         // Parse user data
         const userData = JSON.parse(decodeURIComponent(userDataParam));
-        console.log('Google auth user data:', userData);
         
         // Store in localStorage first
         localStorage.setItem('tokenAccess', tokenAccess);

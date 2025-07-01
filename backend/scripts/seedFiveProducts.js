@@ -20,7 +20,6 @@ import Brand from '../models/brandModel.js';
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error);
     process.exit(1);
@@ -72,8 +71,6 @@ const addProducts = async () => {
       brandMap[brand.name] = brand;
     });
     
-    console.log('Found categories:', Object.keys(categoryMap).join(', '));
-    console.log('Found brands:', Object.keys(brandMap).join(', '));
     
     // Product data
     const productsToAdd = [
@@ -189,12 +186,9 @@ const addProducts = async () => {
         brand: productData.brandName
       });
       
-      console.log(`Added product: ${product.name}`);
     }
     
-    console.log('\nSuccessfully added 5 products:');
     addedProducts.forEach((product, index) => {
-      console.log(`${index + 1}. ${product.name} (${product.brand} - ${product.category})`);
     });
     
     process.exit(0);

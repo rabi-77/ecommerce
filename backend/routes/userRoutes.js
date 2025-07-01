@@ -52,11 +52,9 @@ user.get("/brands", getBrands);
 
 //user profile
 user.get('/profile',(req,res,next)=>{
-    console.log('reach lpleeSE');
     next()
 },getUserinfo)
 user.put('/profile',(req,res,next)=>{
-    console.log('is it coming');
     next();
 },uploadCategory,editUserDetails)
 

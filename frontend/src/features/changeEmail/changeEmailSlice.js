@@ -10,7 +10,6 @@ export const requestEmailChangeThunk = createAsyncThunk(
       toast.success(response.message || "Verification email sent");
       return response;
     } catch (error) {
-      console.log(error.message,'why request failing');
       
       const message =
         error.response?.data?.message ||
@@ -28,7 +27,6 @@ export const verifyEmailChangeThunk = createAsyncThunk(
     try {
       return await verifyEmailChange(token);
     } catch (error) {
-      console.log(error.message,'why verification failing');
       const message =
         error.response?.data?.message ||
         error.message ||

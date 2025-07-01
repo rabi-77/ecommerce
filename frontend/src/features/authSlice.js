@@ -35,15 +35,9 @@ export const verifyOtp = createAsyncThunk(
   "auth/verifyOtp",
   async ({ email, otp, token }, { rejectWithValue }) => {
     try {
-      console.log("right");
-
       const data = await verifyUser({ email, otp, token });
-      console.log(data);
-
       return data;
     } catch (err) {
-      console.log("hey guys");
-
       return rejectWithValue(err.message || "verification failed");
     }
   }

@@ -17,21 +17,17 @@ const transporter = nodemailer.createTransport({
 });
 
 
-console.log("Email config status:", {
   email: process.env.NODE_MAILER_EMAIL ? "Environment variable loaded" : "Using fallback",
   password: process.env.NODE_MAILER_PASSWORD ? "Environment variable loaded" : "Using fallback"
 });
 // Function to generate and send OTP
 export const generateAndSendOtp = async (email) => {
-  console.log("Generating OTP for", email);
-
   // Generate a 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes for better user experience
 
   try {
     // Log the plaintext OTP for development purposes
-    console.log("Generated OTP:", otp);
     
     await transporter.sendMail({
       from: process.env.NODE_MAILER_EMAIL ,
@@ -55,13 +51,8 @@ export const generateAndSendOtp = async (email) => {
 };
 
 const register = async (req, res) => {
-  console.log("hey");
-
   const { username, email, password, referralCode: referralCodeInput } = req.body;
-  console.log('referal',referralCodeInput);
   
-  console.log(req.body);
-
   try {
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
@@ -79,7 +70,6 @@ const register = async (req, res) => {
       }
       return res.status(400).json({ message: "Email already exists" });
     }
-    console.log("before otp");
     if (password.length > 16 || password.length < 8) {
       return res
         .status(400)
@@ -87,27 +77,16 @@ const register = async (req, res) => {
     }
     // Generate and send OTP
     const { otp, expiresAt } = await generateAndSendOtp(email);
-    console.log(otp);
-    console.log("old otp");
-
     // Create JWT with user data
     const hashedPassword = await bcrypt.hash(password, 10);
-    // console.log('bcrypting');
-
     const hashedOtp = await bcrypt.hash(otp, 10);
-    console.log("hashing");
-
     const token = jwt.sign(
       { username, email, password: hashedPassword, otp: hashedOtp, expiresAt, referralCodeInput },
       process.env.JWT_SECRET,
       { expiresIn: "5m" }
     );
-    console.log("token", token);
-
     res.status(201).json({ message: "OTP sent to your email", email, token });
   } catch (error) {
-    console.log("faileuire");
-
     if (error.message === "Failed to send OTP email") {
       return res.status(500).json({ message: "Failed to send OTP email" });
     }
@@ -116,11 +95,7 @@ const register = async (req, res) => {
 };
 
 const verify = async (req, res) => {
-  console.log("Verifying OTP");
-
   const { email, otp, token } = req.body;
-  console.log("verify",email,otp,token);
-
   try {
     // Verify JWT
     let payload;
@@ -129,8 +104,6 @@ const verify = async (req, res) => {
     } catch (error) {
       return res.status(400).json({ message: "Registration session expired" });
     }
-console.log("payload",payload);
-
     // Check if email matches and OTP hasn't expired
     if (payload.email !== email) {
       return res.status(400).json({ message: "Invalid registration session" });
@@ -146,8 +119,6 @@ console.log("payload",payload);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
-    console.log("OTP verified successfully");
-
     // Helper to create unique referral code
     const generateReferralCode = async () => {
       let code;
@@ -183,8 +154,6 @@ console.log("payload",payload);
       referralCode: await generateReferralCode(),
       referredBy: referrerId,
     });
-    console.log("Saving user to database");
-
     await user.save();
 
     // Credit wallet for referrer if applicable
@@ -197,10 +166,7 @@ console.log("payload",payload);
     }
 
     res.json({ message: "Account verified, please log in", referralStatus });
-    console.log("Verification complete");
   } catch (error) {
-    console.log(error.message, "Error during verification");
-
     if (error.code === 11000 && error.keyValue?.email) {
       return res.status(400).json({ message: "Email already exists" });
     }
@@ -228,7 +194,6 @@ const resend = async (req, res) => {
     // Explicitly invalidate the old token by setting a new expiration time
     // Generate and send new OTP
     const { otp, expiresAt } = await generateAndSendOtp(email);
-    console.log("resendotp", otp);
     
     const hashedOtp = await bcrypt.hash(otp, 10);
     
@@ -267,7 +232,6 @@ const googleAuth = passport.authenticate("google", {
 
 const googleAuthCallback = async (req, res) => {
   try {
-    console.log('Google auth callback received user:', req.user);
     
     // Check if JWT_SECRET is defined
     if (!process.env.JWT_SECRET) {
@@ -293,7 +257,6 @@ const googleAuthCallback = async (req, res) => {
     // Store refresh token in the database
     req.user.refreshToken = tokenRefresh;
     await req.user.save();
-    console.log('Saved refresh token to user:', req.user._id);
     
     // Create a user object with necessary information - same format as regular login
     const userData = {
@@ -312,7 +275,6 @@ const googleAuthCallback = async (req, res) => {
     // Redirect to frontend home with token and user data
     // Make sure the URL has the correct port and parameters
     res.redirect(`http://localhost:5173/?tokenAccess=${tokenAccess}&tokenRefresh=${tokenRefresh}&userData=${encodedUserData}`);
-    console.log('Redirecting to frontend with user data:', userData);
   } catch (error) {
     console.error('Google auth callback error:', error);
     res.redirect("http://localhost:5173/login?error=" + encodeURIComponent(error.message || 'Google auth failed'));
@@ -329,12 +291,10 @@ const googleAuthCallback = async (req, res) => {
     if(user.isBlocked){
       return res.status(403).json({message:'the user is blocked'})
     }
-    console.log('Login attempt for:', email);
    
     
   
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match result:', isMatch);
     
     if (!isMatch) {
       return res.status(400).json({ message: "invalid credentials" });
@@ -353,8 +313,6 @@ const googleAuthCallback = async (req, res) => {
 
     user.refreshToken = tokenRefresh;
     await user.save();
-    console.log('logg');
-
     res.json({
       tokenAccess,
       tokenRefresh,
@@ -367,14 +325,12 @@ const googleAuthCallback = async (req, res) => {
       }
     });
   } catch (err) {
-    console.log(err);
     res.status(500).json({ message: "server error" });
   }
 };
 
 const refreshAccessToken = async (req, res) => {
   try {
-    console.log('user refresh');
     
     const { refreshToken } = req.body;
     if (!refreshToken) {
@@ -416,12 +372,9 @@ const userLogout = async (req, res) => {
 
 const checkUserStatus = async (req, res) => {
   try {
-    console.log('Checking user status...');
     const userId = req.user;
-    console.log('User ID:', userId);
     
     const user = await userModel.findById(userId);
-    console.log('User:', user);
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -473,7 +426,6 @@ if (user.authProvider === 'google' && !user.password) {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
       
-      console.log('Password reset OTP for', email, ':', otp);
       
       // Save OTP to user document using the existing structure
       user.otp = {
@@ -514,7 +466,6 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'OTP has expired' });
     }
     
-    console.log('Received OTP:', otp);
     
     const isValidOtp = await bcrypt.compare(otp, user.otp.code);
     if (!isValidOtp) {
@@ -536,7 +487,6 @@ const resetPassword = async (req, res) => {
     }
     
     
-    console.log('Resetting password for user:', user.email);
     
     
     user.password = newPassword;
@@ -577,7 +527,6 @@ if (user.authProvider === 'google' && !user.password) {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
       // Log the OTP for development purposes
-      console.log('Password reset OTP for', email, ':', otp);
       
       // Save OTP to user document using the existing structure
       user.otp = {

@@ -11,18 +11,9 @@ export const refresh = async (refreshToken) => {
 };
 
 export const logout = async (adminId) => {
-  console.log("hi");
-  console.log("kok");
-
   //  adminId={_id:ObjectId('6818831cfc0e3c611f62b727')}
-  //     console.log('hiiii');
-  //     console.log(adminId,'kkk');
-
   try {
-    console.log(adminId);
-
     const response = await api.post("/logout", { admin: adminId });
-    console.log("hey");
     return response.data;
   } catch (error) {
     console.error("Logout failed:", error.message);

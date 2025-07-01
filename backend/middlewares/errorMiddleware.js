@@ -1,6 +1,5 @@
 // Error handling middleware
 const notFound = (req, res, next) => {
-    console.log('so im here');
     
   const error = new Error(`Not Found -jujujuju ${req.originalUrl}`);
   res.status(404);
@@ -8,10 +7,8 @@ const notFound = (req, res, next) => {
 };
 
 const errorHandler = (err, req, res, next) => {
-    console.log('hehe');
     
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  console.log('so finally im here right',err.message,'yy');
   
   res.status(statusCode);
   res.json({

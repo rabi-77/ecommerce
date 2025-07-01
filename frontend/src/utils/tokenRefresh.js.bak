@@ -57,19 +57,15 @@ export function setupTokenRefresh() {
     const refreshTimeBeforeExpiry = 30 * 1000; // 30 seconds
     const timeUntilRefresh = timeUntilExpiry - refreshTimeBeforeExpiry;
     
-    console.log(`Token expires in ${timeUntilExpiry / 1000} seconds. Will refresh in ${timeUntilRefresh / 1000} seconds.`);
     
     if (timeUntilRefresh <= 0) {
       // Token is already expired or about to expire, refresh immediately
-      console.log('Token is about to expire, refreshing immediately...');
       store.dispatch(refreshTokenThunk())
         .then(() => scheduleRefresh())
         .catch(error => console.error('Failed to refresh token:', error));
     } else {
       // Schedule refresh before token expires
-      console.log(`Scheduling token refresh in ${timeUntilRefresh / 1000} seconds`);
       refreshTimer = setTimeout(() => {
-        console.log('Refreshing token proactively...');
         store.dispatch(refreshTokenThunk())
           .then(() => scheduleRefresh())
           .catch(error => console.error('Failed to refresh token:', error));
@@ -118,25 +114,19 @@ export function setupUserTokenRefresh() {
     const refreshTimeBeforeExpiry = 30 * 1000; // 30 seconds
     const timeUntilRefresh = timeUntilExpiry - refreshTimeBeforeExpiry;
     
-    console.log(`User token expires in ${timeUntilExpiry / 1000} seconds. Will refresh in ${timeUntilRefresh / 1000} seconds.`);
     
     if (timeUntilRefresh <= 0) {
       // Token is already expired or about to expire, refresh immediately
-      console.log('User token is about to expire, refreshing immediately...');
       store.dispatch(refreshAccessTokenThunk())
         .then((result) => {
-          console.log('User token refreshed successfully:', result);
           scheduleRefresh();
         })
         .catch(error => console.error('Failed to refresh user token:', error));
     } else {
       // Schedule refresh before token expires
-      console.log(`Scheduling user token refresh in ${timeUntilRefresh / 1000} seconds`);
       refreshTimer = setTimeout(() => {
-        console.log('Refreshing user token proactively...');
         store.dispatch(refreshAccessTokenThunk())
           .then((result) => {
-            console.log('User token refreshed successfully:', result);
             scheduleRefresh();
           })
           .catch(error => console.error('Failed to refresh user token:', error));

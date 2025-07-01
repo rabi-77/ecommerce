@@ -521,7 +521,6 @@ export const clearCart = async (req, res) => {
 
 export const applyCoupon = async (req, res) => {
   try {
-    console.log("Applying coupon to cart:", req.body.code);
     const { code } = req.body;
     const userId = req.user;
 
@@ -532,7 +531,6 @@ export const applyCoupon = async (req, res) => {
       isActive: true
     });
 
-    console.log("Coupon found:", coupon ? {
       code: coupon.code,
       isActive: coupon.isActive,
       startDate: coupon.startDate,
@@ -595,7 +593,6 @@ export const applyCoupon = async (req, res) => {
     });
 
     if (subtotal < coupon.minPurchaseAmount) {
-      console.log('Minimum purchase amount not met');
       return res.status(400).json({
         success: false,
         message: `Minimum purchase amount of $${coupon.minPurchaseAmount} required to use this coupon`
@@ -651,7 +648,6 @@ export const applyCoupon = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(
       'hier'
     );
     
@@ -807,10 +803,8 @@ export const validateCoupon = async (req, res) => {
 // ======= Fetch Available Coupons =======
 export const getAvailableCoupons = async (req, res) => {
   try {
-    console.log('hey');
     
     const userId =  req.user;
-    console.log(userId,'hey');
     
     const userIdStr = userId.toString();
     const userObjId = new mongoose.Types.ObjectId(userIdStr);

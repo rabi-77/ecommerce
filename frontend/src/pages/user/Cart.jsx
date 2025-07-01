@@ -190,7 +190,6 @@ const Cart = () => {
 
   // Return price considering offer
   const getEffectivePrice = (product) => {
-    console.log('koi',product);
     
     return product.effectivePrice ?? product.price;
   };

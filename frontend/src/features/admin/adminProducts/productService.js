@@ -8,7 +8,6 @@ const getProducts = async ({ page, size, search }) => {
 };
 
 const addProduct = async (productData) => {
-    console.log(productData.name,'jjj',productData);
     
   const response = await api.post("/add-product", productData, {
     headers:{"Content-Type":"multipart/form-data"},
@@ -29,10 +28,7 @@ const deleteProduct = async (id) => {
 };
 
 const toggleListProduct = async (id) => {
-  console.log(id,'iddd');
-
   const response = await api.patch(`/products/${id}/list-product`);
-  console.log('resss');
   
   return response.data.product;
 };
@@ -49,8 +45,6 @@ const getCategory = async () => {
 
 const getBrand = async () => {
   const response = await api.get("/get-brands");
-  console.log(response.data, "supp");
-
   return response.data;
 };
 

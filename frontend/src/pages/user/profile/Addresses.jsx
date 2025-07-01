@@ -219,10 +219,8 @@ const Addresses = () => {
   
   const handleSetDefaultAddress = async (addressId) => {
     try {
-      console.log(addressId,'default');
       
       await dispatch(setDefaultAddressThunk(addressId)).unwrap();
-      console.log('default success');
       
       toast.success('Default address updated');
       
@@ -232,7 +230,6 @@ const Addresses = () => {
       toast.error('Default address updated');
 
       // Error is already handled in the thunk and displayed via useEffect
-      console.log(err.message,'default');
     }
   };
   

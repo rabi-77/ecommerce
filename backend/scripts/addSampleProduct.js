@@ -20,7 +20,6 @@ import Brand from '../models/brandModel.js';
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error);
     process.exit(1);
@@ -44,8 +43,6 @@ const addSampleProduct = async () => {
       process.exit(1);
     }
     
-    console.log('Found category:', runningCategory.name);
-    console.log('Found brand:', nikeBrand.name);
     
     // Create variants
     const variants = [];
@@ -84,12 +81,6 @@ const addSampleProduct = async () => {
     // Save the product
     await product.save();
     
-    console.log('Sample product added successfully:');
-    console.log('- Name:', product.name);
-    console.log('- Category:', runningCategory.name);
-    console.log('- Brand:', nikeBrand.name);
-    console.log('- Variants:', product.variants.length);
-    console.log('- Total Stock:', product.totalStock);
     
     process.exit(0);
   } catch (error) {

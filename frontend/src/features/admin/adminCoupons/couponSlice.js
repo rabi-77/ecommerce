@@ -78,7 +78,6 @@ export const updateCoupon = createAsyncThunk(
       const response = await updateExistingCoupon({ id, ...couponData });
       return response.data;
     } catch (error) {
-      console.log(error.response?.data)
       return rejectWithValue(
         error.response?.data?.message||error.response?.data?.errors[0].msg || 'Failed to update coupon'
       );

@@ -9,18 +9,13 @@ const connectDB = async () => {
       writeConcern: { w: "majority" },
     });
 
-    console.log(`connected successfully to ${connect.connection.host}`);
-
     if (process.env.NODE_ENV === "development") {
       mongoose.set("debug", { color: true, level: "debug" });
     }
 
     return connect;
   } catch (er) {
-    console.log(er.message,'is the error');
     
-    console.log(`connected unsuccessfully to ${process.env.MONGODB_URI}`);
-    console.log("what");
     process.exit(1);
   }
 };

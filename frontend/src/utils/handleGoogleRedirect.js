@@ -26,7 +26,6 @@ export const checkForGoogleRedirect = () => {
         }
         localStorage.setItem('user', JSON.stringify(userData));
         
-        console.log('Google authentication successful');
         
         // Update Redux store with user data by dispatching the login.fulfilled action
         store.dispatch(

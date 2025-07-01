@@ -182,7 +182,6 @@ export const deleteAddress = async (req, res) => {
 export const setDefaultAddress = async (req, res) => {
   try {
     const userId = req.user;
-    console.log(userId,'userid');
     
     const addressId = req.params.addressId;
     

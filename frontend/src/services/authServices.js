@@ -6,15 +6,9 @@ const URL =`${API_URL}/user/register`;
 
 export const registerUser = async (userData) => {
   try {
-    console.log(userData);
-
     const response = await axios.post(`${URL}`, userData);
-    console.log("success");
-
     return response.data;
   } catch (er) {
-    console.log(API_URL);
-    console.log("hi", er.message);
     throw new Error(
       er.response?.data?.message || "someting wrong with registration"
     );
@@ -28,13 +22,8 @@ export const verifyUser = async ({ email, otp, token }) => {
       otp,
       token,
     });
-    console.log("hi");
-    console.log(response.data);
-
     return response.data;
   } catch (er) {
-    console.log("errrrr", er.message);
-
     throw new Error(
       er.response?.data?.message || "someting wrong with registration"
     );
@@ -111,9 +100,7 @@ export const checkUserStatus = async () => {
     }
 
     // Use the API instance with interceptors for automatic token refresh
-    console.log('Making request to check user status');
     const response = await api.get(`/check-status`);
-    console.log('User status check successful:', response.data);
     return response.data;
   } catch (er) {
     console.error('Error checking user status:', er);
@@ -138,14 +125,10 @@ export const checkUserStatus = async () => {
 
 export const logoutUser = async () => {
   try {
-    console.log("logout");
     // Use the API instance with interceptors
     const response = await api.post(`/logout`);
-    console.log("hoi", response.data);
     return response.data;
   } catch (er) {
-    console.log("logout error", er.message);
-    console.log("hi", er.response?.data?.message);
     throw new Error(er.response?.data?.message || "Failed to logout");
   }
 };
@@ -176,7 +159,6 @@ export const refreshAccessToken = async () => {
       localStorage.setItem("tokenRefresh", response.data.tokenRefresh);
     }
     
-    console.log('Token refreshed successfully');
     return response.data;
   } catch (err) {
     console.error('Error refreshing token:', err);

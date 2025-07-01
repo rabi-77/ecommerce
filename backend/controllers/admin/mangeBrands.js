@@ -4,8 +4,6 @@ import { uploadImagesToCloudinary } from "../../utils/imageUpload.js";
 
 
 const getBrands = async (req, res) => {
-  console.log("hiiii");
-
   const { page = 1, search = "", size = 10 } = req.query;
   const query = {
     isDeleted: false,
@@ -13,22 +11,14 @@ const getBrands = async (req, res) => {
   };
 
   try {
-    console.log("koko");
-
     const total = await brandModel.countDocuments(query);
-    console.log("here noo?");
-
     const brands = await brandModel
       .find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * size)
       .limit(Number(size));
-    console.log("here?");
-
     res.json({ brands, total, page: Number(page), size: Number(size) });
   } catch (err) {
-    console.log(err.message);
-
     res.status(500).json({ message: "something happened internally" });
   }
 };
@@ -37,11 +27,7 @@ const getBrands = async (req, res) => {
 
 const addBrand = async (req, res) => {
   const { name, description } = req.body;
-  console.log(req.body, "body is recieving");
-
   const file = req.file;
-  console.log(file, "file has images");
-
   try {
     // Validate name is not empty and doesn't contain only whitespace
     if (!name || name.trim() === '') {
@@ -63,24 +49,17 @@ const addBrand = async (req, res) => {
     });
     
     if (existingBrand) {
-      console.log("existing???");
       return res.status(400).json({ message: "Brand already exists (case-insensitive match)" });
     }
 
     if (!["image/jpeg", "image/png", "image/gif"].includes(file.mimetype)) {
-      console.log("image existing???");
-
       return res
         .status(400)
         .json({ message: "Only image files are allowed (JPEG, PNG, GIF)" });
     }
 
     // Upload the image to Cloudinary
-    console.log("huhuh");
-
     const imageUrl = await uploadImagesToCloudinary([file], "brands");
-    console.log("huhuhffff");
-
     const newBrand = new brandModel({
       name: trimmedName,
       description: description ? description.trim() : '',
@@ -95,8 +74,6 @@ const addBrand = async (req, res) => {
         brand: newBrand,
       });
   } catch (err) {
-    console.log(err.message, "hu?");
-
     res.status(500).json({ message: "server error" });
   }
 };
@@ -104,13 +81,9 @@ const addBrand = async (req, res) => {
 //edit brand
 
 const editBrand = async (req, res) => {
-  console.log("koooi");
-
   const { id } = req.params;
   const { name, description } = req.body;
   const file = req.file;
-  console.log(file, req.body, req.params);
-
   // Validate name is not empty and doesn't contain only whitespace
   if (!name || name.trim() === '') {
     return res.status(400).json({ message: "Brand name cannot be empty or contain only whitespace" });
@@ -120,21 +93,16 @@ const editBrand = async (req, res) => {
   const trimmedName = name.trim();
   
   try {
-    console.log("hi");
-
     // Check for existing brand with case-insensitive search
     const checking = await brandModel.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
-    console.log("hpi");
-
     if (checking && checking._id.toString() !== id) {
       return res
         .status(400)
         .json({ message: "Brand with this name already exists (case-insensitive match)" });
     }
 
-    console.log("jop");
 let imageUrl;
     if (file) {
       // Upload the new image to Cloudinary
@@ -151,7 +119,6 @@ let imageUrl;
       },
       { new: true }
     );
-    console.log('ko');
     
     if (!editBrand) {
       return res
@@ -161,7 +128,6 @@ let imageUrl;
 
     res.json({ message: "brand updated successfully" ,brand:editBrand});
   } catch (err) {
-    console.log(err.message);
     
     res.status(500).json({ message: "some internal server error" });
   }
@@ -171,18 +137,15 @@ let imageUrl;
 
 const softDeleteBrand = async (req, res) => {
   const { id } = req.params;
-  console.log(req.params);
   
   try {
     const brand = await brandModel.findOne({_id:id});
     if (!brand) {
-        console.log('hey',brand);
         
       return res
         .status(404)
         .json({ message: "this brand doesnt exist no more" });
     }
-    console.log('soft');
     const softDelete = await brandModel.findByIdAndDelete(
       id,
     );
@@ -190,10 +153,8 @@ const softDeleteBrand = async (req, res) => {
       return res.status(500).json({ message: "couldnt found this brand" });
     }
     res.json({ message: "brand deleted successfully",deletedId:softDelete._id });
-    console.log('success',softDelete);
     
   } catch (err) {
-    console.log(err.message);
     
     res
       .status(500)

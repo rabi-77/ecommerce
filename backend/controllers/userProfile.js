@@ -3,8 +3,6 @@ import { uploadImagesToCloudinary } from "../utils/imageUpload.js";
 
 export const getUserinfo = async (req, res) => {
   const { id } = req.query;
-  console.log(id, "back");
-
   //const {id}= req.user
   try {
     const user = await userModel.findById(id).select("-password -otp");
@@ -29,17 +27,13 @@ export const getUserinfo = async (req, res) => {
     const userResponse = user.toObject();
     userResponse.defaultAddress = defaultAddress;
     
-    console.log("success");
-
     res.json({ user: userResponse });
   } catch (err) {
-    console.log(err.message);
     res.status(500).json({ message: "internal server error" + err.message });
   }
 };
 
 export const editUserDetails = async (req, res) => {
-  console.log(req.body);
   try {
     const { name, phone, email, existingImage } = req.body;
     const file = req.file;
@@ -67,7 +61,6 @@ export const editUserDetails = async (req, res) => {
     await user.save();
     res.json({user})
   } catch (err) {
-    console.log(err.message,'profile error');
     res.status(500).json({ message: "internal server error" + err.message });
   }
 };

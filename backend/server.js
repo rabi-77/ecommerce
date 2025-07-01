@@ -1,7 +1,5 @@
 import { config } from 'dotenv'
 config()
-console.log(process.env.NODE_MAILER_EMAIL);
-
 import express from 'express'
 import cors from "cors"
 import helmet from 'helmet'

@@ -147,7 +147,6 @@ export const getInventory = asyncHandler(async (req, res) => {
 
 export const getInventoryHistory = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  console.log('hey');
   
   const product = await Product.findById(id)
     .populate("category", "name")
@@ -165,8 +164,6 @@ export const getInventoryHistory = asyncHandler(async (req, res) => {
   .sort({ createdAt: -1 });
   
 
-  console.log(`Found ${orders.length} orders for product ${id}`);
-  console.log('Order statuses:', orders.map(order => order.status));
   
   const inventoryChanges = [];
   
@@ -196,7 +193,6 @@ export const getInventoryHistory = asyncHandler(async (req, res) => {
       }
     }
   }
-  console.log(inventoryChanges);
   res.json({
     success: true,
     product,

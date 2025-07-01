@@ -16,8 +16,6 @@ import { uploadImagesToCloudinary } from "../../utils/imageUpload.js";
 // }).single("image");
 
 const getCategories = async (req, res) => {
-  console.log("hiiii");
-
   const { page = 1, search = "", size = 10 } = req.query;
   const query = {
     isDeleted: false,
@@ -25,22 +23,14 @@ const getCategories = async (req, res) => {
   };
 
   try {
-    console.log("koko");
-
     const total = await categoryModel.countDocuments(query);
-    console.log("here noo?");
-
     const categories = await categoryModel
       .find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * size)
       .limit(Number(size));
-    console.log("here?");
-
     res.json({ categories, total, page: Number(page), size: Number(size) });
   } catch (err) {
-    console.log(err.message);
-
     res.status(500).json({ message: "something happened internally" });
   }
 };
@@ -49,11 +39,7 @@ const getCategories = async (req, res) => {
 
 const addCategory = async (req, res) => {
   const { name, description } = req.body;
-  console.log(req.body, "body is recieving");
-
   const file = req.file;
-  console.log(file, "file has images");
-
   try {
     // Validate name is not empty and doesn't contain only whitespace
     if (!name || name.trim() === '') {
@@ -75,24 +61,17 @@ const addCategory = async (req, res) => {
     });
     
     if (existingCategory) {
-      console.log("existing???");
       return res.status(400).json({ message: "Category already exists (case-insensitive match)" });
     }
 
     if (!["image/jpeg", "image/png", "image/gif"].includes(file.mimetype)) {
-      console.log("image existing???");
-
       return res
         .status(400)
         .json({ message: "Only image files are allowed (JPEG, PNG, GIF)" });
     }
 
     // Upload the image to Cloudinary
-    console.log("huhuh");
-
     const imageUrl = await uploadImagesToCloudinary([file], "categories");
-    console.log("huhuhffff");
-
     const newCategory = new categoryModel({
       name: trimmedName,
       description: description ? description.trim() : '',
@@ -107,8 +86,6 @@ const addCategory = async (req, res) => {
         category: newCategory,
       });
   } catch (err) {
-    console.log(err.message, "hu?");
-
     res.status(500).json({ message: "server error" });
   }
 };
@@ -116,13 +93,9 @@ const addCategory = async (req, res) => {
 //edit category
 
 const editCategory = async (req, res) => {
-  console.log("koooi");
-
   const { id } = req.params;
   const { name, description } = req.body;
   const file = req.file;
-  console.log(file, req.body, req.params);
-
   // Validate name is not empty and doesn't contain only whitespace
   if (!name || name.trim() === '') {
     return res.status(400).json({ message: "Category name cannot be empty or contain only whitespace" });
@@ -132,21 +105,16 @@ const editCategory = async (req, res) => {
   const trimmedName = name.trim();
   
   try {
-    console.log("hi");
-
     // Check for existing category with case-insensitive search
     const checking = await categoryModel.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
-    console.log("hpi");
-
     if (checking && checking._id.toString() !== id) {
       return res
         .status(400)
         .json({ message: "Category with this name already exists (case-insensitive match)" });
     }
 
-    console.log("jop");
 let imageUrl;
     if (file) {
       // Upload the new image to Cloudinary
@@ -163,7 +131,6 @@ let imageUrl;
       },
       { new: true }
     );
-    console.log('ko');
     
     if (!editCategory) {
       return res
@@ -173,7 +140,6 @@ let imageUrl;
 
     res.json({ message: "category updated successfully",category:editCategory });
   } catch (err) {
-    console.log(err.message);
     
     res.status(500).json({ message: "some internal server error" });
   }
@@ -183,18 +149,15 @@ let imageUrl;
 
 const softDeleteCategory = async (req, res) => {
   const { id } = req.params;
-  console.log(req.params);
   
   try {
     const category = await categoryModel.findOne({_id:id});
     if (!category) {
-        console.log('hey',category);
         
       return res
         .status(404)
         .json({ message: "this category doesnt exist no more" });
     }
-    console.log('soft');
     const softDelete = await categoryModel.findByIdAndDelete(
       id,
      
@@ -203,10 +166,8 @@ const softDeleteCategory = async (req, res) => {
       return res.status(500).json({ message: "couldnt found this category" });
     }
     res.json({ message: "category deleted successfully",deletedId:softDelete._id });
-    console.log('success',softDelete);
     
   } catch (err) {
-    console.log(err.message);
     
     res
       .status(500)

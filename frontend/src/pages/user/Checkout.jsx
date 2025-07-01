@@ -132,7 +132,6 @@ const Checkout = () => {
   
   // Initial data loading effect - runs only once on component mount
   useEffect(() => {
-    console.log(cartItems,'nononono');
     
     if (!user) {
       navigate('/login');

@@ -12,11 +12,7 @@ import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/prici
 
 const createOrder = asyncHandler(async (req, res) => {
   const { address, paymentMethod = "COD" } = req.body;
-  console.log("addressId", address, paymentMethod);
-
   const userId = req.user;
-  console.log("so finally im here right", req.body, req.user.addresses, "ad");
-
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "items.product",
     populate:[ {
@@ -39,8 +35,6 @@ const createOrder = asyncHandler(async (req, res) => {
   const shippingAddress = userAddresses.find(
     (address) => address._id.toString() === address._id.toString()
   );
-console.log(shippingAddress,'shippingAddress');
-
   if (!shippingAddress) {
     res.status(400);
     throw new Error("Invalid shipping address");
@@ -137,13 +131,9 @@ console.log(shippingAddress,'shippingAddress');
   // Include coupon discount if applied on cart, but re-validate to ensure it is still eligible
   let couponDiscount = 0;
   let appliedCoupon = null;
-  console.log('heyyyyy',cart.coupon);
   
   if (cart.coupon) {
-    console.log('heyy true',cart.coupon);
-
     const couponDoc = await Coupon.findById(cart.coupon);
-    console.log(couponDoc,'doc');
     
     const now = new Date();
 
@@ -181,7 +171,6 @@ console.log(shippingAddress,'shippingAddress');
 
     discountAmount += couponDiscount;
     appliedCoupon = couponDoc._id;
-    console.log('applied acoupon and discamount',appliedCoupon,discountAmount);
     
   }
 
@@ -225,8 +214,6 @@ console.log(shippingAddress,'shippingAddress');
   }
 
   // Create order
-  console.log("before saving, allocating shares done");
-
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2);
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -253,11 +240,7 @@ console.log(shippingAddress,'shippingAddress');
     status: "pending",
     isPaid: false, 
   });
-  console.log("is it saved?");
-console.log(order.coupon,order.couponDiscount)
   const createdOrder = await order.save();
-  console.log("err");
-
   // Razorpay flow: return pending order, leave cart intact
   if (paymentMethod === 'RAZORPAY') {
     return res.status(201).json({ success: true, order: createdOrder });
@@ -338,8 +321,6 @@ const getOrderById = asyncHandler(async (req, res) => {
 // @route   GET /orders
 // @access  Private
 const getMyOrders = asyncHandler(async (req, res) => {
-  console.log("kdkd");
-
   const keyword = req.query.keyword || "";
   const status = req.query.status || "";
 
@@ -355,8 +336,6 @@ const getMyOrders = asyncHandler(async (req, res) => {
       ],
     };
   }
-  console.log("kdkd");
-
   // Add status filter
   if (status && status !== "all") {
     query.status = status;
@@ -379,7 +358,6 @@ const getMyOrders = asyncHandler(async (req, res) => {
 // @access  Private
 const cancelOrder = asyncHandler(async (req, res) => {
   const { reason } = req.body;
-  console.log('heyy');
   
   const order = await Order.findOne({
     $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],
@@ -768,8 +746,6 @@ const returnOrderItem = asyncHandler(async (req, res) => {
 // @access  Private
 const cancelUnpaidOrder = asyncHandler(async (req, res) => {
   const { id } = req.params;
-console.log('is is cancelling',id);
-
   const order = await Order.findOne({
     _id: id,
     user: req.user,

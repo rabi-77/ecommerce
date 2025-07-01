@@ -84,14 +84,10 @@ async function migrateCartData() {
   try {
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('Connected to MongoDB');
-
     // Get all existing cart items
     const oldCartItems = await OldCartItem.find().lean();
-    console.log(`Found ${oldCartItems.length} cart items to migrate`);
     
     if (oldCartItems.length === 0) {
-      console.log('No cart data to migrate');
       return;
     }
     
@@ -111,7 +107,6 @@ async function migrateCartData() {
       });
     });
     
-    console.log(`Grouped into ${Object.keys(cartsByUser).length} user carts`);
     
     // Create new cart documents
     const newCarts = [];
@@ -128,31 +123,25 @@ async function migrateCartData() {
       // First, drop the new collection if it exists to avoid conflicts
       try {
         await mongoose.connection.db.collection('carts').drop();
-        console.log('Dropped existing carts collection');
       } catch (err) {
         // Collection might not exist, which is fine
-        console.log('No existing carts collection to drop');
       }
       
       const result = await NewCart.insertMany(newCarts);
-      console.log(`Successfully migrated ${result.length} carts with ${oldCartItems.length} total items`);
     }
     
     // Rename the old collection instead of dropping it
     // This is safer than dropping in case you need to rollback
     try {
       await mongoose.connection.db.collection('cartitems').rename('cartitems_old');
-      console.log('Renamed old collection to cartitems_old');
     } catch (err) {
       console.error('Error renaming old collection:', err.message);
     }
     
-    console.log('Migration completed successfully');
   } catch (error) {
     console.error('Migration failed:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
   }
 }
 

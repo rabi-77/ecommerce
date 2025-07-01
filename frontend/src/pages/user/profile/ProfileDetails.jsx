@@ -15,23 +15,15 @@ const ProfileDetails = () => {
     (state) => state.profile
   );
   const invalidReferral = useSelector((state) => state.auth.invalidReferral);
-  console.log(profileData, 'and', user, 'details')
-
   useEffect(() => {
     // Show error toast if there's an error
     if (error && errorMessage) {
       toast.error(errorMessage);
       dispatch(clearProfileErrors())
     }
-    console.log('hrtres');
-    // console.log(profileData, 'and', user, 'details')
-    console.log(error, errorMessage);
-    // console.log(user, 'user')
   }, [error, errorMessage, dispatch]);
 
   useEffect(() => {
-    console.log("kjhgfd", user);
-
     dispatch(fetchUserProfile(user._id));
   }, [dispatch]);
 
@@ -39,9 +31,6 @@ const ProfileDetails = () => {
   const userData = profileData || user;
   // Get the default address from the user data
   const defaultAddress = userData?.defaultAddress;
-  // console.log(userData, 'userData')
-  console.log(profileData, 'fdfghjk', user);
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">

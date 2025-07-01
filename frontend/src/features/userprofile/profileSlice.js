@@ -6,7 +6,6 @@ export const fetchUserProfile = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const data = await getUserProfile(id);
-      console.log(data.user.username,'slice');
       
       return data.user;
     } catch (err) {
@@ -19,7 +18,6 @@ export const updateProfile = createAsyncThunk(
   "profile/updateProfile",
   async (profileData, { rejectWithValue }) => {
     try {
-      console.log(profileData,'frony');
       
       const data = await updateUserProfile(profileData);
       return data;

@@ -16,22 +16,16 @@ const EditProfile = () => {
   );
 
   // Use profile data if available, otherwise fall back to user data from auth state
-  console.log(profileData);
-
   useEffect(() => {
     dispatch(fetchUserProfile(user._id));
   }, [dispatch, user]);
 
   const userData = profileData || user;
-  console.log(userData.phone, "edit", userData);
-
   const [formData, setFormData] = useState({
     name: userData?.username || "",
     phone: userData?.phone || "",
     email: userData?.email || "",
   });
-  console.log(formData.name, "form");
-
   const [profileImage, setProfileImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(
     userData?.image || userData?.image || null
@@ -48,8 +42,6 @@ const EditProfile = () => {
   // Update form data if user data changes
   useEffect(() => {
     if (userData) {
-      console.log("yes");
-
       setFormData({
         name: userData.username || "",
         phone: userData.phone || "",
@@ -61,7 +53,6 @@ const EditProfile = () => {
       );
     }
   }, [userData]);
-  console.log(formData.name, "form");
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
     if (file) {
@@ -114,8 +105,6 @@ const EditProfile = () => {
       formDataToSend.append("existingImage", userData.image);
     }
     formDataToSend.append("email", formData.email || userData.email);
-    console.log(formData.email, "email fron", userData.email);
-
     dispatch(updateProfile(formDataToSend))
       .unwrap()
       .then(() => {

@@ -30,16 +30,9 @@ const getProducts = async (req, res) => {
 };
 
 const addProduct = async (req, res) => {
-  console.log("jeib");
-
   const { name, price, images, description, brand, category, variants } =
     req.body;
-  console.log(req.body, "hello from back", images);
-
   const files = req.files;
-  console.log(files, req.files, "ggg");
-  console.log(files, req.files, "gopu");
-
   if (!files || files.length < 3) {
     return res.status(400).json({ message: "Minimum 3 images required" });
   }
@@ -74,7 +67,6 @@ const addProduct = async (req, res) => {
     const totalStock = parsedVariants.reduce((acc,curr) => {
      return Number(curr.stock) + acc;
     }, 0);
-    console.log(totalStock,'tot');
     
     const newProduct = new productModel({
       name,
@@ -92,15 +84,12 @@ const addProduct = async (req, res) => {
     res.status(201).json({message:'successfully added',product:newProduct})
   } catch (err) {
 
-    console.log(err.message,'huhu');
-
     res.status(500).json({ message: "some internal server error ishappening" });
   }
 };
 
 const editProduct = async (req, res) => {
   const { id } = req.params;
-  console.log(id,'id');
   
   const {
     name,
@@ -118,7 +107,6 @@ const editProduct = async (req, res) => {
   try {
     const product = await productModel.findById(id);
     if (!product) {
-      console.log(product,'ifif');
       
       return res.status(404).json({ message: "Product not found" });
     }
@@ -183,7 +171,6 @@ const editProduct = async (req, res) => {
 
     res.json({ message: "success", product });
   } catch (err) {
-    console.log(err.message,'last');
     
     res.status(500).json({ message: "some internal error" });
   }
@@ -207,12 +194,10 @@ const toggleList = async (req, res) => {
   
   
   const { id } = req.params;
-  console.log(id,'back id');
   
   try {
     const product = await productModel.findById(id);
     if (!product) {
-      console.log('hey');
       
       return res.status(404).json({ message: "Could not find this product" });
     }
@@ -234,8 +219,6 @@ const toggleList = async (req, res) => {
 
 const toggleFeatured = async (req, res) => {
   const { id } = req.params;
-console.log('fet');
-
   try {
     const product = await productModel.findById(id);
     if (!product) {
@@ -265,7 +248,6 @@ const fetchBrands = async (req, res) => {
     }
     res.json({ brands: brand });
   } catch (err) {
-    console.log(err.message, "no brands listed");
    return res.status(500).json({ message: "failed" });
   }
 };
@@ -278,7 +260,6 @@ const fetchCategories = async (req, res) => {
     }
     res.json({ categories: category });
   } catch (err) {
-    console.log(err.message, "no categories listed");
     res.status(500).json({ message: "failed" });
   }
 };

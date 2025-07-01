@@ -26,7 +26,6 @@ router
   .post(verifyToken, authenticateUser, userAuthorization, createOrder)
   .get(
     async (req, res, next) => {
-      console.log("lollll");
       next();
     },
     verifyToken,

@@ -7,14 +7,10 @@ import Coupon from "../models/couponModel.js";
 
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
     try {
-        console.log('Creating Razorpay order...');
         const { amount, receipt, orderId } = req.body;
-        console.log(orderId,'orderId');
         
-        console.log('Request body:', req.body);
         
         if (!amount || !orderId) {
-            console.log('Amount and orderId are required');
             return res.status(400).json({
                 success: false,
                 message: 'Amount and orderId are required'
@@ -46,12 +42,8 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
             payment_capture: 1
         };
 
-        console.log('Razorpay order options:', options);
-
         
         const order = await razorpay.orders.create(options);
-        console.log('Razorpay order created:', order.id);
-
         
         await Order.findByIdAndUpdate(orderId, {
             paymentResult:{
@@ -87,7 +79,6 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
 
 export const verifyPayment = asyncHandler(async (req,res)=>{
     const {razorpay_order_id,razorpay_payment_id,razorpay_signature}=req.body
-console.log(razorpay_order_id,razorpay_payment_id,razorpay_signature,'razorpay_order_id');
     const generateSignature=crypto.createHmac('sha256',process.env.RAZORPAY_KEY_SECRET)
     .update(razorpay_order_id+"|"+razorpay_payment_id)
     .digest('hex')
@@ -97,7 +88,6 @@ console.log(razorpay_order_id,razorpay_payment_id,razorpay_signature,'razorpay_o
     }
 
     const order= await Order.findOne({"paymentResult.razorpayOrderId":razorpay_order_id})
-console.log(order,'order');
     if(!order){
         res.status(404).json({message:'Order not found',success:false})
     }
@@ -115,7 +105,6 @@ console.log(order,'order');
         razorpaySignature:razorpay_signature
     }
     await order.save()
-    console.log(order,'order');
     let appliedCoupon=order.coupon
     let userId= req.user
     await Cart.findOneAndUpdate(

@@ -3,30 +3,20 @@ import { API_URL } from "../../config";
 
 export const getUserProfile = async (id) => {
   try {
-    console.log('hey')
-    const token = localStorage.getItem("tokenAccess");
     if (!token) {
       throw new Error("No token found");
     }
-    console.log('lol');
-    console.log('before semding');
     
-    const response = await axios.get(`${API_URL}/user/profile`, {
-      params:{id},
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log('success');
     
     return response.data;
   } catch (err) {
-    console.log(err.message,'gorp');
-    
     throw new Error(
       err.response?.data?.message || "Failed to fetch profile"
     );
-  }
 };
 
 export const updateUserProfile = async (profileData) => {

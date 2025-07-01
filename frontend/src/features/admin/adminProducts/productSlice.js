@@ -15,7 +15,6 @@ export const getProductsThunk = createAsyncThunk(
   async ({ page, size, search }, { rejectWithValue }) => {
     try {
       const data = await getProducts({ page, size, search });
-      console.log(data);
       
       return data;
     } catch (err) {
@@ -64,13 +63,11 @@ export const toggleListProductThunk = createAsyncThunk(
   "product/toggleListProduct",
   async (id, { rejectWithValue }) => {
     try {
-        console.log('what happened');
         
       const updatedProduct = await toggleListProduct(id);
       
       return updatedProduct;
     } catch (err) {
-        console.log(err.message);
         
       return rejectWithValue(err.response?.data?.message || "Failed to toggle listing status");
     }

@@ -34,10 +34,8 @@ const UserLayout = () => {
       // Periodically check if user is blocked
       const checkStatus = async () => {
         try {
-          console.log('Checking user status...');
           
           const response = await checkUserStatus();
-          console.log('User status check response:', response);
           
           if (response.isBlocked) {
             console.warn('User is blocked, logging out');

@@ -34,8 +34,6 @@ export const editBrandThunk = createAsyncThunk(
   "brand/editbrand",
   async ({ id, brandData }, { rejectWithValue }) => {
     try {
-      console.log(brandData, "joks");
-
       const response = await editBrand(id, brandData);
       return response;
     } catch (err) {

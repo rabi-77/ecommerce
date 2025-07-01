@@ -21,7 +21,6 @@ export const getOffer = async (id) => {
 };
 
 export const createOffer = async (offerData) => {
-  console.log(offerData,'df');
   
   const response = await api.post('/offers', offerData);
   return response.data;

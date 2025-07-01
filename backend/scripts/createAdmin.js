@@ -22,7 +22,6 @@ const SALT_ROUNDS = 10;
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected');
   } catch (err) {
     console.error('DB connection error:', err.message);
     process.exit(1);
@@ -33,7 +32,6 @@ const createAdmin = async () => {
   try {
     const existing = await Admin.findOne({ email: ADMIN_EMAIL });
     if (existing) {
-      console.log(`✅ Admin already exists with email ${ADMIN_EMAIL}`);
       return;
     }
 
@@ -46,10 +44,6 @@ const createAdmin = async () => {
     });
 
     await admin.save();
-    console.log('✅ Admin user created successfully');
-    console.log('— Credentials —');
-    console.log(`Email   : ${ADMIN_EMAIL}`);
-    console.log(`Password: ${ADMIN_PASSWORD}`);
   } catch (err) {
     console.error('Error creating admin:', err.message);
   }

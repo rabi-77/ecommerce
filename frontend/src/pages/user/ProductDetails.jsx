@@ -20,8 +20,6 @@ const ProductDetails = () => {
     (state) => state.userProduct
   );
   const newProduct = products.find((p) => p._id === id);
-  console.log('new product',newProduct);
-
   const relateIds = relatedProducts.map((p) => p._id);
 
   const [selectedSize, setSelectedSize] = useState("");
@@ -458,10 +456,8 @@ const ProductDetails = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => {
                 let ad = products.find((p) => p._id === relatedProduct._id);
-                console.log(ad);
                 
                 const productshow = ad || relatedProduct;
-                console.log('productshow',productshow);
                 
                return <ProductCard key={relatedProduct._id} product={productshow} />;
               })}

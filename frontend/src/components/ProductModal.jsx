@@ -14,7 +14,6 @@ const ProductModal = ({ product, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { categories, brands } = useSelector((state) => state.product);
-//   console.log(categories,brands);
   
   const SHOE_SIZES = ["6", "7", "8", "9", "10"];
 
@@ -59,13 +58,10 @@ const ProductModal = ({ product, onClose }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) {
-      console.log("No file selected");
       return;
     }
 
     const totalImages = imagePreviews.length + 1;
-    console.log("Total images after adding:", totalImages);
-
     if (totalImages > 5) {
       toast.error("You can only upload a maximum of 5 images");
       e.target.value = "";
@@ -77,8 +73,6 @@ const ProductModal = ({ product, onClose }) => {
     }
 
     const imageUrl = URL.createObjectURL(file);
-    console.log("Image selected, URL:", imageUrl);
-
     setFormData((prev) => ({
       ...prev,
       images: [...prev.images, file],
@@ -107,7 +101,6 @@ const ProductModal = ({ product, onClose }) => {
   };
 
   const handleCropStart = (index) => {
-    console.log("Starting crop for image at index:", index);
     setCroppingIndex(index);
     
     // Create a new image with crossOrigin attribute to avoid tainted canvas issues
@@ -146,7 +139,6 @@ const ProductModal = ({ product, onClose }) => {
   const handleCropConfirm = () => {
     if (croppingIndex === null || !crop || !imgRef.current) return;
 
-    console.log("Confirming crop for image at index:", croppingIndex);
     const canvas = document.createElement("canvas");
     const image = imgRef.current;
     const scaleX = image.naturalWidth / image.width;
@@ -221,14 +213,12 @@ const ProductModal = ({ product, onClose }) => {
   };
 
   const handleCropCancel = () => {
-    console.log("Crop canceled for image at index:", croppingIndex);
     setCroppingIndex(null);
     setCroppedImage(null);
     setCrop(null);
   };
 
   const handleRemoveImage = (index) => {
-    console.log("Removing image at index:", index);
     const newPreviews = [...imagePreviews];
     newPreviews.splice(index, 1);
     setImagePreviews(newPreviews);
@@ -332,9 +322,7 @@ const ProductModal = ({ product, onClose }) => {
   ));
 
   // Debug: Log FormData contents before sending
-  console.log("FormData contents:");
   for (let [key, value] of data.entries()) {
-    console.log(key, value);
   }
 
 

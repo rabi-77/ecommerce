@@ -15,7 +15,6 @@ const Brand = () => {
     const [editBrand, setEditBrand] = useState(null);
   
     useEffect(() => {
-      console.log(typeof total,typeof sizes,typeof pages);
       
       dispatch(getBrandsThunk({ pages, sizes, search }));
     }, [dispatch, pages, sizes, search, showModal]);

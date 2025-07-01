@@ -24,29 +24,23 @@ import { MongoClient } from 'mongodb';
       // Check if replica set is already initialized
       const status = await admin.command({ replSetGetStatus: 1 });
       if (status.ok === 1) {
-        console.log('✅ Replica set already initiated. State:', status.myState);
         process.exit(0);
       }
     } catch (err) {
       if (err.codeName === 'NotYetInitialized' || err.code === 94) {
         // This is expected - means we need to initialize
-        console.log('ℹ️ Initializing new replica set...');
         const result = await admin.command({
           replSetInitiate: {
             _id: 'rs0',
             members: [{ _id: 0, host: 'localhost:27017' }]
           }
         });
-        console.log('✅ Replica set initiated successfully!', result);
       } else {
         throw err; // Re-throw other errors
       }
     }
   } catch (err) {
     console.error('❌ Error:', err.message);
-    console.log('\nTroubleshooting:');
-    console.log('1. Make sure MongoDB is running with: mongod --dbpath /path/to/data --replSet rs0');
-    console.log('2. Check if port 27017 is available: lsof -i :27017');
     process.exit(1);
   } finally {
     if (client) await client.close();

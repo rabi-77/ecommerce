@@ -21,7 +21,6 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
     if (isOpen) {
       // Instead of completely resetting the state, we'll just clear error states
       // but preserve the email information
-      console.log('ResetPasswordModal opened with email:', passwordResetEmail);
     }
   }, [isOpen, passwordResetEmail]);
   
@@ -47,8 +46,6 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
     dispatch(clearPasswordResetErrors());
     
     // Log the email and OTP for debugging
-    console.log('Submitting password reset with email:', passwordResetEmail);
-    console.log('OTP:', otp);
     
     // Validate password
     if (newPassword.length < 8) {
@@ -82,7 +79,6 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
     }
     
     // Log the email being used (for debugging only)
-    console.log('Using email for password reset:', email);
     
     dispatch(resetPasswordWithOtp({
       email: email, // Use the email prop directly

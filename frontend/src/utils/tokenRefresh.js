@@ -69,19 +69,15 @@ export function setupTokenRefresh() {
     const refreshTimeBeforeExpiry = 60 * 1000; // 60 seconds
     const timeUntilRefresh = timeUntilExpiry - refreshTimeBeforeExpiry;
     
-    console.log(`Token expires in ${timeUntilExpiry / 1000} seconds. Will refresh in ${timeUntilRefresh / 1000} seconds.`);
     
     if (timeUntilRefresh <= 0) {
       // Token is already expired or about to expire, refresh immediately
-      console.log('Token is about to expire, refreshing immediately...');
       store.dispatch(refreshTokenThunk())
         .then(() => scheduleRefresh())
         .catch(error => console.error('Failed to refresh token:', error));
     } else {
       // Schedule refresh before token expires
-      console.log(`Scheduling token refresh in ${timeUntilRefresh / 1000} seconds`);
       refreshTimer = setTimeout(() => {
-        console.log('Refreshing token proactively...');
         store.dispatch(refreshTokenThunk())
           .then(() => scheduleRefresh())
           .catch(error => console.error('Failed to refresh token:', error));
@@ -116,7 +112,6 @@ export function setupUserTokenRefresh() {
     
     const token = localStorage.getItem('tokenAccess');
     if (!token) {
-      console.log('No access token found, cannot schedule refresh');
       return;
     }
     
@@ -136,22 +131,18 @@ export function setupUserTokenRefresh() {
     const refreshTimeBeforeExpiry = 60 * 1000; // 60 seconds
     const timeUntilRefresh = timeUntilExpiry - refreshTimeBeforeExpiry;
     
-    console.log(`User token expires in ${timeUntilExpiry / 1000} seconds. Will refresh in ${timeUntilRefresh / 1000} seconds.`);
     
     // Function to handle token refresh
     const refreshToken = () => {
-      console.log('Refreshing user token...');
       store.dispatch(refreshAccessTokenThunk())
         .then((result) => {
           if (result.payload) {
-            console.log('User token refreshed successfully');
             // Schedule the next refresh
             scheduleRefresh();
           } else {
             console.warn('Token refresh returned undefined payload');
             // Try again after 30 seconds if there's still a token in localStorage
             if (localStorage.getItem('tokenAccess')) {
-              console.log('Will retry token refresh in 30 seconds');
               refreshTimer = setTimeout(refreshToken, 30 * 1000);
             }
           }
@@ -160,7 +151,6 @@ export function setupUserTokenRefresh() {
           console.error('Failed to refresh user token:', error);
           // If there's still a token in localStorage, try again after 30 seconds
           if (localStorage.getItem('tokenAccess')) {
-            console.log('Will retry token refresh in 30 seconds');
             refreshTimer = setTimeout(refreshToken, 30 * 1000);
           }
         });
@@ -168,11 +158,9 @@ export function setupUserTokenRefresh() {
     
     if (timeUntilRefresh <= 0) {
       // Token is already expired or about to expire, refresh immediately
-      console.log('User token is about to expire, refreshing immediately...');
       refreshToken();
     } else {
       // Schedule refresh before token expires
-      console.log(`Scheduling user token refresh in ${timeUntilRefresh / 1000} seconds`);
       refreshTimer = setTimeout(refreshToken, timeUntilRefresh);
     }
   }

@@ -125,7 +125,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
   const { approved, notes } = req.body;
   
   const order = await Order.findById(orderId);
-  console.log('is there ant coupon',order.coupon);
   
   if (!order) {
     return res.status(404).json({ message: "Order not found" });

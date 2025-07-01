@@ -54,11 +54,9 @@ export const setDefaultAddressThunk= createAsyncThunk(
     async (addressId,{rejectWithValue})=>{
         try {
             const response= await setDefaultAddress(addressId)
-            console.log(response,'thunkdefault res');
             
             return response
         } catch (error) {
-            console.log(error.message,'thunkdefault');
             
             return rejectWithValue(error?.message || "Failed to set default address")
         }

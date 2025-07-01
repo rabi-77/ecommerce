@@ -44,7 +44,6 @@ export const applyBestOffer = (productDoc, offerMaps) => {
   const withSavings = candidates.map(o => {
     const percentSave = o.percentage ? (productDoc.price * o.percentage) / 100 : 0;
     const amountSave = o.amount || 0;
-    console.log(o,o.amount,'offer pricw');
     
     return { offer: o, save: Math.max(percentSave, amountSave) };
   });
@@ -57,7 +56,6 @@ export const applyBestOffer = (productDoc, offerMaps) => {
   const effectivePrice = Number((productDoc.price - discountAmount).toFixed(2));
   const discountPercent = appliedOffer.percentage || 0;
 
-  console.log(appliedOffer,'amount',appliedOffer.amount);
   
 
   return { effectivePrice, appliedOffer, discountPercent, discountAmount };

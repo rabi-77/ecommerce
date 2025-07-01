@@ -40,8 +40,6 @@ export default function Navbar() {
   useEffect(() => {
     // Fetch cart and wishlist data only when user is logged in
     if (user) {
-      console.log('user umage',user.image);
-      console.log('user',user);
       
       
       dispatch(fetchCart());
@@ -100,14 +98,12 @@ export default function Navbar() {
       clearError()
       navigate('/');
     }).catch((error)=>{
-      console.log(error)
       toast.error(error.message || "Logout failed")
     })  
   };
 
   const handleProfileNavigation = (e, path) => {
     e.stopPropagation();
-    console.log('Navigating to:', path);
     setDropdownOpen(false);
     navigate(path);
   };
@@ -149,7 +145,6 @@ export default function Navbar() {
           
           {/* <Link to="/cart" className="relative p-2 rounded-full hover:bg-[var(--background-cream)] transition-colors"> */}
           <button onClick={()=>{
-            console.log('user name and email services');
             
             if(!user){
               toast.error(<div>Please login to view your cart
@@ -172,7 +167,6 @@ export default function Navbar() {
           {/* Wishlist */}
           <button 
             onClick={() => {
-            console.log('user name and email services');
               if (!user) {
                 toast.error(
                   <div>

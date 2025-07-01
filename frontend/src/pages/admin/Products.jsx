@@ -17,8 +17,6 @@ const Products = () => {
   const { products, total, page, size, loading, error,categories ,brands} = useSelector(
     (state) => state.product
   );
-  // console.log(total,loading,categories,products,brands)
-  // console.log(products);
   
 
   const [search, setSearch] = useState("");

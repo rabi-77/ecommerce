@@ -20,7 +20,6 @@ api.interceptors.request.use(
 // Create new order
 export const createOrder = async (orderData) => {
   try {
-    console.log(orderData,'d');
     
     const response = await api.post('/orders', orderData);
     return response;
@@ -52,12 +51,10 @@ export const getOrderDetails = async (orderId) => {
 // Get all user orders with optional search and filter
 export const getMyOrders = async (keyword = '', status = '') => {
   try {
-    console.log('lol');
     
     const response = await api.get(`/orders?keyword=${keyword}&status=${status}`);
     return response;
   } catch (error) {
-    console.log('er',error.message);
     
     throw error;
   }

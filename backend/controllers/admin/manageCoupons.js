@@ -3,11 +3,9 @@ import { validationResult } from 'express-validator';
 
 export const createCoupon = async (req, res) => {
   try {
-    console.log('coupon controller',req.body);
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('errors',errors);
       
       return res.status(400).json({ errors: errors.array() });
     }

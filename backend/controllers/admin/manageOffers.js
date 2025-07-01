@@ -17,8 +17,6 @@ const validateRefs = async (type, product, category) => {
 
 export const createOffer = asyncHandler(async (req, res) => {
   const { type, percentage, amount, product, category, startDate, endDate } = req.body;
-console.log(product,'h', typeof product);
-
   await validateRefs(type, product, category);
 
   if (!percentage && !amount) {

@@ -7,7 +7,6 @@ export const uploadCategory = multer({
   storage,
   limits:{},
   fileFilter: (req, file, cb) => {
-    console.log(file,'lol file isnt coming');
     
     const validImageTypes = ["image/jpeg", "image/png", "image/gif"]; // Allowed image MIME types
     if (validImageTypes.includes(file.mimetype)) {

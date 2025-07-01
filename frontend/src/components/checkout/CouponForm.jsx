@@ -77,7 +77,6 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
       setLoadingCoupons(true);
       try {
         const res = await api.get('/coupons/active');
-        console.log('is coupon coming here',res.data);
         
         setActiveCoupons(res.data.coupons || []);
       } catch (err) {

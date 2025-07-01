@@ -77,7 +77,6 @@ export const updateCartItemQuantity = async (cartItemId, quantity) => {
 // Remove item from cart
 export const removeItemFromCart = async (cartItemId) => {
   try {
-    console.log("removing item from cart");
     const response = await api.delete(`/cart/${cartItemId}`);
     return response;
   } catch (error) {
@@ -88,7 +87,6 @@ export const removeItemFromCart = async (cartItemId) => {
 // Clear entire cart
 export const clearCartItems = async () => {
   try {
-    console.log("clearing cart");
     const response = await api.delete('/cart/clear');
     return response;
   } catch (error) {

@@ -26,11 +26,9 @@ const VerifyEmailChange = () => {
     
     // Prevent multiple verification attempts with the same token
     if (verificationAttempted.current) {
-      console.log("Verification already attempted, skipping duplicate request");
       return;
     }
     
-    console.log("Verifying email with token:", token);
     verificationAttempted.current = true;
     dispatch(verifyEmailChangeThunk(token));
   }, [searchParams, dispatch]);

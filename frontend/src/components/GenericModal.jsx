@@ -56,7 +56,6 @@ const GenericModal = ({
       }
       onClose();
     } catch (err) {
-      console.log(err.message, 'kop');
       toast.error(err || "Operation failed");
     } finally {
       setIsLoading(false);
