@@ -14,6 +14,7 @@
         "start": "npm run frontend & npm run backend"
     },
     "dependencies": {
+        "mongodb": "^6.17.0",
         "react-icons": "^5.5.0"
     }
 }
