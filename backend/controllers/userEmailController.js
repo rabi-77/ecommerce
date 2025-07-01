@@ -20,6 +20,7 @@ export const requestEmailChange = async (req, res) => {
 
 
   const requestId = Date.now() + Math.random().toString(36).substring(2, 10);
+  (`[REQUEST ${requestId}] Starting email verification`);
   try {
     const { newEmail, password } = req.body;
     const userId = req.user;
@@ -33,6 +34,7 @@ export const requestEmailChange = async (req, res) => {
 
     const user = await userModel.findById(userId);
     if (!user) {
+      ("User not found");
       
       return res.status(404).json({ message: "User not found" });
     }
@@ -83,6 +85,7 @@ export const requestEmailChange = async (req, res) => {
     user.emailChangeTokenExpiry = expiryTime;
     await user.save();
 
+    ('User after save:', {
       emailChangeToken: user.emailChangeToken,
       email: user.email
     });
@@ -93,6 +96,9 @@ export const requestEmailChange = async (req, res) => {
     const verificationURL = `${frontendURL}/verify-email?token=${token}`;
 
     if (process.env.NODE_ENV !== "production") {
+      ("\n\n==== EMAIL VERIFICATION LINK ====");
+      (verificationURL);
+      ("==================================\n\n");
     }
 
     // Send verification email
@@ -118,6 +124,11 @@ export const requestEmailChange = async (req, res) => {
     });
 
     if (process.env.NODE_ENV !== "production") {
+      ("\n\n==== EMAIL CONTENT ====");
+      (`To: ${newEmail}`);
+      (`Subject: Verify Your New Email Address`);
+      (`Verification Link: ${verificationURL}`);
+      ("========================\n\n");
     }
 
     res.status(200).json({
@@ -133,6 +144,7 @@ export const requestEmailChange = async (req, res) => {
 export const verifyEmailChange = async (req, res) => {
 
   const requestId = Date.now() + Math.random().toString(36).substring(2, 15);
+  (`[REQUEST ${requestId}] Starting email verification`);
   
   try {
     const { token } = req.query;
@@ -145,8 +157,10 @@ export const verifyEmailChange = async (req, res) => {
     const user = await userModel.findOne({
       emailChangeToken: token
     });
+    ('are we finding him antime??',user);
     
     if (!user) {
+      ('is it stopping here????????????',user);
       
       return res.status(400).json({
         message: "Invalid or expired verification link",
@@ -181,6 +195,11 @@ export const verifyEmailChange = async (req, res) => {
     });
 
     if (process.env.NODE_ENV !== "production") {
+      ("\n\n==== CONFIRMATION EMAIL CONTENT ====");
+      (`To: ${previousEmail}`);
+      (`Subject: Your email address has been changed`);
+      (`New Email: ${user.email}`);
+      ("====================================\n\n");
     }
 
     res.status(200).json({
@@ -200,6 +219,7 @@ export const verifyEmailChange = async (req, res) => {
           user.emailChangeToken = undefined;
           user.emailChangeTokenExpiry = undefined;
           await user.save();
+          ("Cleared token fields for user after verification error");
         }
       }
     } catch (cleanupErr) {
@@ -277,6 +297,7 @@ export const changePassword = async (req, res) => {
       };
 
       await transporter.sendMail(mailOptions);
+      (`Password change notification email sent to ${user.email}`);
     } catch (emailError) {
       // Don't fail the password change if email sending fails
       console.error("Failed to send password change notification:", emailError);

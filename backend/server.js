@@ -49,4 +49,4 @@ app.get('/test-orders', async (req, res) => {
 app.use(notFound)
 app.use(errorHandler)
 
-app.listen(PORT, () => console.log(`Server is running on ${PORT}`));
+app.listen(PORT, () => (`Server is running on ${PORT}`));
