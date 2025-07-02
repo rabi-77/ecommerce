@@ -311,11 +311,11 @@ const googleAuthCallback = async (req, res) => {
     
     // Redirect to frontend home with token and user data
     // Make sure the URL has the correct port and parameters
-    res.redirect(`http://mydunk.shop/?tokenAccess=${tokenAccess}&tokenRefresh=${tokenRefresh}&userData=${encodedUserData}`);
+    res.redirect(`https://mydunk.shop/?tokenAccess=${tokenAccess}&tokenRefresh=${tokenRefresh}&userData=${encodedUserData}`);
     ('Redirecting to frontend with user data:', userData);
   } catch (error) {
     console.error('Google auth callback error:', error);
-    res.redirect("http://mydunk.shop/login?error=" + encodeURIComponent(error.message || 'Google auth failed'));
+    res.redirect("https://mydunk.shop/login?error=" + encodeURIComponent(error.message || 'Google auth failed'));
   }
 };
 
