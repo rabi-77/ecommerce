@@ -34,9 +34,7 @@ app.use("/admin", admin)
 app.use('/orders', orderRoutes)
 
 // Add a test endpoint to verify server is running
-// app.get('/test', (req, res) => {
-//   res.json({ message: 'Server is running correctly' });
-// });
+
 app.get('/test-orders', async (req, res) => {
     try {
       const orders = await Order.find();
@@ -49,4 +47,6 @@ app.get('/test-orders', async (req, res) => {
 app.use(notFound)
 app.use(errorHandler)
 
-app.listen(PORT, () => (`Server is running on ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`server i s running on ${PORT}`);
+});
