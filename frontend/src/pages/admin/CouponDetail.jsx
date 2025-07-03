@@ -51,7 +51,7 @@ const CouponDetail = () => {
     if (success) {
       if (success === 'Coupon deleted successfully') {
         toast.success(success);
-        navigate('/admin/coupons');
+        navigate('/adm/coupons');
       } else if (success === 'Coupon status updated successfully') {
         toast.success(success);
       }

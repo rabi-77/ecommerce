@@ -63,7 +63,7 @@ const OrderDetails = () => {
         setNewStatus(foundOrder.status);
       } else {
         toast.error('Order not found');
-        navigate('/admin/orders');
+        navigate('/adm/orders');
       }
     }
   }, [orders, id, navigate]);
@@ -158,7 +158,7 @@ const OrderDetails = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
         <button
-          onClick={() => navigate('/admin/orders')}
+          onClick={() => navigate('/adm/orders')}
           className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded"
         >
           Back to Orders

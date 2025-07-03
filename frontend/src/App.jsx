@@ -41,7 +41,7 @@ function App() {
               <Route path="/*" element={<UserRoutes />} />
               
               {/* Admin Routes */}
-              <Route path="/admin/*" element={<AdminRoutes />} />
+              <Route path="/adm/*" element={<AdminRoutes />} />
             </Routes>
             
             <ToastContainer

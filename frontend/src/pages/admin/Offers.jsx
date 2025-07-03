@@ -82,7 +82,7 @@ const Offers = () => {
 
           {/* Add button */}
           <Link
-            to="/admin/offers/add"
+            to="/adm/offers/add"
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             <FaPlus className="mr-2" />
@@ -130,7 +130,7 @@ const Offers = () => {
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <Link to={`/admin/offers/edit/${offer._id}`} className="text-blue-600 hover:text-blue-900 mr-3 inline-block">
+                    <Link to={`/adm/offers/edit/${offer._id}`} className="text-blue-600 hover:text-blue-900 mr-3 inline-block">
                       <FaEdit />
                     </Link>
                     <button onClick={() => handleDelete(offer._id)} className="text-red-600 hover:text-red-900">

@@ -2,17 +2,17 @@ import { NavLink } from 'react-router-dom';
 
 const Sidebar = ({ onLinkClick = () => {} }) => {
   const navItems = [
-    { name: 'Dashboard', path: '/admin/dashboard' },
-    { name: 'Users', path: '/admin/users' },
-    { name: 'Product', path: '/admin/product' },
-    { name: 'Inventory', path: '/admin/inventory' },
-    { name: 'Brands', path: '/admin/brands' },
-    { name: 'Category', path: '/admin/category' },
-    { name: 'Orders', path: '/admin/orders' },
-    { name: 'Offers', path: '/admin/offers' },
-    { name: 'Banner', path: '/admin/banner' },
-    { name: 'Coupons', path: '/admin/coupons' },
-    { name: 'Sales Report', path: '/admin/sales-report' },
+    { name: 'Dashboard', path: '/adm/dashboard' },
+    { name: 'Users', path: '/adm/users' },
+    { name: 'Product', path: '/adm/product' },
+    { name: 'Inventory', path: '/adm/inventory' },
+    { name: 'Brands', path: '/adm/brands' },
+    { name: 'Category', path: '/adm/category' },
+    { name: 'Orders', path: '/adm/orders' },
+    { name: 'Offers', path: '/adm/offers' },
+    { name: 'Banner', path: '/adm/banner' },
+    { name: 'Coupons', path: '/adm/coupons' },
+    { name: 'Sales Report', path: '/adm/sales-report' },
   ];
 
   return (

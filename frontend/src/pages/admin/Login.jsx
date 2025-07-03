@@ -18,7 +18,7 @@ const AdminLogin = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/admin/dashboard");
+      navigate("/adm/dashboard");
     }
     if (error) {
       toast.error(error);

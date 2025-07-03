@@ -15,7 +15,7 @@ const AdminLayout = () => {
 
   const handleLogout = () => {
     dispatch(logoutThunk(adminInfo._id));
-    navigate("/admin/login", { replace: true });
+    navigate("/adm/login", { replace: true });
   };
 
   return (

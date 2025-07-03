@@ -64,7 +64,7 @@ const AddEditOffer = () => {
     dispatch(resetOfferState());
     if (success) {
       toast.success(isEditMode ? 'Offer updated' : 'Offer created');
-      navigate('/admin/offers');
+      navigate('/adm/offers');
     }
   }, [error, success, isEditMode, navigate]);
 
@@ -137,7 +137,7 @@ const AddEditOffer = () => {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <Link to="/admin/offers" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
+        <Link to="/adm/offers" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
           <FaArrowLeft className="mr-2" /> Back to Offers
         </Link>
         <h2 className="text-2xl font-bold text-gray-800">{isEditMode ? 'Edit Offer' : 'Add New Offer'}</h2>

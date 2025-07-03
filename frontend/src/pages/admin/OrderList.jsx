@@ -238,7 +238,7 @@ const OrderList = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Link 
-                          to={`/admin/orders/${order._id}`} 
+                          to={`/adm/orders/${order._id}`} 
                           className="text-indigo-600 hover:text-indigo-900 mr-3"
                         >
                           View
