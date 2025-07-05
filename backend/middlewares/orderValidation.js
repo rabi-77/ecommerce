@@ -1,7 +1,6 @@
 import Order from "../models/orderModel.js";
 import asyncHandler from "express-async-handler";
 
-// Define valid status transitions for admin
 export const adminStatusTransitions = {
   pending: ['processing', 'shipped', 'out for delivery', 'cancelled'],
   processing: ['shipped', 'out for delivery', 'cancelled'],
@@ -12,18 +11,16 @@ export const adminStatusTransitions = {
   returned: []
 };
 
-// Define valid status transitions for users
 export const userStatusTransitions = {
   pending: ['cancelled'],
   processing: ['cancelled'],
-  shipped: ['cancelled'], // Users can cancel until delivery
-  'out for delivery': ['cancelled'], // Users can cancel until delivery
+  shipped: ['cancelled'], 
+  'out for delivery': ['cancelled'], 
   delivered: ['returned'],
   cancelled: [],
   returned: []
 };
 
-// Middleware to validate status transitions for admin
 export const validateAdminStatusChange = asyncHandler(async (req, res, next) => {
   const { status: newStatus } = req.body;
   const order = await Order.findById(req.params.id);
@@ -41,7 +38,6 @@ export const validateAdminStatusChange = asyncHandler(async (req, res, next) => 
   next();
 });
 
-// Middleware to validate status transitions for users
 export const validateUserStatusChange = asyncHandler(async (req, res, next) => {
   const { status: newStatus } = req.body;
   const order = await Order.findById(req.params.id);

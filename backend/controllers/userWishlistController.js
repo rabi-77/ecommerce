@@ -1,19 +1,15 @@
 import wishlistModel from "../models/wishlistModel.js";
 import productModel from "../models/productModel.js";
 
-// Add product to wishlist
 export const addToWishlist = async (req, res) => {
   try {
     const { productId } = req.body;
     const userId = req.user;
 
-    // Check if product exists
     const product = await productModel.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-
-    // Check if already in wishlist
     const existingItem = await wishlistModel.findOne({
       user: userId,
       product: productId,
@@ -23,7 +19,6 @@ export const addToWishlist = async (req, res) => {
       return res.status(400).json({ message: "Product already in wishlist" });
     }
 
-    // Add to wishlist
     const wishlistItem = new wishlistModel({
       user: userId,
       product: productId,
@@ -40,7 +35,6 @@ export const addToWishlist = async (req, res) => {
   }
 };
 
-// Remove product from wishlist
 export const removeFromWishlist = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -62,7 +56,6 @@ export const removeFromWishlist = async (req, res) => {
   }
 };
 
-// Get user's wishlist
 export const getWishlist = async (req, res) => {
   try {
     const userId = req.user;
@@ -78,7 +71,6 @@ export const getWishlist = async (req, res) => {
       })
       .sort({ addedAt: -1 });
 
-    // Filter out any products that might have been deleted or unlisted
     const validWishlistItems = wishlistItems.filter(item => 
       item.product && item.product.isListed === true
     );
@@ -93,7 +85,6 @@ export const getWishlist = async (req, res) => {
   }
 };
 
-// Check if a product is in the user's wishlist
 export const checkWishlistItem = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -113,7 +104,6 @@ export const checkWishlistItem = async (req, res) => {
   }
 };
 
-// Clear entire wishlist
 export const clearWishlist = async (req, res) => {
   try {
     const userId = req.user;

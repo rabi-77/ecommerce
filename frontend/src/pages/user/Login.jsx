@@ -18,7 +18,6 @@ const Login = () => {
     password: ""
   });
 
-  // Modal states for forgot password flow
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
@@ -31,7 +30,6 @@ const Login = () => {
 
   useEffect(() => {
     dispatch(resetAuthState());
-    // Check for both old and new token parameter names for backward compatibility
     const token = searchParams.get("token");
     const tokenAccess = searchParams.get("tokenAccess");
     const refreshToken = searchParams.get("refreshToken");
@@ -39,19 +37,15 @@ const Login = () => {
     const userDataParam = searchParams.get("userData");
     const error = searchParams.get("error");
 
-    // Use either token format (supporting both old and new parameter names)
     const accessToken = tokenAccess || token;
     const refreshTokenValue = tokenRefresh || refreshToken;
 
     if (accessToken) {
       
-      // Process user data if available
       if (userDataParam) {
         try {
           const userData = JSON.parse(decodeURIComponent(userDataParam));
           
-          // Dispatch login success action directly to update Redux state
-          // This mimics the exact same action that happens during regular login
           dispatch({
             type: 'auth/login/fulfilled',
             payload: {
@@ -65,7 +59,6 @@ const Login = () => {
           
           toast.success("Logged in with Google");
           
-          // Add a slight delay before navigating to ensure Redux state is updated
           setTimeout(() => {
             navigate("/");
           }, 100);
@@ -75,7 +68,6 @@ const Login = () => {
           toast.error("Error processing login data");
         }
       } else {
-        // If no user data but we have a token, try to use it
         console.warn('No user data found in redirect, but token is present');
         dispatch(setAuthToken(accessToken));
         toast.success("Logged in with Google");
@@ -88,19 +80,15 @@ const Login = () => {
 
 
   useEffect(() => {
-    // Handle errors from Redux
     if (error && errormessage) {
       toast.error(errormessage);
-      // Clear the error after showing it to prevent duplicate toasts
       dispatch(clearError());
     }
 
-    // Handle successful login
     if (token && !loading) {
       navigate("/");
     }
     
-    // Clean up function to clear errors when component unmounts
     return () => {
       dispatch(clearError());
     };
@@ -123,19 +111,15 @@ const Login = () => {
     dispatch(login(formData));
   };
 
-  // State to track the email for password reset flow
   const [resetEmail, setResetEmail] = useState("");
 
-  // Forgot password handlers
   const handleForgotPasswordClick = () => {
-    // Reset all states before showing the modal
     dispatch(resetPasswordState());
     setResetEmail("");
     setShowForgotPasswordModal(true);
   };
 
   const handleOtpSent = (email) => {
-    // Store the email in component state
     setResetEmail(email);
     setShowForgotPasswordModal(false);
     setShowOtpModal(true);
@@ -152,9 +136,7 @@ const Login = () => {
     setShowOtpModal(false);
     setShowResetPasswordModal(false);
     setOtpCode("");
-    // Reset auth state
     dispatch(resetAuthState());
-    // Only reset password state when completely closing the flow
     dispatch(resetPasswordState());
   };
 

@@ -10,15 +10,12 @@ const WishlistButton = ({ productId, size = 'normal', className = '', product = 
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // Get auth state, wishlist state, and cart state from Redux
   const { user } = useSelector((state) => state.auth);
   const { productStatuses } = useSelector((state) => state.wishlist);
   const { items: cartItems } = useSelector((state) => state.cart);
   
-  // Check if product is in wishlist
   const isInWishlist = productStatuses[productId] || false;
   
-  // Check if product is already in cart
   const isInCart = cartItems && cartItems.some(item => item.product._id === productId);
   
   useEffect(() => {
@@ -27,18 +24,14 @@ const WishlistButton = ({ productId, size = 'normal', className = '', product = 
     }
   }, [productId, user, dispatch]);
   
-  // Effect to update wishlist status when cart changes
   useEffect(() => {
-    // If product is in cart, it should not be in wishlist
     if (isInCart && isInWishlist) {
-      // Update the local Redux state immediately
       dispatch(setProductInWishlist({ productId, inWishlist: false }));
     }
   }, [isInCart, productId, isInWishlist, dispatch]);
 
   const toggleWishlist = async () => {
     if (!user) {
-      // Show toast notification for guest users
       toast.error(
         <div>
           Please login to add items to your wishlist.
@@ -54,7 +47,6 @@ const WishlistButton = ({ productId, size = 'normal', className = '', product = 
       return;
     }
     
-    // Check if product is unlisted (if product object is provided)
     if (product && !product.isListed) {
       toast.error("This product is currently unavailable", {
         autoClose: 5000,
@@ -63,7 +55,6 @@ const WishlistButton = ({ productId, size = 'normal', className = '', product = 
       return;
     }
     
-    // Check if trying to add to wishlist and product is already in cart
     if (!isInWishlist && isInCart) {
       toast.error('This product is already in your cart. Items cannot be in both cart and wishlist simultaneously.');
       return;
@@ -72,11 +63,9 @@ const WishlistButton = ({ productId, size = 'normal', className = '', product = 
     setIsLoading(true);
     try {
       if (isInWishlist) {
-        // Remove from wishlist
         await dispatch(removeFromWishlist(productId)).unwrap();
         toast.success('Removed from wishlist');
       } else {
-        // Add to wishlist
         await dispatch(addToWishlist(productId)).unwrap();
         toast.success('Added to wishlist');
       }
@@ -88,8 +77,6 @@ const WishlistButton = ({ productId, size = 'normal', className = '', product = 
     }
   };
 
-  // Determine the actual state to display
-  // This ensures we show the correct state even before the backend confirms
   const effectivelyInWishlist = isInWishlist && !isInCart;
   
   return (

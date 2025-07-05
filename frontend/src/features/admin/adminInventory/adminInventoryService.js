@@ -16,7 +16,6 @@ export const getInventory = async (page = 1, size = 10, search = '', sort = 'nam
   }
 };
 
-// Update inventory for a product
 export const updateInventory = async (productId, variants) => {
   try {
     const response = await api.put(`/inventory/${productId}`, { variants });
@@ -26,7 +25,6 @@ export const updateInventory = async (productId, variants) => {
   }
 };
 
-// Get inventory history for a product
 export const getInventoryHistory = async (productId) => {
   try {
     const response = await api.get(`/inventory/${productId}/history`);
@@ -36,7 +34,6 @@ export const getInventoryHistory = async (productId) => {
   }
 };
 
-// Get low stock products
 export const getLowStockProducts = async (threshold = 5) => {
   try {
     const response = await api.get(`/inventory/low-stock?threshold=${threshold}`);

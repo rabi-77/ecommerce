@@ -23,18 +23,15 @@ const getBrands = async (req, res) => {
   }
 };
 
-//add brands
 
 const addBrand = async (req, res) => {
   const { name, description } = req.body;
   const file = req.file;
   try {
-    // Validate name is not empty and doesn't contain only whitespace
     if (!name || name.trim() === '') {
       return res.status(400).json({ message: "Brand name cannot be empty or contain only whitespace" });
     }
     
-    // Trim the name to remove any leading/trailing whitespace
     const trimmedName = name.trim();
     
     if (!file) {
@@ -43,7 +40,6 @@ const addBrand = async (req, res) => {
         .json({ message: "An image is required for the brand" });
     }
 
-    // Check for existing brand with case-insensitive search
     const existingBrand = await brandModel.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
@@ -58,7 +54,6 @@ const addBrand = async (req, res) => {
         .json({ message: "Only image files are allowed (JPEG, PNG, GIF)" });
     }
 
-    // Upload the image to Cloudinary
     const imageUrl = await uploadImagesToCloudinary([file], "brands");
     const newBrand = new brandModel({
       name: trimmedName,
@@ -78,22 +73,18 @@ const addBrand = async (req, res) => {
   }
 };
 
-//edit brand
 
 const editBrand = async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
   const file = req.file;
-  // Validate name is not empty and doesn't contain only whitespace
   if (!name || name.trim() === '') {
     return res.status(400).json({ message: "Brand name cannot be empty or contain only whitespace" });
   }
   
-  // Trim the name to remove any leading/trailing whitespace
   const trimmedName = name.trim();
   
   try {
-    // Check for existing brand with case-insensitive search
     const checking = await brandModel.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
@@ -105,9 +96,8 @@ const editBrand = async (req, res) => {
 
 let imageUrl;
     if (file) {
-      // Upload the new image to Cloudinary
       const uploadImage = await uploadImagesToCloudinary([file], "brands");
-      imageUrl = uploadImage[0]; // Update the image URL
+      imageUrl = uploadImage[0]; 
     }
 
     const editBrand = await brandModel.findByIdAndUpdate(
@@ -133,7 +123,6 @@ let imageUrl;
   }
 };
 
-//delete (soft delete )
 
 const softDeleteBrand = async (req, res) => {
   const { id } = req.params;
@@ -162,7 +151,6 @@ const softDeleteBrand = async (req, res) => {
   }
 };
 
-// Toggle brand listing status
 const toggleBrandListing = async (req, res) => {
   const { brandId } = req.params;
 
@@ -173,7 +161,6 @@ const toggleBrandListing = async (req, res) => {
       return res.status(404).json({ message: "Brand not found" });
     }
     
-    // Toggle the isListed status
     brand.isListed = !brand.isListed;
     await brand.save();
     

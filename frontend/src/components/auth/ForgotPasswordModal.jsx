@@ -14,10 +14,9 @@ const ForgotPasswordModal = ({ isOpen, onClose, onOtpSent }) => {
     passwordResetMessage 
   } = useSelector((state) => state.auth);
   
-  // Clear form and error states when modal opens
+  
   useEffect(() => {
     if (isOpen) {
-      // Reset form state
       setEmail("");
       setEmail("");
     }
@@ -37,14 +36,12 @@ const ForgotPasswordModal = ({ isOpen, onClose, onOtpSent }) => {
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Proceed with password reset request
     
     if (!email) {
       toast.error("Please enter your email");
       return;
     }
     
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast.error("Please enter a valid email address");

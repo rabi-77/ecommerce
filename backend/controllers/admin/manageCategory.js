@@ -35,18 +35,15 @@ const getCategories = async (req, res) => {
   }
 };
 
-//add catogories
 
 const addCategory = async (req, res) => {
   const { name, description } = req.body;
   const file = req.file;
   try {
-    // Validate name is not empty and doesn't contain only whitespace
     if (!name || name.trim() === '') {
       return res.status(400).json({ message: "Category name cannot be empty or contain only whitespace" });
     }
     
-    // Trim the name to remove any leading/trailing whitespace
     const trimmedName = name.trim();
     
     if (!file) {
@@ -55,7 +52,6 @@ const addCategory = async (req, res) => {
         .json({ message: "An image is required for the category" });
     }
 
-    // Check for existing category with case-insensitive search
     const existingCategory = await categoryModel.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
@@ -70,7 +66,6 @@ const addCategory = async (req, res) => {
         .json({ message: "Only image files are allowed (JPEG, PNG, GIF)" });
     }
 
-    // Upload the image to Cloudinary
     const imageUrl = await uploadImagesToCloudinary([file], "categories");
     const newCategory = new categoryModel({
       name: trimmedName,
@@ -90,22 +85,17 @@ const addCategory = async (req, res) => {
   }
 };
 
-//edit category
-
 const editCategory = async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
   const file = req.file;
-  // Validate name is not empty and doesn't contain only whitespace
   if (!name || name.trim() === '') {
     return res.status(400).json({ message: "Category name cannot be empty or contain only whitespace" });
   }
   
-  // Trim the name to remove any leading/trailing whitespace
   const trimmedName = name.trim();
   
   try {
-    // Check for existing category with case-insensitive search
     const checking = await categoryModel.findOne({ 
       name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
     });
@@ -117,9 +107,8 @@ const editCategory = async (req, res) => {
 
 let imageUrl;
     if (file) {
-      // Upload the new image to Cloudinary
       const uploadImage = await uploadImagesToCloudinary([file], "categories");
-      imageUrl = uploadImage[0]; // Update the image URL
+      imageUrl = uploadImage[0]; 
     }
 
     const editCategory = await categoryModel.findByIdAndUpdate(
@@ -145,7 +134,6 @@ let imageUrl;
   }
 };
 
-//delete (soft delete )
 
 const softDeleteCategory = async (req, res) => {
   const { id } = req.params;
@@ -175,7 +163,6 @@ const softDeleteCategory = async (req, res) => {
   }
 };
 
-// Toggle category listing status
 const toggleCategoryListing = async (req, res) => {
   const { categoryId } = req.params;
 
@@ -186,7 +173,6 @@ const toggleCategoryListing = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
     
-    // Toggle the isListed status
     category.isListed = !category.isListed;
     await category.save();
     

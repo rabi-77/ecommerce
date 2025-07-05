@@ -137,7 +137,6 @@ export const updateCoupon = async (req, res) => {
       return res.status(404).json({ message: 'Coupon not found' });
     }
 
-    // Check if coupon code is being changed and if new code already exists
     if (code && code.toUpperCase() !== coupon.code) {
       const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
       if (existingCoupon) {
@@ -146,7 +145,6 @@ export const updateCoupon = async (req, res) => {
       coupon.code = code.toUpperCase();
     }
 
-    // Update fields
     if (description !== undefined) coupon.description = description;
     if (discountType !== undefined) coupon.discountType = discountType;
     if (discountValue !== undefined) coupon.discountValue = discountValue;
@@ -156,7 +154,6 @@ export const updateCoupon = async (req, res) => {
     if (expiryDate) coupon.expiryDate = new Date(expiryDate);
     if (maxUses !== undefined) coupon.maxUses = maxUses || null;
 
-    // If changing to percentage discount, ensure maxDiscountAmount is set
     if (coupon.discountType === 'percentage' && !coupon.maxDiscountAmount) {
       return res.status(400).json({
         message: 'Max discount amount is required for percentage discounts',
@@ -203,7 +200,6 @@ export const toggleCouponStatus = async (req, res) => {
     coupon.isActive = !coupon.isActive;
     await coupon.save();
 
-    // Fetch the updated coupon with populated fields
     const updatedCoupon = await Coupon.findById(coupon._id).populate('createdBy', 'username email');
 
     res.status(200).json({

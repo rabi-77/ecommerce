@@ -66,12 +66,10 @@ export const getAllOrders = asyncHandler(async (req, res) => {
   });
 });
 
-// Update order status
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   
-  // Validate status
   const validStatuses = ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'cancelled'];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ message: "Invalid status value" });
@@ -83,10 +81,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Order not found" });
   }
   
-  // Update status and related fields
   order.status = status;
   
-  // Update additional fields based on status
   if (status === 'delivered') {
     order.isPaid= true;
     order.isDelivered = true;
@@ -106,10 +102,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     order.cancellationDate = Date.now();
   }
   
-  // Save the order first
   await order.save();
   
-  // Then fetch it with populated fields to return complete data
   const populatedOrder = await Order.findById(id)
     .populate('user', 'username email')
     .populate('items.product', 'name images price');
@@ -135,12 +129,10 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Order item not found" });
   }
   
-  // Validate there is a pending return request on this item
   if (orderItem.returnRequestStatus !== 'pending') {
     return res.status(400).json({ message: "This item does not have a pending return request" });
   }
   
-  // Helper to recalculate order-level returnRequestStatus
   function calculateOrderReturnStatus(order) {
     const relevantItems = order.items.filter(item => !item.isCancelled);
     const pendingCount = relevantItems.filter(item => item.returnRequestStatus === 'pending').length;
@@ -159,12 +151,10 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     if (rejectedCount > 0 && approvedCount === 0) {
       return 'rejected';
     }
-    // Mixed approved and rejected with no pending – fall back to partial-pending so admin can review
     return 'partial-pending';
   }
 
   if (approved) {
-    // Update order item with verification details
     orderItem.isReturned = true;
     orderItem.returnVerified = true;
     orderItem.returnVerifiedAt = Date.now();
@@ -187,11 +177,9 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       (order.paymentMethod === 'COD' && order.isDelivered);
     
     if (shouldProcessRefund) {
-      // Unified refund logic (mirrors cancelOrderItem)
       const prevTotal = order.totalPrice;
 
-      const subtotalBefore = order.itemsPrice; // includes the item being returned
-      // Use line-item total (price × quantity after per-item discount) to account for multi-quantity returns
+      const subtotalBefore = order.itemsPrice;
       const itemNetPrice = orderItem.totalPrice;
       const remainingSubtotal = subtotalBefore - itemNetPrice;
       const isLastActive = remainingSubtotal === 0;
@@ -199,7 +187,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       let refundAmount = 0;
 
       if (!order.coupon) {
-        // --- No-coupon order ---
         if (isLastActive) {
           refundAmount = prevTotal;
           order.itemsPrice = 0;
@@ -208,7 +195,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
           order.taxPrice = 0;
           order.totalPrice = 0;
         } else {
-          // price + tax (+ shipping only on last item)
           const itemTax = parseFloat((itemNetPrice * TAX_RATE).toFixed(2));
           const itemShipping = isLastActive ? order.shippingPrice : 0;
           refundAmount = itemNetPrice + itemTax + itemShipping;
@@ -221,7 +207,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
           order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
         }
       } else {
-        // --- Coupon order ---
         if (isLastActive) {
           refundAmount = prevTotal;
           order.itemsPrice = 0;
@@ -268,7 +253,6 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       order.returnDate = Date.now();
     }
     
-    // Re-calculate order-level return status with new helper
     order.returnRequestStatus = calculateOrderReturnStatus(order);
     
     await order.save();
@@ -284,14 +268,12 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       order: populatedOrder
     });
   } else {
-    // Reject the return request
     orderItem.isReturned = false;
     orderItem.returnVerified = false;
     orderItem.returnVerifiedAt = Date.now();
     orderItem.returnNotes = notes || 'Return rejected';
     orderItem.returnRequestStatus = 'rejected';
     
-    // Re-calculate order-level return status with new helper
     order.returnRequestStatus = calculateOrderReturnStatus(order);
     
     await order.save();

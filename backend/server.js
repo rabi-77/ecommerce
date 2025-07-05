@@ -15,12 +15,17 @@ import Order from './models/orderModel.js';
 const app = express()
 await connectDB()
 
-// Apply middleware
+
 app.use(cors())
+// app.use(cors({
+//   origin: ['http://localhost:5173', 'https://mydunk.shop'],
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+// }));
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet())
-// Disable helmet completely for now to troubleshoot
+
 // app.use(helmet({
 //   crossOriginResourcePolicy: false
 // }));
@@ -33,7 +38,6 @@ app.use('/user', user)
 app.use("/admin", admin)
 app.use('/orders', orderRoutes)
 
-// Add a test endpoint to verify server is running
 
 app.get('/test-orders', async (req, res) => {
     try {
@@ -43,7 +47,7 @@ app.get('/test-orders', async (req, res) => {
       res.status(500).json({ message: 'Error fetching orders', error: error.message });
     }
   });
-// Error handling middleware
+
 app.use(notFound)
 app.use(errorHandler)
 

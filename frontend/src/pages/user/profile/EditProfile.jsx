@@ -15,7 +15,6 @@ const EditProfile = () => {
     (state) => state.profile
   );
 
-  // Use profile data if available, otherwise fall back to user data from auth state
   useEffect(() => {
     dispatch(fetchUserProfile(user._id));
   }, [dispatch, user]);
@@ -32,14 +31,12 @@ const EditProfile = () => {
   );
 
   useEffect(() => {
-    // Show error toast if there's an error
     if (error && errorMessage) {
       toast.error(errorMessage);
       dispatch(clearProfileErrors());
     }
   }, [error, errorMessage]);
 
-  // Update form data if user data changes
   useEffect(() => {
     if (userData) {
       setFormData({
@@ -101,7 +98,6 @@ const EditProfile = () => {
     if (profileImage) {
       formDataToSend.append("image", profileImage);
     } else if (userData.image) {
-      // If no new image is selected but user already has an image, send the existing image URL
       formDataToSend.append("existingImage", userData.image);
     }
     formDataToSend.append("email", formData.email || userData.email);
@@ -111,7 +107,6 @@ const EditProfile = () => {
         toast.success("Profile updated successfully");
       })
       .catch((err) => {
-        // Error is handled by the useEffect above
       });
   };
 

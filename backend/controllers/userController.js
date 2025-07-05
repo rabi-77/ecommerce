@@ -21,16 +21,14 @@ const transporter = nodemailer.createTransport({
   email: process.env.NODE_MAILER_EMAIL ? "Environment variable loaded" : "Using fallback",
   password: process.env.NODE_MAILER_PASSWORD ? "Environment variable loaded" : "Using fallback"
 });
-// Function to generate and send OTP
+
 export const generateAndSendOtp = async (email) => {
   ("Generating OTP for", email);
 
-  // Generate a 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes for better user experience
+  const expiresAt = Date.now() + 5 * 60 * 1000; 
 
   try {
-    // Log the plaintext OTP for development purposes
     ("Generated OTP:", otp);
     
     await transporter.sendMail({
@@ -65,9 +63,7 @@ const register = async (req, res) => {
   try {
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
-      // Special case: Google user trying to add password
       if (existingUser.authProvider === "google" && !existingUser.password) {
-        // Allow Google users to add password capability
         existingUser.password = password; 
         await existingUser.save();
         
@@ -85,18 +81,11 @@ const register = async (req, res) => {
         .status(400)
         .json({ message: "Password must be between 8 and 16 characters" });
     }
-    // Generate and send OTP
     const { otp, expiresAt } = await generateAndSendOtp(email);
     (otp);
     ("old otp");
-
-    // Create JWT with user data
     const hashedPassword = await bcrypt.hash(password, 10);
-    // ('bcrypting');
-
     const hashedOtp = await bcrypt.hash(otp, 10);
-    ("hashing");
-
     const token = jwt.sign(
       { username, email, password: hashedPassword, otp: hashedOtp, expiresAt, referralCodeInput },
       process.env.JWT_SECRET,
@@ -122,7 +111,6 @@ const verify = async (req, res) => {
   ("verify",email,otp,token);
 
   try {
-    // Verify JWT
     let payload;
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
@@ -131,24 +119,20 @@ const verify = async (req, res) => {
     }
 ("payload",payload);
 
-    // Check if email matches and OTP hasn't expired
     if (payload.email !== email) {
       return res.status(400).json({ message: "Invalid registration session" });
     }
     
-    // Check if OTP has expired
     if (payload.expiresAt < Date.now()) {
       return res.status(400).json({ message: "OTP has expired, please request a new one" });
     }
 
-    // Verify the OTP using bcrypt compare
     const isMatch = await bcrypt.compare(otp, payload.otp);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
     ("OTP verified successfully");
 
-    // Helper to create unique referral code
     const generateReferralCode = async () => {
       let code;
       let exists = true;
@@ -159,7 +143,6 @@ const verify = async (req, res) => {
       return code;
     };
 
-    // Process referral before creating user
     let referrerId = null;
     let referralStatus = 'NONE';
     if (payload.referralCodeInput) {
@@ -172,7 +155,6 @@ const verify = async (req, res) => {
       }
     }
 
-    // Create new user
     const user = new userModel({
       username: payload.username,
       email: payload.email,
@@ -187,7 +169,6 @@ const verify = async (req, res) => {
 
     await user.save();
 
-    // Credit wallet for referrer if applicable
     if (referrerId) {
       try {
         await creditWallet(referrerId, 50, { source: 'REFERRAL', description: `Referral reward for inviting ${user.email}` });
@@ -212,7 +193,6 @@ const resend = async (req, res) => {
   const { email, token } = req.body;
 
   try {
-    // Verify JWT
     let payload;
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET);
@@ -225,14 +205,11 @@ const resend = async (req, res) => {
       return res.status(400).json({ message: "Invalid registration session" });
     }
 
-    // Explicitly invalidate the old token by setting a new expiration time
-    // Generate and send new OTP
     const { otp, expiresAt } = await generateAndSendOtp(email);
     ("resendotp", otp);
     
     const hashedOtp = await bcrypt.hash(otp, 10);
     
-    // Create a completely new token with the new OTP
     const newToken = jwt.sign(
       {
         username: payload.username,
@@ -240,7 +217,6 @@ const resend = async (req, res) => {
         password: payload.password,
         otp: hashedOtp,
         expiresAt,
-        // Add a timestamp to ensure the token is unique
         timestamp: Date.now()
       },
       process.env.JWT_SECRET,
@@ -250,7 +226,6 @@ const resend = async (req, res) => {
     res.json({ 
       message: "New OTP sent to your email", 
       token: newToken,
-      // Send the expiration time to the frontend
       expiresAt: expiresAt
     });
   } catch (error) {
@@ -269,19 +244,16 @@ const googleAuthCallback = async (req, res) => {
   try {
     ('Google auth callback received user:', req.user);
     
-    // Check if JWT_SECRET is defined
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET is not defined in environment variables');
     }
 
-    // Generate access token - use same format as regular login
     const tokenAccess = jwt.sign(
       { userId: req.user._id },
       process.env.JWT_SECRET,
       { expiresIn: '20m' }
     );
     
-    // Use JWT_REFRESH for consistency with regular login
     const refreshSecret = process.env.JWT_REFRESH || process.env.JWT_SECRET;
     
     const tokenRefresh = jwt.sign(
@@ -290,12 +262,10 @@ const googleAuthCallback = async (req, res) => {
       { expiresIn: '15d' }
     );
     
-    // Store refresh token in the database
     req.user.refreshToken = tokenRefresh;
     await req.user.save();
     ('Saved refresh token to user:', req.user._id);
     
-    // Create a user object with necessary information - same format as regular login
     const userData = {
       _id: req.user._id,
       username: req.user.username || req.user.email.split('@')[0],
@@ -306,11 +276,8 @@ const googleAuthCallback = async (req, res) => {
       image: req.user.image
     };
     
-    // Encode user data for URL
     const encodedUserData = encodeURIComponent(JSON.stringify(userData));
     
-    // Redirect to frontend home with token and user data
-    // Make sure the URL has the correct port and parameters
     res.redirect(`https://mydunk.shop/?tokenAccess=${tokenAccess}&tokenRefresh=${tokenRefresh}&userData=${encodedUserData}`);
     ('Redirecting to frontend with user data:', userData);
   } catch (error) {
@@ -450,32 +417,27 @@ const checkUserStatus = async (req, res) => {
   }
 };
 
-// Forgot Password - Request OTP
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     
-    // Check if user exists
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User with this email does not exist' });
     }
     
-// Check if user authenticated with Google and has no password
 if (user.authProvider === 'google' && !user.password) {
   return res.status(400).json({ 
     message: 'This email is registered with Google. Please use Google Sign-In or register with email and password first.'
   });
 }
     
-    // Generate and send OTP
     try {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
       
       ('Password reset OTP for', email, ':', otp);
       
-      // Save OTP to user document using the existing structure
       user.otp = {
         code: otp,
         expiresAt: expiresAt
@@ -495,12 +457,10 @@ if (user.authProvider === 'google' && !user.password) {
   }
 };
 
-// Reset Password with OTP verification
 const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword, validateOnly } = req.body;
     
-    // Find user by email
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -553,33 +513,27 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// Resend Password Reset OTP
 const resendPasswordResetOtp = async (req, res) => {
   try {
     const { email } = req.body;
     
-    // Check if user exists
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User with this email does not exist' });
     }
     
     
-// Check if user authenticated with Google and has no password
 if (user.authProvider === 'google' && !user.password) {
   return res.status(400).json({ 
     message: 'This email is registered with Google. Please use Google Sign-In or register with email and password first.'
   });
 }
     
-    // Generate and send new OTP
     try {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
-      // Log the OTP for development purposes
       ('Password reset OTP for', email, ':', otp);
       
-      // Save OTP to user document using the existing structure
       user.otp = {
         code: otp,
         expiresAt: expiresAt

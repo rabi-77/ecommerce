@@ -37,7 +37,6 @@ const addProduct = async (req, res) => {
     return res.status(400).json({ message: "Minimum 3 images required" });
   }
   
-  // Ensure we don't exceed the maximum of 5 images
   if (files.length > 5) {
     return res.status(400).json({ message: "Maximum 5 images allowed" });
   }
@@ -153,7 +152,6 @@ const editProduct = async (req, res) => {
       return res.status(400).json({ message: "Minimum three images required" });
     }
     
-    // Ensure we don't exceed the maximum of 5 images
     if (updatedImages.length > 5) {
       return res.status(400).json({ message: "Maximum 5 images allowed" });
     }

@@ -12,7 +12,6 @@ const Modal = ({ title, children, onClose, showCloseButton = true }) => {
     
     window.addEventListener('keydown', handleEscape);
     
-    // Prevent scrolling on body when modal is open
     document.body.style.overflow = 'hidden';
     
     return () => {
@@ -21,7 +20,6 @@ const Modal = ({ title, children, onClose, showCloseButton = true }) => {
     };
   }, [onClose]);
 
-  // Handle click outside modal content to close
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();

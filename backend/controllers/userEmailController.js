@@ -6,7 +6,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Use the same nodemailer configuration as in userController.js
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -15,7 +14,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Controller for requesting email change
 export const requestEmailChange = async (req, res) => {
 
 
@@ -25,7 +23,6 @@ export const requestEmailChange = async (req, res) => {
     const { newEmail, password } = req.body;
     const userId = req.user;
 
-    // Validate inputs
     if (!newEmail || !password) {
       return res.status(400).json({
         message: "New email and current password are required",
@@ -52,7 +49,6 @@ export const requestEmailChange = async (req, res) => {
       });
     }
 
-    // Check if new email is already in use
     const emailExists = await userModel.findOne({ email: newEmail });
     if (emailExists) {
       return res.status(400).json({
@@ -60,7 +56,6 @@ export const requestEmailChange = async (req, res) => {
       });
     }
 
-    // Verify password
     if (!user.password) {
       return res.status(400).json({
         message: "Cannot verify password",
@@ -74,12 +69,10 @@ export const requestEmailChange = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = crypto.randomBytes(32).toString("hex");
     const expiryTime = new Date();
-    expiryTime.setHours(expiryTime.getHours() + 24); // Token valid for 24 hours
+    expiryTime.setHours(expiryTime.getHours() + 24); 
 
-    // Save token and new email to user
     user.newEmail = newEmail;
     user.emailChangeToken = token;
     user.emailChangeTokenExpiry = expiryTime;
@@ -90,7 +83,6 @@ export const requestEmailChange = async (req, res) => {
       email: user.email
     });
 
-    // Create verification URL
     
     const frontendURL = process.env.FRONTEND_URL ;
     const verificationURL = `${frontendURL}/verify-email?token=${token}`;
@@ -101,7 +93,6 @@ export const requestEmailChange = async (req, res) => {
       ("==================================\n\n");
     }
 
-    // Send verification email
     await transporter.sendMail({
       from: process.env.NODE_MAILER_EMAIL ,
       to: newEmail,
@@ -140,7 +131,6 @@ export const requestEmailChange = async (req, res) => {
   }
 };
 
-// Controller for verifying and completing email change
 export const verifyEmailChange = async (req, res) => {
 
   const requestId = Date.now() + Math.random().toString(36).substring(2, 15);
@@ -153,7 +143,6 @@ export const verifyEmailChange = async (req, res) => {
       return res.status(400).json({ message: "Token is required" });
     }
 
-    // Find user with this token
     const user = await userModel.findOne({
       emailChangeToken: token
     });
@@ -167,18 +156,15 @@ export const verifyEmailChange = async (req, res) => {
       });
     }
 
-    // Update email
     const previousEmail = user.email;
     user.email = user.newEmail;
 
-    // Clear email change fields
     user.newEmail = undefined;
     user.emailChangeToken = undefined;
     user.emailChangeTokenExpiry = undefined;
 
     await user.save();
 
-    // Send confirmation email to old address
     await transporter.sendMail({
       from: process.env.NODE_MAILER_EMAIL ,
       to: previousEmail,
@@ -208,7 +194,6 @@ export const verifyEmailChange = async (req, res) => {
   } catch (err) {
     console.error("Error verifying email change:", err.message);
 
-    // Try to find and clear token fields for the user with this token
     try {
       if (req.query.token) {
         const user = await userModel.findOne({
@@ -233,13 +218,11 @@ export const verifyEmailChange = async (req, res) => {
   }
 };
 
-// Controller for changing password
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user;
 
-    // Validate input
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ 
         message: "Current password and new password are required",
@@ -254,7 +237,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Find user
     const user = await userModel.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -299,7 +281,6 @@ export const changePassword = async (req, res) => {
       await transporter.sendMail(mailOptions);
       (`Password change notification email sent to ${user.email}`);
     } catch (emailError) {
-      // Don't fail the password change if email sending fails
       console.error("Failed to send password change notification:", emailError);
     }
 
@@ -310,7 +291,6 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// Controller for cleaning up expired tokens
 // export const cleanupAllExpiredTokens = async (req, res) => {
 //   try {
 //     const result = await userModel.updateMany(

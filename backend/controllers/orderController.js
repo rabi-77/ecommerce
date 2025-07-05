@@ -30,7 +30,6 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("No items in cart");
   }
 
-  // Get user's address
   const userAddresses = req.user.addresses;
   const shippingAddress = userAddresses.find(
     (address) => address._id.toString() === address._id.toString()
@@ -40,7 +39,6 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Invalid shipping address");
   }
 
-  // Validate cart items and calculate prices
   const productIdsForOffer = cart.items.map(ci => ci.product._id);
   const categoryIdsForOffer = cart.items.map(ci => ci.product.category?._id).filter(Boolean);
   const offerMaps = await fetchActiveOffers(productIdsForOffer, categoryIdsForOffer);
@@ -55,7 +53,6 @@ const createOrder = asyncHandler(async (req, res) => {
       (v) => v.size === cartItem.variant.size
     );
 
-    // Check if product is available and has stock
     if (
       !product.isListed ||
       product.isDeleted ||
@@ -74,7 +71,6 @@ const createOrder = asyncHandler(async (req, res) => {
       );
     }
 
-    // Calculate prices
     const { effectivePrice, appliedOffer, discountPercent } = (() => {
       const res = applyBestOffer(product, offerMaps);
       return { effectivePrice: res.effectivePrice, appliedOffer: res.appliedOffer, discountPercent: res.discountPercent };
@@ -83,11 +79,9 @@ const createOrder = asyncHandler(async (req, res) => {
     const discount = discountPercent;
     const discountedPrice = effectivePrice;
 
-    // Add to totals
     itemsPrice += price * cartItem.quantity;
     discountAmount += (price - discountedPrice) * cartItem.quantity;
 
-    // Add to order items
     orderItems.push({
       product: product._id,
       variant: {
@@ -101,7 +95,6 @@ const createOrder = asyncHandler(async (req, res) => {
       totalPrice: discountedPrice,
     });
 
-    // Update product stock
     await Product.updateOne(
       {
         _id: product._id,
@@ -116,9 +109,8 @@ const createOrder = asyncHandler(async (req, res) => {
     );
   }
 
-  // ----- COD payment restriction (subtotal before coupon) -----
   if (paymentMethod === 'COD') {
-    const subtotalBeforeCoupon = itemsPrice - discountAmount; // only product-level discounts applied
+    const subtotalBeforeCoupon = itemsPrice - discountAmount; 
     if (subtotalBeforeCoupon > 1000) {
       return res.status(400).json({
         success: false,
@@ -126,9 +118,7 @@ const createOrder = asyncHandler(async (req, res) => {
       });
     }
   }
-  // ------------------------------------------------------------
 
-  // Include coupon discount if applied on cart, but re-validate to ensure it is still eligible
   let couponDiscount = 0;
   let appliedCoupon = null;
   
@@ -162,7 +152,6 @@ const createOrder = asyncHandler(async (req, res) => {
       });
     }
 
-    // Recalculate coupon discount against the live subtotal to ensure accuracy
     try {
       couponDiscount = couponDoc.calculateDiscount(currentSubtotal);
     } catch (err) {
@@ -174,7 +163,7 @@ const createOrder = asyncHandler(async (req, res) => {
     
   }
 
-  // Calculate final prices
+  
   const netAmount = itemsPrice - discountAmount; // after product + coupon discounts, before tax / shipping
 
   // ---- Allocate couponShare & taxShare per item ----
@@ -189,13 +178,10 @@ const createOrder = asyncHandler(async (req, res) => {
       itm.taxShare = taxShare;
     });
   }
-  // -----------------------------------------------
 
-  // Shipping: decision based on amount BEFORE coupon discount
-  const baseForShipping = netAmount + couponDiscount; // total after product-level discounts, before coupon
+  const baseForShipping = netAmount + couponDiscount; 
   const shippingPrice = baseForShipping >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
-  // Sum of item taxShares is authoritative
   const taxPrice = orderItems.reduce((sum, i) => sum + (i.taxShare || 0), 0);
 
   const totalPrice = netAmount + taxPrice + shippingPrice;
@@ -213,7 +199,6 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  // Create order
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2);
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -241,12 +226,10 @@ const createOrder = asyncHandler(async (req, res) => {
     isPaid: false, 
   });
   const createdOrder = await order.save();
-  // Razorpay flow: return pending order, leave cart intact
   if (paymentMethod === 'RAZORPAY') {
     return res.status(201).json({ success: true, order: createdOrder });
   }
 
-  // Wallet payment: attempt to debit and mark paid
   if (paymentMethod === 'WALLET') {
     try {
       await debitWallet(userId, totalPrice, {
@@ -261,13 +244,12 @@ const createOrder = asyncHandler(async (req, res) => {
       createdOrder.paymentResult = { status: 'completed' };
       await createdOrder.save();
     } catch (err) {
-      // If wallet debit fails, delete the order to avoid orphan record
+      
       await Order.findByIdAndDelete(createdOrder._id);
       return res.status(400).json({ success: false, message: err.message || 'Wallet payment failed' });
     }
   }
 
-  // COD or Wallet flow: clear cart & update coupon usage
   await Cart.findOneAndUpdate(
     { user: userId },
     {
@@ -294,9 +276,6 @@ const createOrder = asyncHandler(async (req, res) => {
   return res.status(201).json({ success: true, order: createdOrder });
 });
 
-// @desc    Get order by ID or order number
-// @route   GET /orders/:id
-// @access  Private
 const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findOne({
     $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],
@@ -317,16 +296,12 @@ const getOrderById = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get logged in user orders with search and filter
-// @route   GET /orders
-// @access  Private
 const getMyOrders = asyncHandler(async (req, res) => {
   const keyword = req.query.keyword || "";
   const status = req.query.status || "";
 
   let query = { user: req.user };
 
-  // Add search functionality
   if (keyword) {
     query = {
       ...query,
@@ -336,7 +311,6 @@ const getMyOrders = asyncHandler(async (req, res) => {
       ],
     };
   }
-  // Add status filter
   if (status && status !== "all") {
     query.status = status;
   }
@@ -353,9 +327,6 @@ const getMyOrders = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Cancel entire order
-// @route   PUT /orders/:id/cancel
-// @access  Private
 const cancelOrder = asyncHandler(async (req, res) => {
   const { reason } = req.body;
   
@@ -369,9 +340,6 @@ const cancelOrder = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
   
-  // Status validation is now handled by the validateUserStatusChange middleware
-
-  // Update order status
   order.status = "cancelled";
   order.cancellationReason = reason;
   order.cancellationDate = Date.now();
@@ -382,7 +350,6 @@ const cancelOrder = asyncHandler(async (req, res) => {
     item.cancellationDate = Date.now();
   }
 
-  // Restore product stock for all items
   for (const item of order.items) {
     await Product.updateOne(
       {
@@ -398,7 +365,6 @@ const cancelOrder = asyncHandler(async (req, res) => {
     );
   }
 
-  // Wallet refund for full order cancellation
   if (order.isPaid && order.paymentMethod !== 'COD') {
     const alreadyRefunded = order.refundToWallet || 0;
     const amountPaidOnline = order.totalPrice;
@@ -421,9 +387,6 @@ const cancelOrder = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Cancel specific item in order
-// @route   PUT /orders/:id/items/:itemId/cancel
-// @access  Private
 const cancelOrderItem = asyncHandler(async (req, res) => {
   const { reason } = req.body;
   const { id, itemId } = req.params;
@@ -438,7 +401,6 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  // Only allow cancellation if order is pending or processing
   if (!["pending", "processing"].includes(order.status)) {
     res.status(400);
     throw new Error(
@@ -446,25 +408,20 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     );
   }
 
-  // Find the specific item
   const item = order.items.id(itemId);
   if (!item) {
     res.status(404);
     throw new Error("Order item not found");
   }
 
-  // Check if item is already cancelled
   if (item.isCancelled) {
     res.status(400);
     throw new Error("This item is already cancelled");
   }
 
-  // Update item status
   item.isCancelled = true;
   item.cancellationReason = reason;
   item.cancellationDate = Date.now();
-
-  // Restore product stock
   await Product.updateOne(
     {
       _id: item.product,
@@ -478,9 +435,7 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     }
   );
 
-  // Recalculate payable amounts for COD orders
   if (order.paymentMethod === 'COD') {
-    // Calculate subtotal of active (non-cancelled) items
     const activeItems = order.items.filter(i => !i.isCancelled);
     const activeSubtotal = activeItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -493,7 +448,6 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
       order.discountAmount = parseFloat(Math.max(order.discountAmount - cancelledItemDiscount, 0).toFixed(2));
     }
 
-    // Validate coupon min-spend
     let couponStillValid = true;
     if (order.coupon) {
       const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
@@ -504,35 +458,27 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     if (!couponStillValid) {
       const prevCouponDiscount = order.couponDiscount || 0;
       order.couponDiscount = 0;
-      // discountAmount currently includes the coupon component; remove it
       order.discountAmount = parseFloat((order.discountAmount - prevCouponDiscount).toFixed(2));
     }
 
-    // Net payable for tax after ALL discounts (product offers + coupon)
     const netAfterDiscounts = activeSubtotal - (order.discountAmount || 0);
 
-    // Recompute tax & shipping using shared constants
     order.itemsPrice = activeSubtotal;
     order.shippingPrice = activeSubtotal === 0 ? 0 : (activeSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE);
     order.taxPrice = activeSubtotal === 0 ? 0 : parseFloat((netAfterDiscounts * TAX_RATE).toFixed(2));
     order.totalPrice = activeSubtotal === 0 ? 0 : (netAfterDiscounts + order.shippingPrice + order.taxPrice);
   }
 
-  // Wallet refund for partial cancellation
   if (order.isPaid && order.paymentMethod !== 'COD') {
 
-    // Snapshot total before any recalculation
     const prevTotal = order.totalPrice;
 
-    // Calculate key figures for the cancelled item & remaining order
-    const subtotalBefore = order.itemsPrice; // authoritative before update (original prices sum)
-    const itemOriginalPrice = item.price * item.quantity; // before any offer discount
-    const itemPaidPrice = (item.totalPrice || item.price) * item.quantity; // after offer discount
+    const subtotalBefore = order.itemsPrice; 
+    const itemOriginalPrice = item.price * item.quantity;
+    const itemPaidPrice = (item.totalPrice || item.price) * item.quantity; 
     const remainingSubtotal = subtotalBefore - itemOriginalPrice;
 
     const isLastActive = remainingSubtotal === 0;
-
-    // Coupon qualifying check (only needed for orders with coupon)
     let couponStillApplies = true;
     if (order.coupon) {
       const couponDoc = await Coupon.findById(order.coupon).select('minPurchaseAmount');
@@ -543,7 +489,6 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     let refundAmount = 0;
 
     if (isLastActive) {
-      // Refund everything that remains (includes shipping & any coupon/tax)
       refundAmount = prevTotal;
 
       order.itemsPrice = 0;
@@ -553,23 +498,19 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
       order.taxPrice = 0;
       order.totalPrice = 0;
     } else {
-      // Proportional refund for this item using stored shares
       const couponShare = item.couponShare || 0;
       const itemTax = item.taxShare || 0;
       const priceAfterCoupon = itemPaidPrice - couponShare;
 
-      refundAmount = priceAfterCoupon + itemTax; // shipping only on last item
+      refundAmount = priceAfterCoupon + itemTax;
 
-      // Update order monetary fields
       order.itemsPrice -= itemOriginalPrice;
       order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
       order.discountAmount = parseFloat((order.discountAmount - couponShare - ((item.price - item.totalPrice) * item.quantity)).toFixed(2));
       order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
-      // shipping unchanged (handled in last item branch)
       order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
     }
 
-    // Safety clamp against negative due to float errors
     if (refundAmount < 0) refundAmount = 0;
 
     if (refundAmount > 0) {
@@ -582,7 +523,6 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     }
   }
 
-  // Check if all items are cancelled, update order status if needed
   const allItemsCancelled = order.items.every((item) => item.isCancelled);
   if (allItemsCancelled) {
     order.status = "cancelled";
@@ -605,9 +545,6 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Return entire order
-// @route   PUT /orders/:id/return
-// @access  Private
 const returnOrder = asyncHandler(async (req, res) => {
   const { reason } = req.body;
 
@@ -626,24 +563,21 @@ const returnOrder = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  // Only allow return if order is delivered
   if (order.status !== "delivered") {
     res.status(400);
     throw new Error("Only delivered orders can be returned");
   }
   
-  // Check if a return request is already pending
   if (order.returnRequestStatus === 'pending') {
     res.status(400);
     throw new Error("A return request is already pending for this order");
   }
   
-  // Determine which items are still eligible for return
   const eligibleItems = order.items.filter((item) => {
-    if (item.isCancelled) return false; // cancelled items cannot be returned
-    if (item.isReturned && item.returnRequestStatus === 'approved') return false; // already returned & accepted
-    if (item.returnRequestStatus === 'pending') return false; // already has an open request
-    if (item.returnRequestStatus === 'rejected') return false; // admin rejected, do not reopen automatically
+    if (item.isCancelled) return false; 
+    if (item.isReturned && item.returnRequestStatus === 'approved') return false; 
+    if (item.returnRequestStatus === 'pending') return false; 
+    if (item.returnRequestStatus === 'rejected') return false; 
     return true;
   });
 
@@ -651,15 +585,12 @@ const returnOrder = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'No items are eligible for return' });
   }
 
-  // Create return request only for eligible items
   eligibleItems.forEach((item) => {
     item.isReturned = false;
     item.returnReason = reason;
     item.returnRequestStatus = 'pending';
-    // item.returnDate = Date.now();
   });
 
-  // If some items were skipped (already processed) mark the order status accordingly
   order.returnRequestStatus = eligibleItems.length === order.items.length ? 'pending' : 'partial-pending';
   order.returnReason = reason;
   order.returnRequestDate = Date.now();
@@ -672,9 +603,6 @@ const returnOrder = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Return specific item in order
-// @route   PUT /orders/:id/items/:itemId/return
-// @access  Private
 const returnOrderItem = asyncHandler(async (req, res) => {
   const { reason } = req.body;
   const { id, itemId } = req.params;
@@ -694,20 +622,17 @@ const returnOrderItem = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  // Only allow return if order is delivered
   if (order.status !== "delivered") {
     res.status(400);
     throw new Error("Only delivered orders can have items returned");
   }
 
-  // Find the specific item
   const item = order.items.id(itemId);
   if (!item) {
     res.status(404);
     throw new Error("Order item not found");
   }
 
-  // Check if item is already returned or cancelled
   if (item.isReturned) {
     res.status(400);
     throw new Error("This item is already returned");
@@ -718,20 +643,15 @@ const returnOrderItem = asyncHandler(async (req, res) => {
     throw new Error("Cancelled items cannot be returned");
   }
 
-  // Update item status - mark as return requested, not immediately returned
   item.isReturned = true;
   item.returnReason = reason;
   item.returnRequestStatus = 'pending';
   item.returnDate = Date.now();
   
-  // Update order return request status
   order.returnRequestStatus = 'pending';
   order.returnRequestDate = Date.now();
   
-  // Note: We don't restore product stock here - that happens when admin approves the return
 
-  // We don't change the order status to "returned" immediately
-  // This will happen only after admin approves the return request
 
   const updatedOrder = await order.save();
 
@@ -741,9 +661,6 @@ const returnOrderItem = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Delete/cancel unpaid pending Razorpay order when checkout is abandoned
-// @route   DELETE /orders/:id/unpaid
-// @access  Private
 const cancelUnpaidOrder = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const order = await Order.findOne({
@@ -758,14 +675,11 @@ const cancelUnpaidOrder = asyncHandler(async (req, res) => {
     return res.json({ success: false, message: 'Unpaid order not found or already processed' });
   }
 
-  await order.deleteOne(); // Alternatively set status: 'cancelled-unpaid' to keep history
+  await order.deleteOne(); 
 
   return res.json({ success: true, message: 'Unpaid order cancelled' });
 });
 
-// @desc    Generate invoice for order
-// @route   GET /orders/:id/invoice
-// @access  Private
 const generateInvoice = asyncHandler(async (req, res) => {
   const order = await Order.findOne({
     $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],
@@ -782,20 +696,16 @@ const generateInvoice = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  // Create a PDF document
   const doc = new PDFDocument({ margin: 50 });
 
-  // Set response headers
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
     `attachment; filename=invoice-${order.orderNumber}.pdf`
   );
 
-  // Pipe the PDF to the response
   doc.pipe(res);
 
-  // Add company logo and info
   doc.fontSize(20).text("Vercachi", { align: "center" });
   doc.moveDown();
   doc
@@ -847,17 +757,14 @@ const generateInvoice = asyncHandler(async (req, res) => {
     .text("Price", priceX, tableTop)
     .text("Amount", amountX, tableTop);
 
-  // Draw a line
   doc
     .moveTo(50, tableTop + 15)
     .lineTo(550, tableTop + 15)
     .stroke();
 
-  // Add table rows
   let tableY = tableTop + 25;
 
   order.items.forEach((item, i) => {
-    // Skip cancelled items
     if (item.isCancelled) return;
 
     const y = tableY + i * 25;
@@ -873,11 +780,9 @@ const generateInvoice = asyncHandler(async (req, res) => {
       .text(`$${amount.toFixed(2)}`, amountX, y);
   });
 
-  // Draw a line
   const bottomY = tableY + order.items.length * 25 + 10;
   doc.moveTo(50, bottomY).lineTo(550, bottomY).stroke();
 
-  // Add totals
   const totalsY = bottomY + 20;
   doc
     .fontSize(10)
@@ -916,16 +821,12 @@ const generateInvoice = asyncHandler(async (req, res) => {
   // Finalize the PDF
   doc.end();
 
-  // Update order with invoice info
   order.invoice = {
     generatedAt: Date.now(),
   };
   await order.save();
 });
 
-// @desc   Mark Razorpay order payment as failed and clear cart
-// @route  POST /orders/:id/payment-failed
-// @access Private
 const markPaymentFailed = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const order = await Order.findOne({
@@ -939,11 +840,9 @@ const markPaymentFailed = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Order not found' });
   }
 
-  // Update status so it is not considered pending
   order.status = 'payment_failed';
   await order.save();
 
-  // Clear cart so user starts fresh
   await Cart.findOneAndUpdate(
     { user: req.user },
     {
@@ -959,7 +858,6 @@ const markPaymentFailed = asyncHandler(async (req, res) => {
   return res.json({ success: true });
 });
 
-// Helper function to calculate refund amount for a cancelled item
 function _calculateItemRefund(order, item, isLastActive) {
   const itemPrice = item.totalPrice;
   const itemTax = parseFloat((itemPrice * TAX_RATE).toFixed(2));

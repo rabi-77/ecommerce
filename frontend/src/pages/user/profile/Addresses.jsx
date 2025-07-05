@@ -33,23 +33,19 @@ const Addresses = () => {
   const [pincodeError, setPincodeError] = useState(null);
   
   useEffect(() => {
-    // Fetch addresses when component mounts
     dispatch(getAllAddressesThunk());
     
-    // Fetch user profile if not already loaded
     if (!profileData) {
       dispatch(fetchUserProfile(user._id));
     }
   }, [dispatch, profileData,user._id]);
   
-  // Update form with profile data when it loads
   useEffect(() => {
     if (profileData) {
       resetForm();
     }
   }, [profileData]);
   
-  // Show toast messages for address operations
   useEffect(() => {
     if (addressError) {
       toast.error(addressError);
@@ -78,13 +74,11 @@ const Addresses = () => {
       [name]: type === 'checkbox' ? checked : value
     });
     
-    // Auto-fill city and state when pincode is entered
     if (name === 'postalCode' && value.length === 6) {
       fetchPincodeDetails(value);
     }
   };
   
-  // Function to fetch pincode details from India Post API
   const fetchPincodeDetails = async (pincode) => {
     try {
       setPincodeLoading(true);
@@ -150,7 +144,6 @@ const Addresses = () => {
     setFormLoading(true);
     
     try {
-      // Validate required fields
       const requiredFields = ['name', 'phoneNumber', 'addressLine1', 'city', 'state', 'postalCode'];
       for (const field of requiredFields) {
         if (!addressForm[field]) {
@@ -160,7 +153,6 @@ const Addresses = () => {
         }
       }
 
-      // --- Phone validation (Indian numbers) ---
       const phonePattern = /^(?:\+91[-\s]?)?[6-9]\d{9}$/;
       if (!phonePattern.test(addressForm.phoneNumber)) {
         toast.error('Please enter a valid 10-digit Indian mobile number');
@@ -174,28 +166,24 @@ const Addresses = () => {
       }
       
       if (editingAddressId) {
-        // Update existing address
         await dispatch(updateAddressThunk({
           addressId: editingAddressId,
           address: addressForm
         })).unwrap();
         toast.success('Address updated successfully');
       } else {
-        // Add new address
         await dispatch(addAddressThunk(addressForm)).unwrap();
         toast.success('Address added successfully');
       }
       
-      // Refresh addresses
       dispatch(getAllAddressesThunk());
       
-      // Reset form and state
       setIsAddingAddress(false);
       setEditingAddressId(null);
       resetForm();
       
     } catch (err) {
-      // Error is already handled in the thunk and displayed via useEffect
+//handling in useefect
     } finally {
       setFormLoading(false);
     }
@@ -210,10 +198,8 @@ const Addresses = () => {
       await dispatch(deleteAddressThunk(addressId)).unwrap();
       toast.success('Address deleted successfully');
       
-      // Refresh addresses
       dispatch(getAllAddressesThunk());
     } catch (err) {
-      // Error is already handled in the thunk and displayed via useEffect
     }
   };
   
@@ -224,12 +210,10 @@ const Addresses = () => {
       
       toast.success('Default address updated');
       
-      // Refresh addresses
       dispatch(getAllAddressesThunk());
     } catch (err) {
       toast.error('Default address updated');
 
-      // Error is already handled in the thunk and displayed via useEffect
     }
   };
   

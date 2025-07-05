@@ -67,7 +67,6 @@ const Checkout = () => {
     isDefault: false
   });
   
-  // Keep local appliedCoupon in sync with redux cart
   useEffect(() => {
     if (cartCoupon) {
       setAppliedCoupon({
@@ -80,7 +79,6 @@ const Checkout = () => {
     }
   }, [cartCoupon, cartSummary]);
 
-  // Handle coupon application
   const handleApplyCoupon = async (couponCode) => {
     if (!couponCode.trim()) {
       toast.error('Please enter a coupon code');
@@ -94,7 +92,6 @@ const Checkout = () => {
       
       if (applyCoupon.fulfilled.match(result)) {
         const { coupon, summary } = result.payload;
-        // redux state will trigger useEffect sync, but set local for immediate UI
         setAppliedCoupon({
           code: coupon.code,
           discountAmount: summary.couponDiscount,
@@ -113,12 +110,10 @@ const Checkout = () => {
     }
   };
 
-  // Handle coupon removal
   const handleRemoveCoupon = () => {
     dispatch(removeCoupon())
       .unwrap()
       .then(() => {
-        // redux state sync will clear it but clear local immediately
         setAppliedCoupon(null);
         toast.success('Coupon removed successfully');
       })
@@ -127,10 +122,8 @@ const Checkout = () => {
       });
   };
 
-  // Get total price from summary
   const totalPrice = summary?.total || 0;
   
-  // Initial data loading effect - runs only once on component mount
   useEffect(() => {
     
     if (!user) {
@@ -141,25 +134,20 @@ const Checkout = () => {
     dispatch(fetchCart());
     dispatch(getAllAddressesThunk());
     
-    // Fetch user profile if not already loaded
     if (!profileData && user._id) {
       dispatch(fetchUserProfile(user._id));
     }
   }, [dispatch, user, navigate, profileData]);
   
-  // Clear any stale order when Checkout mounts
   useEffect(() => {
     dispatch(clearOrderDetails());
     dispatch(resetOrderCreated());
-    // Ensure wallet balance is up-to-date when user opens checkout
     dispatch(fetchWallet());
   }, [dispatch]);
   
-  // Handle order creation success - separate effect
   useEffect(() => {
     if (orderCreated && order) {
       if (paymentMethod === 'RAZORPAY') {
-        // Don't navigate yet, let the Razorpay button handle the payment
         return;
       } else if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
         const orderId = order?._id || order._id;
@@ -169,7 +157,6 @@ const Checkout = () => {
     }
   }, [orderCreated, order, navigate, dispatch, paymentMethod]);
 
-  // Handle payment success callback from RazorpayButton
   const handlePaymentSuccess = useCallback(() => {
     if (order) {
       const orderId = order?._id || order._id;
@@ -178,21 +165,18 @@ const Checkout = () => {
     }
   }, [order, navigate, dispatch]);
 
-  // Handle payment error callback from RazorpayButton
   const handlePaymentError = useCallback((errorMsg) => {
     const isCancelledByUser = errorMsg && errorMsg.toLowerCase().includes('cancelled');
     toast.error(isCancelledByUser ? 'Payment cancelled' : (errorMsg || 'Payment failed. Please try again.'));
     setProcessingPayment(false);
 
     if (isCancelledByUser) {
-      // User closed modal, simply reset state and optionally cancel unpaid order on backend
       if (order?._id) {
         dispatch(cancelUnpaidPending(order._id));
       }
       dispatch(resetOrderCreated());
       dispatch(clearOrderDetails());
     } else {
-      // Actual payment failure
       if (order?._id) {
         dispatch(markPaymentFailed(order._id)).finally(() => {
           navigate(`/order/failure/${order._id}`);
@@ -204,7 +188,6 @@ const Checkout = () => {
     }
   }, [dispatch, navigate, order]);
 
-  // Handle errors - separate effect
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -212,20 +195,17 @@ const Checkout = () => {
   }, [error]);
   
   useEffect(() => {
-    // Set the first address as selected by default if available
     if (addresses && addresses.length > 0 && !selectedAddress) {
       setSelectedAddress(addresses[0]._id);
     }
   }, [addresses, selectedAddress]);
   
-  // Update form with profile data when it loads
   useEffect(() => {
     if (profileData) {
       resetAddressForm();
     }
   }, [profileData]);
   
-  // Show toast messages for address operations
   useEffect(() => {
     if (addressError) {
       toast.error(addressError);
@@ -261,7 +241,6 @@ const Checkout = () => {
     try {
       setProcessingPayment(true);
       
-      // Get the selected address details
       const address = addresses.find(addr => addr._id === selectedAddress);
       
       // Prepare order data
@@ -284,17 +263,13 @@ const Checkout = () => {
         } : null
       };
       
-      // Create the order
       const result = await dispatch(createOrder(orderData)).unwrap();
       
-      // backend returns { success:true, order:{ _id: .. } }
       const orderId = result.order?._id || result._id;
 
-      // If payment method is COD or WALLET, redirect to success page
       if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
         navigate(`/order/success/${orderId}`);
       }
-      // For Razorpay, the payment will be handled by the RazorpayButton component
       
     } catch (error) {
       console.error('Error creating order:', error);
@@ -367,7 +342,6 @@ const Checkout = () => {
     setAddressFormLoading(true);
     
     try {
-      // Validate required fields
       const requiredFields = ['name', 'phoneNumber', 'addressLine1', 'city', 'state', 'postalCode'];
       for (const field of requiredFields) {
         if (!addressForm[field]) {
@@ -377,19 +351,15 @@ const Checkout = () => {
         }
       }
       
-      // Add new address
       await dispatch(addAddressThunk(addressForm)).unwrap();
       toast.success('Address added successfully');
       
-      // Refresh addresses
       await dispatch(getAllAddressesThunk());
       
-      // Reset form and state
       setShowAddressForm(false);
       resetAddressForm();
       
     } catch (err) {
-      // Error is already handled in the thunk and displayed via useEffect
     } finally {
       setAddressFormLoading(false);
       setProcessingPayment(false);
@@ -399,7 +369,6 @@ const Checkout = () => {
   const handleRazorpaySuccess = async (paymentResponse) => {
     try {
       setProcessingPayment(true);
-      // Create order with Razorpay payment details
       await dispatch(createOrder({
         addressId: selectedAddress,
         paymentMethod: 'RAZORPAY',
@@ -424,7 +393,7 @@ const Checkout = () => {
   
   const getStepContent = (step) => {
     switch (step) {
-      case 1: // Shipping
+      case 1: 
         return (
           <div>
             <h2 className="text-xl font-semibold mb-4">

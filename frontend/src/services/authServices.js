@@ -78,8 +78,6 @@ export const resendPasswordResetOtp = async (email) => {
 
 export const resetPassword = async (resetData) => {
   try {
-    // If validateOnly is true, we're just checking if the OTP is valid
-    // without actually resetting the password
     const response = await axios.post(
       `${API_URL}/user/reset-password`,
       resetData
@@ -92,22 +90,18 @@ export const resetPassword = async (resetData) => {
 
 export const checkUserStatus = async () => {
   try {
-    // Check if token exists before making the request
     const token = localStorage.getItem('tokenAccess');
     if (!token) {
       console.warn('No access token found when checking user status');
       throw new Error('No access token available');
     }
 
-    // Use the API instance with interceptors for automatic token refresh
     const response = await api.get(`/check-status`);
     return response.data;
   } catch (er) {
     console.error('Error checking user status:', er);
     
-    // Handle specific error cases
     if (er.response?.status === 403 && er.response?.data?.isBlocked) {
-      // If user is blocked, immediately clear localStorage
       console.warn('User is blocked, clearing auth data');
       localStorage.removeItem("user");
       localStorage.removeItem("tokenAccess");
@@ -115,8 +109,6 @@ export const checkUserStatus = async () => {
       return { isBlocked: true, message: er.response.data.message };
     }
     
-    // For token expiration, the API interceptor will handle the refresh
-    // We just need to throw the error to be handled by the component
     throw new Error(
       er.response?.data?.message || "Failed to check user status"
     );
@@ -125,7 +117,6 @@ export const checkUserStatus = async () => {
 
 export const logoutUser = async () => {
   try {
-    // Use the API instance with interceptors
     const response = await api.post(`/logout`);
     return response.data;
   } catch (er) {
@@ -140,21 +131,17 @@ export const refreshAccessToken = async () => {
       throw new Error("No refresh token found");
     }
     
-    // Use direct axios call here to avoid circular dependency with the interceptor
     const response = await axios.post(`${API_URL}/user/refresh`, {
       refreshToken: token,
     });
 
-    // Ensure we have a valid response with tokenAccess
     if (!response.data || !response.data.tokenAccess) {
       console.error('Invalid response format from refresh token endpoint:', response.data);
       throw new Error("Invalid token response format from server");
     }
 
-    // Store the new access token
     localStorage.setItem("tokenAccess", response.data.tokenAccess);
     
-    // If a new refresh token is provided, update it as well
     if (response.data.tokenRefresh) {
       localStorage.setItem("tokenRefresh", response.data.tokenRefresh);
     }

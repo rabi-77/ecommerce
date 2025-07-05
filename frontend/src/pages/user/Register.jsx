@@ -17,39 +17,31 @@ const Register = () => {
   useEffect(() => {
     dispatch(resetAuthState()); 
   }, []);
-  // Registration form
   const { register: formRegister, handleSubmit: handleRegisterSubmit, formState: { errors: registerErrors }, reset: resetForm } = useForm({
     resolver: zodResolver(registerSchema),
   });
 
-  // OTP form
   const { register: otpRegister, handleSubmit: handleOtpSubmit, formState: { errors: otpErrors },reset: resetOtpForm } = useForm({
     resolver: zodResolver(verifyOtpSchema.omit({ email: true, token: true })),
   });
 
-  // OTP countdown timer
   const [timeLeft, setTimeLeft] = useState(30);
   const [resendDisabled, setResendDisabled] = useState(true);
 
-  // Effect for success toast and resetting form
   useEffect(() => {
     if (success && showOtpModal) {
       toast.success('OTP sent to your email');
       resetOtpForm();
       
-      // Always use 30 seconds for the timer regardless of server expiration
       setTimeLeft(30);
       setResendDisabled(true);
     }
   }, [success, showOtpModal, resetOtpForm]);
   
-  // Separate effect for the timer that depends only on showOtpModal
   useEffect(() => {
     if (showOtpModal) {
-      // Clear any existing timer
       let timer = null;
       
-      // Start a new timer
       timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
@@ -67,7 +59,6 @@ const Register = () => {
     }
   }, [showOtpModal]);
   
-  // Effect for handling errors and verification
   useEffect(() => {
     if (error) {
       toast.error(errormessage);
@@ -78,14 +69,11 @@ const Register = () => {
         setResendDisabled(true);
         dispatch(resetAuthState());
       } else {
-        // Only clear the error state, not the entire auth state
-        // This keeps the modal open for invalid OTP errors
         dispatch(clearError());
       }
     }
     
     if (isVerified) {
-      // Check if we have a custom success message (for Google account password addition)
       if (successMessage && successMessage.includes('Google account')) {
         toast.success(successMessage);
       } else {
@@ -96,16 +84,14 @@ const Register = () => {
       setTimeLeft(30);
       setResendDisabled(true);
       
-      // Add a slight delay before redirecting to ensure the toast message is visible
       setTimeout(() => {
         navigate('/login');
         dispatch(resetAuthState());
-      }, 1500); // 1.5 second delay
+      }, 1500); 
     }
   }, [error, errormessage, isVerified, navigate, dispatch, resetForm, resetOtpForm]);
 
   const onRegisterSubmit = async (data) => {
-    // Ensure referralCode is sent even if empty string
     const payload = {
       ...data,
       referralCode: data.referralCode?.trim() || undefined,

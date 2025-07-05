@@ -43,14 +43,12 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
     };
   }, [dispatch, onError]);
 
-  // Handle payment success
   useEffect(() => {
     if (verified && onSuccess) {
       onSuccess();
     }
   }, [verified, onSuccess]);
 
-  // Handle payment errors
   useEffect(() => {
     if (razorpayerror) {
       toast.error(razorpayerror);
@@ -69,14 +67,12 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
     }
 
     try {
-      // Get Razorpay key first
       const keyResult = await dispatch(getRazorPayKeyThunk()).unwrap();
       
       if (!keyResult || !keyResult.key) {
         throw new Error('Failed to get Razorpay key');
       }
       
-      // Create Razorpay order
       const resultAction = await dispatch(razorpayOrderThunk({
         amount: Math.round(order.totalPrice), // Amount in INR; backend converts to paise
         orderId: order._id,
@@ -91,7 +87,6 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
           throw new Error('Failed to create Razorpay order');
         }
         
-        // Initialize Razorpay payment
         const options = {
           key: keyResult.key,
           amount: razorpayOrder.amount,
@@ -108,12 +103,10 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
                 orderId: order._id,
               })).unwrap();
               
-              // onSuccess will be called by the useEffect when verified is true
             } catch (error) {
               console.error('Payment verification failed:', error);
               const errorMsg = error.message || 'Payment verification failed. Please try again.';
               toast.error(errorMsg);
-              // mark order as failed so user can retry later
               if (order?._id) {
                 dispatch(markPaymentFailed(order._id));
               }
@@ -143,11 +136,9 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
         };
 
         const rzp = new window.Razorpay(options);
-        // Listen for payment failure explicitly
         rzp.on('payment.failed', function (response) {
           console.error('Razorpay payment failed:', response.error);
           const errorMsg = response.error?.description || 'Payment failed. Please try again.';
-          // Mark order as failed in backend
           if (order?._id) {
             dispatch(markPaymentFailed(order._id));
           }
@@ -168,7 +159,6 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
     }
   }, [dispatch, order, onError]);
 
-  // Helper to restore scrolling and remove leftover Razorpay DOM
   const cleanupRazorpayModal = () => {
     document.body.style.overflow = '';
     const existing = document.querySelector('.razorpay-container');
@@ -177,7 +167,6 @@ const RazorpayButton = ({ order, onSuccess, onError, buttonText = 'Pay Now', loa
     }
   };
 
-  // Auto-trigger payment when component mounts if enabled (e.g., Checkout flow)
   useEffect(() => {
     if (autoLaunch && order?._id) {
       handlePayment();

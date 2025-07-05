@@ -17,7 +17,6 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
             });
         }
 
-        // Ensure amount is a valid number
         const amountNum = Number(amount);
         if (isNaN(amountNum) || amountNum <= 0) {
             return res.status(400).json({

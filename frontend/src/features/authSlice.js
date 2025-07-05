@@ -4,7 +4,7 @@ import {
   buildCreateSlice,
 } from "@reduxjs/toolkit";
 import { registerUser, verifyUser, resendOtp, loginUser, requestPasswordReset, resendPasswordResetOtp, resetPassword ,logoutUser,refreshAccessToken} from "../services/authServices";
-import { updateProfile } from "./userprofile/profileSlice"; // <-- new import
+import { updateProfile } from "./userprofile/profileSlice"; 
 // import { build } from "vite";
 
 export const login = createAsyncThunk(
@@ -113,11 +113,9 @@ export const refreshAccessTokenThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const data = await refreshAccessToken();
-      // Check if data contains tokenAccess (API response format)
       if (data && data.tokenAccess) {
         localStorage.setItem('tokenAccess', data.tokenAccess);
         
-        // Return both the token and the user data for the reducer
         const userData = localStorage.getItem('user');
         return {
           tokenAccess: data.tokenAccess,
@@ -128,7 +126,6 @@ export const refreshAccessTokenThunk = createAsyncThunk(
       }
     } catch (err) {
       console.error("Token refresh failed:", err.message);
-      // Only remove tokens if it's an authentication error, not for network issues
       if (err.message.includes("unauthorized") || err.message.includes("invalid") || 
           err.message.includes("expired") || err.message.includes("No refresh token")) {
         localStorage.removeItem('tokenAccess');
@@ -149,12 +146,11 @@ const initialState = {
   success: false,
   error: false,
   errormessage: null,
-  successMessage: null, // Added proper field for success messages
+  successMessage: null, 
   showOtpModal: false,
   token: null,
-  otpExpiresAt: null, // Added to track OTP expiration time
+  otpExpiresAt: null, 
   invalidReferral: localStorage.getItem('invalidReferral') === 'true',
-  // Separate loading states for different actions
   verifyLoading: false,
   resendLoading: false,
   // Password reset states
@@ -174,7 +170,7 @@ const authSlice = createSlice({
       state.success = false;
       state.error = false;
       state.errormessage = null;
-      state.successMessage = null; // Clear success message
+      state.successMessage = null; 
       state.token = null;
       state.isVerified = false;
       state.showOtpModal = false;
@@ -189,7 +185,6 @@ const authSlice = createSlice({
       state.error = false;
       state.errormessage = null;
       
-      // Try to get user data from localStorage if not already in state
       if (!state.user) {
         try {
           const storedUser = localStorage.getItem('user');
@@ -216,7 +211,6 @@ const authSlice = createSlice({
       state.passwordResetEmail = action.payload;
     },
     clearPasswordResetErrors: (state) => {
-      // Clear only error states, preserve the email
       state.passwordResetLoading = false;
       state.passwordResetSuccess = false;
       state.passwordResetError = false;
@@ -230,7 +224,6 @@ const authSlice = createSlice({
       state.passwordResetMessage = null;
     },
     clearError: (state) => {
-      // Clear only error states, preserve other states like showOtpModal
       state.loading = false;
       state.verifyLoading = false;
       state.resendLoading = false;
@@ -253,14 +246,11 @@ const authSlice = createSlice({
         state.errormessage = null;
         
         if (action.payload.isPasswordAddedToGoogleAccount) {
-          // Special case: password added to Google account
-          // Don't show OTP modal, just show success message
           state.showOtpModal = false;
-          state.isVerified = true; // User is already verified through Google
+          state.isVerified = true; 
           state.email = action.payload.email;
-          state.successMessage = action.payload.message; // Store custom message in proper field
+          state.successMessage = action.payload.message; 
         } else {
-          // Normal registration flow
           state.token = action.payload.token;
           state.showOtpModal = true;
           state.email = action.payload.email;
@@ -286,7 +276,6 @@ const authSlice = createSlice({
         state.email = null;
         state.showOtpModal = false;
 
-        // Handle referral status
         const status = action.payload?.referralStatus;
         if (status === 'INVALID') {
           state.invalidReferral = true;
@@ -300,7 +289,6 @@ const authSlice = createSlice({
         state.verifyLoading = false;
         state.error = true;
         state.errormessage = action.payload;
-        // Only close the modal for session expiration, not for invalid OTP
         if (action.payload === "Registration session expired") {
           state.showOtpModal = false;
           state.email = null;
@@ -318,9 +306,7 @@ const authSlice = createSlice({
       .addCase(resend.fulfilled, (state, action) => {
         state.resendLoading = false;
         state.success = true;
-        // Update the token with the new one containing the new OTP
         state.token = action.payload.token;
-        // Store the expiration time for the OTP timer
         state.otpExpiresAt = action.payload.expiresAt;
       })
       .addCase(resend.rejected, (state, action) => {
@@ -349,7 +335,6 @@ const authSlice = createSlice({
         state.isVerified = true;
         state.user = action.payload.user;
         
-        // Store user info and tokens in localStorage
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('tokenAccess', action.payload.tokenAccess);
         localStorage.setItem('tokenRefresh', action.payload.tokenRefresh);
@@ -360,7 +345,6 @@ const authSlice = createSlice({
         state.errormessage = action.payload;
       });
       
-    // Forgot password reducers
     builder
       .addCase(forgotPassword.pending, (state) => {
         state.passwordResetLoading = true;
@@ -413,7 +397,7 @@ const authSlice = createSlice({
         state.passwordResetSuccess = true;
         state.passwordResetError = false;
         state.passwordResetMessage = action.payload.message;
-        state.passwordResetEmail = null; // Clear email after successful reset
+        state.passwordResetEmail = null; 
       })
       .addCase(resetPasswordWithOtp.rejected, (state, action) => {
         state.passwordResetLoading = false;
@@ -451,15 +435,12 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = true;
         state.errormessage = action.payload;
-        // Token refresh failed, clear auth state
         state.token = null;
         state.refreshToken = null;
         state.user = null;
         state.isVerified = false;
       })
-      // Keep auth slice in sync with profile updates
       .addCase(updateProfile.fulfilled, (state, action) => {
-        // action.payload.user contains the latest user info
         if (action.payload && action.payload.user) {
           state.user = action.payload.user;
         }

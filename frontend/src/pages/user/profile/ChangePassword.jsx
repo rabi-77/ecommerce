@@ -18,15 +18,12 @@ const ChangePassword = () => {
   
   const [errors, setErrors] = useState({});
   
-  // Check if user is a Google user without a password
   const isGoogleUserWithoutPassword = user?.authProvider === 'google' && !user?.hasPassword;
   
-  // Effect to handle success/error states from Redux
   useEffect(() => {
     if (isError) {
       toast.error(message);
       
-      // Set field-specific error if provided
       if (fieldError) {
         setErrors(prev => ({
           ...prev,
@@ -45,15 +42,12 @@ const ChangePassword = () => {
       dispatch(resetChangePassword());
     }
     
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isError, isSuccess, message]);
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       dispatch(resetChangePassword());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   const handleChange = (e) => {
@@ -62,7 +56,6 @@ const ChangePassword = () => {
       [e.target.name]: e.target.value
     });
     
-    // Clear error when user starts typing
     if (errors[e.target.name]) {
       setErrors({
         ...errors,
@@ -70,7 +63,6 @@ const ChangePassword = () => {
       });
     }
     
-    // Clear Redux errors when typing
     if (isError) {
       dispatch(clearChangePasswordErrors());
     }
@@ -86,7 +78,6 @@ const ChangePassword = () => {
     if (!formData.newPassword) {
       newErrors.newPassword = 'New password is required';
     } else {
-      // Length validation
       if (formData.newPassword.length < 8 || formData.newPassword.length > 16) {
         newErrors.newPassword = 'Password must be between 8 and 16 characters';
       }

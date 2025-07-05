@@ -147,7 +147,6 @@ const couponSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Get all coupons
     builder
       .addCase(getCoupons.pending, (state) => {
         state.loading = true;
@@ -168,7 +167,6 @@ const couponSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Get single coupon
     builder
       .addCase(getSingleCoupon.pending, (state) => {
         state.loading = true;
@@ -183,7 +181,6 @@ const couponSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Create coupon
     builder
       .addCase(createCoupon.pending, (state) => {
         state.loading = true;
@@ -201,7 +198,6 @@ const couponSlice = createSlice({
         state.success = false;
       });
 
-    // Update coupon
     builder
       .addCase(updateCoupon.pending, (state) => {
         state.loading = true;
@@ -227,7 +223,6 @@ const couponSlice = createSlice({
         state.success = false;
       });
 
-    // Delete coupon
     builder
       .addCase(deleteCoupon.pending, (state) => {
         state.loading = true;
@@ -247,7 +242,6 @@ const couponSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Toggle coupon status
     builder
       .addCase(toggleStatus.pending, (state) => {
         state.loading = true;
@@ -270,7 +264,6 @@ const couponSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Validate coupon
     builder
       .addCase(validateCoupon.pending, (state) => {
         state.validation.loading = true;

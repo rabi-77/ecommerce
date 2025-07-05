@@ -16,11 +16,8 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
     passwordResetMessage 
   } = useSelector((state) => state.auth);
   
-  // Only clear error messages, not the email when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Instead of completely resetting the state, we'll just clear error states
-      // but preserve the email information
     }
   }, [isOpen, passwordResetEmail]);
   
@@ -30,7 +27,6 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
         toast.error(passwordResetMessage);
       } else if (passwordResetSuccess && passwordResetMessage.includes("successful")) {
         toast.success(passwordResetMessage);
-        // Reset form and close modal
         setNewPassword("");
         setConfirmPassword("");
         dispatch(clearPasswordResetErrors());
@@ -42,12 +38,9 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Clear only errors, not email
     dispatch(clearPasswordResetErrors());
     
-    // Log the email and OTP for debugging
     
-    // Validate password
     if (newPassword.length < 8) {
       toast.error("Password must be at least 8 characters");
       return;
@@ -78,10 +71,9 @@ const ResetPasswordModal = ({ isOpen, onClose, otp, email }) => {
       return;
     }
     
-    // Log the email being used (for debugging only)
     
     dispatch(resetPasswordWithOtp({
-      email: email, // Use the email prop directly
+      email: email, 
       otp: otp,
       newPassword: newPassword
     }));

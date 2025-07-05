@@ -12,15 +12,12 @@ const Wishlist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  // State for size selection modal
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState('');
   
-  // Get auth state from Redux
   const { user } = useSelector((state) => state.auth);
   
-  // Get wishlist state from Redux
   const { items, loading, error, itemsCount } = useSelector((state) => state.wishlist);
 
   useEffect(() => {
@@ -47,7 +44,6 @@ const Wishlist = () => {
       return;
     }
     
-    // Fetch wishlist items when component mounts
     dispatch(fetchWishlist());
   }, [user, navigate, dispatch]);
 
@@ -75,14 +71,12 @@ const Wishlist = () => {
     }
   };
 
-  // Function to handle size selection requirement
   const handleSizeRequired = (product) => {
     setSelectedProduct(product);
     setSelectedSize('');
     setShowSizeModal(true);
   };
   
-  // Close the size selection modal
   const closeSizeModal = () => {
     setShowSizeModal(false);
     setSelectedProduct(null);

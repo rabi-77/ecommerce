@@ -2,13 +2,11 @@ import Coupon from '../../models/couponModel.js';
 import { validationResult } from 'express-validator';
 import Cart from '../../models/cartModel.js';
 
-// Validate coupon and apply to user's cart
 export const validateAndApplyCoupon = async (req, res) => {
   try {
     const { code } = req.body;
     const userId = req.user;
 
-    // Find active coupon
     const coupon = await Coupon.findOne({
       code: code.toUpperCase(),
       isActive: true,
@@ -27,7 +25,6 @@ export const validateAndApplyCoupon = async (req, res) => {
       });
     }
 
-    // Get user's cart
     const cart = await Cart.findOne({ user: userId }).populate('items.product');
     if (!cart) {
       return res.status(404).json({ 
@@ -36,13 +33,10 @@ export const validateAndApplyCoupon = async (req, res) => {
       });
     }
 
-    // Calculate subtotal
     const subtotal = cart.items.reduce((sum, item) => {
       const price = item.product.discountedPrice || item.product.price;
       return sum + (price * item.quantity);
     }, 0);
-
-    // Check minimum purchase amount
     if (subtotal < coupon.minPurchaseAmount) {
       return res.status(400).json({
         success: false,
@@ -50,20 +44,16 @@ export const validateAndApplyCoupon = async (req, res) => {
       });
     }
 
-    // Calculate discount
     let discount = 0;
     if (coupon.discountType === 'percentage') {
       discount = (subtotal * coupon.discountValue) / 100;
-      // Apply max discount if set
       if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
         discount = coupon.maxDiscountAmount;
       }
     } else {
-      // Fixed amount
       discount = Math.min(coupon.discountValue, subtotal);
     }
 
-    // Update cart with coupon
     cart.coupon = coupon._id;
     cart.discount = discount;
     cart.total = subtotal - discount;
@@ -91,12 +81,10 @@ export const validateAndApplyCoupon = async (req, res) => {
   }
 };
 
-// Remove coupon from user's cart
 export const removeCoupon = async (req, res) => {
   try {
     const userId = req.user;
     
-    // Get user's cart
     const cart = await Cart.findOne({ user: userId });
     if (!cart) {
       return res.status(404).json({ 
@@ -105,13 +93,10 @@ export const removeCoupon = async (req, res) => {
       });
     }
 
-    // Recalculate total without coupon
     const subtotal = cart.items.reduce((sum, item) => {
       const price = item.product.discountedPrice || item.product.price;
       return sum + (price * item.quantity);
     }, 0);
-
-    // Update cart
     cart.coupon = undefined;
     cart.discount = 0;
     cart.total = subtotal;
@@ -132,7 +117,6 @@ export const removeCoupon = async (req, res) => {
   }
 };
 
-// Get coupon details
 export const getCouponDetails = async (req, res) => {
   try {
     const { code } = req.params;

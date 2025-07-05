@@ -71,7 +71,6 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
     setCouponCode(code);
   };
 
-  // Fetch active coupons that user can still use
   useEffect(() => {
     const fetchActiveCoupons = async () => {
       setLoadingCoupons(true);

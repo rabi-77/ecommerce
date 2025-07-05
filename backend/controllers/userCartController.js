@@ -452,10 +452,8 @@ export const getCart = async (req, res) => {
       totalAfterCoupon = totalAfterProductDisc;
     }
 
-    // Calculate tax on net amount after discounts
     tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
 
-    // Shipping charge should be decided BEFORE coupon discount is applied
     shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
     grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
@@ -614,10 +612,8 @@ export const applyCoupon = async (req, res) => {
 
     totalAfterCoupon = Math.max(0, totalAfterProductDisc - couponDiscount);
 
-    // Calculate tax on net amount after discounts
     tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
 
-    // Shipping charge should be decided BEFORE coupon discount is applied
     shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
     grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
@@ -705,15 +701,12 @@ export const removeCoupon = async (req, res) => {
 
     totalAfterCoupon = totalAfterProductDisc;
 
-    // Calculate tax on net amount after discounts
     tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
 
-    // Shipping charge should be decided BEFORE coupon discount is applied
     shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
     grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
 
-    // Update cart
     cart.coupon = undefined;
     cart.discount = 0;
     cart.tax = tax;
@@ -804,7 +797,6 @@ export const validateCoupon = async (req, res) => {
   }
 };
 
-// ======= Fetch Available Coupons =======
 export const getAvailableCoupons = async (req, res) => {
   try {
     ('hey');
@@ -817,7 +809,6 @@ export const getAvailableCoupons = async (req, res) => {
 
     const now = new Date();
 
-    // Find coupons that are active, in valid date range, not exhausted, and not already used by this user
     const coupons = await Coupon.find({
       isActive: true,
       startDate: { $lte: now },

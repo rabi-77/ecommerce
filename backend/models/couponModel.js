@@ -62,7 +62,7 @@ const couponSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // Track users who already redeemed this coupon
+    
     usedBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -84,10 +84,8 @@ const couponSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
 couponSchema.index({ code: 1, isActive: 1 });
 
-// Pre-save hook to ensure maxDiscountAmount is set for percentage discounts
 couponSchema.pre('save', function(next) {
   if (this.discountType === 'percentage' && !this.maxDiscountAmount) {
     throw new Error('Max discount amount is required for percentage discounts');
@@ -95,7 +93,6 @@ couponSchema.pre('save', function(next) {
   next();
 });
 
-// Method to check if coupon is valid
 couponSchema.methods.isValid = function() {
   const now = new Date();
   return (
@@ -106,7 +103,6 @@ couponSchema.methods.isValid = function() {
   );
 };
 
-// Method to calculate discount amount
 couponSchema.methods.calculateDiscount = function(amount) {
   if (amount < this.minPurchaseAmount) {
     throw new Error(`Minimum purchase amount of ${this.minPurchaseAmount} required`);
@@ -120,7 +116,7 @@ couponSchema.methods.calculateDiscount = function(amount) {
     discount = Math.min(this.discountValue, amount);
   }
 
-  return Math.round(discount * 100) / 100; // Round to 2 decimal places
+  return Math.round(discount * 100) / 100; 
 };
 
 const Coupon = mongoose.model('Coupon', couponSchema);

@@ -37,10 +37,8 @@ const AddToCartButton = ({
     // Find items of the same product in cart
     const sameProductItems = cartItems.filter(item => item.product._id === productId);
     
-    // Calculate total quantity
     const totalQuantity = sameProductItems.reduce((total, item) => total + item.quantity, 0);
     
-    // Check if adding the new quantity would exceed the limit
     return (totalQuantity + quantity) <= MAX_QUANTITY_PER_PRODUCT;
   };
 
@@ -67,7 +65,6 @@ const AddToCartButton = ({
       return;
     }
     
-    // Check if product is unlisted (if product object is provided)
     if (product && !product.isListed) {
       toast.error("This product is currently unavailable", {
         autoClose: 5000,
@@ -76,23 +73,18 @@ const AddToCartButton = ({
       return;
     }
 
-    // If size is required but not provided
     if (!size) {
-      // If product is provided and has variants (like in wishlist view)
       if (product && product.variants && product.variants.length > 0) {
-        // If there's only one variant with stock, use that size
         const availableVariants = product.variants.filter(v => v.stock > 0);
         if (availableVariants.length === 1) {
           const availableSize = availableVariants[0].size;
           addToCartWithSize(availableSize);
           return;
         } else if (availableVariants.length > 1) {
-          // If callback provided for size selection
           if (onSizeRequired) {
             onSizeRequired(product);
             return;
           } else {
-            // Navigate to product page for size selection
             navigate(`/products/${productId}`);
             toast.info('Please select a size for this product');
             return;
@@ -107,7 +99,6 @@ const AddToCartButton = ({
       }
     }
 
-    // Check if adding would exceed the maximum quantity per product
     if (!checkQuantityLimit()) {
       toast.error(`You can only have ${MAX_QUANTITY_PER_PRODUCT} items of this product in your cart (across all sizes)`);
       return;
@@ -125,28 +116,21 @@ const AddToCartButton = ({
         setIsAdded(true);
         toast.success('Item added to cart');
         
-        // Immediately update the wishlist state in Redux
-        // This ensures the UI updates right away without waiting for the API
         dispatch(setProductInWishlist({ productId, inWishlist: false }));
         
-        // Refresh cart data
         dispatch(fetchCart());
         
-        // Refresh wishlist data since the item is automatically removed from wishlist when added to cart
         dispatch(fetchWishlist());
         
-        // Call success callback if provided
         if (onSuccess && typeof onSuccess === 'function') {
           onSuccess();
         }
         
-        // Reset added state after 2 seconds
         setTimeout(() => {
           setIsAdded(false);
         }, 2000);
       })
       .catch((error) => {
-        // Check if the error is about product availability
         if (error && error.message) {
           toast.error(error.message, {
             autoClose: 5000,

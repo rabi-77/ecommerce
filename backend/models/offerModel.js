@@ -6,7 +6,6 @@ const offerSchema = new mongoose.Schema({
     enum: ['PRODUCT', 'CATEGORY'],
     required: true,
   },
-  // Either percentage or amount must be provided
   percentage: {
     type: Number,
     min: 1,

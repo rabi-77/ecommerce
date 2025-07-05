@@ -40,21 +40,17 @@ export const addAddress = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Initialize addresses array if it doesn't exist
     if (!user.addresses) {
       user.addresses = [];
     }
     
-    // If this is the first address or isDefault is true, set it as default
     const shouldBeDefault = user.addresses.length === 0 || addressData.isDefault;
     
     // Remove isDefault from addressData since we're using defaultAddressId
     delete addressData.isDefault;
     
-    // Add the new address
     user.addresses.push(addressData);
     
-    // If this should be the default address, set defaultAddressId
     if (shouldBeDefault) {
       const newAddressId = user.addresses[user.addresses.length - 1]._id;
       user.defaultAddressId = newAddressId;
@@ -77,14 +73,12 @@ export const addAddress = async (req, res) => {
   }
 };
 
-// Update an existing address
 export const updateAddress = async (req, res) => {
   try {
     const userId = req.user;
     const addressId = req.params.addressId;
     const addressData = req.body;
     
-    // Validate required fields
     const requiredFields = ['name', 'phoneNumber', 'addressLine1', 'city', 'state', 'postalCode', 'country'];
     for (const field of requiredFields) {
       if (!addressData[field]) {
@@ -97,7 +91,6 @@ export const updateAddress = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Find the address to update
     const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
     if (addressIndex === -1) {
       return res.status(404).json({ message: "Address not found" });
@@ -106,16 +99,13 @@ export const updateAddress = async (req, res) => {
     // Check if we need to set this address as default
     const shouldBeDefault = addressData.isDefault;
     
-    // Remove isDefault from addressData since we're using defaultAddressId
     delete addressData.isDefault;
     
-    // Update the address
     user.addresses[addressIndex] = {
       ...user.addresses[addressIndex].toObject(),
       ...addressData
     };
     
-    // If this should be the default address, update defaultAddressId
     if (shouldBeDefault) {
       user.defaultAddressId = user.addresses[addressIndex]._id;
     }
@@ -137,7 +127,6 @@ export const updateAddress = async (req, res) => {
   }
 };
 
-// Delete an address
 export const deleteAddress = async (req, res) => {
   try {
     const userId = req.user;
@@ -148,21 +137,16 @@ export const deleteAddress = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Find the address to delete
     const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
     if (addressIndex === -1) {
       return res.status(404).json({ message: "Address not found" });
     }
     
-    // Check if this was the default address
     const wasDefault = user.defaultAddressId && 
       user.defaultAddressId.toString() === addressId;
     
-    // Remove the address
     user.addresses.splice(addressIndex, 1);
     
-    // If the deleted address was the default and we have other addresses,
-    // set the first one as the new default
     if (wasDefault && user.addresses.length > 0) {
       user.defaultAddressId = user.addresses[0]._id;
     } else if (wasDefault && user.addresses.length === 0) {
@@ -178,7 +162,6 @@ export const deleteAddress = async (req, res) => {
   }
 };
 
-// Set an address as default
 export const setDefaultAddress = async (req, res) => {
   try {
     const userId = req.user;
@@ -190,18 +173,15 @@ export const setDefaultAddress = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Find the address to set as default
     const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
     if (addressIndex === -1) {
       return res.status(404).json({ message: "Address not found" });
     }
     
-    // Set the selected address as default using defaultAddressId
     user.defaultAddressId = user.addresses[addressIndex]._id;
     
     await user.save();
     
-    // Get all addresses with updated isDefault property
     const addresses = user.addresses.map(address => {
       const addressObj = address.toObject();
       addressObj.isDefault = user.defaultAddressId && 

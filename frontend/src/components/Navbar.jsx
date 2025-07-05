@@ -33,12 +33,10 @@ export default function Navbar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // Get cart state from Redux
   const { count: cartItemCount } = useSelector(state => state.cart);
   const { itemsCount: wishlistItemCount } = useSelector(state => state.wishlist);
 
   useEffect(() => {
-    // Fetch cart and wishlist data only when user is logged in
     if (user) {
       
       
@@ -46,7 +44,6 @@ export default function Navbar() {
       dispatch(fetchWishlist());
     }
     
-    // Add scroll event listener to change navbar appearance on scroll
     const handleScroll = () => {
       if (window.scrollY > 10) {
         setIsScrolled(true);
@@ -57,7 +54,6 @@ export default function Navbar() {
     
     window.addEventListener('scroll', handleScroll);
 
-    // Handle clicks outside of dropdown to close it
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
@@ -66,7 +62,6 @@ export default function Navbar() {
 
     document.addEventListener('mousedown', handleClickOutside);
 
-    // Cleanup function
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
@@ -74,7 +69,6 @@ export default function Navbar() {
   }, [user, dispatch]);
 
   const handleUserClick = (e) => {
-    // Prevent event from bubbling up
     e.stopPropagation();
     
     if (!user) {
@@ -119,7 +113,6 @@ export default function Navbar() {
           {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         
-        {/* Logo */}
         <Link
           to="/"
           className="text-2xl font-heading font-bold tracking-wide text-[var(--primary)] flex items-center"
@@ -137,7 +130,6 @@ export default function Navbar() {
           <Link to="/about" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">About</Link>
         </nav>
 
-        {/* Icons */}
         <div className="flex items-center gap-4 text-[var(--text-light)]">
 
           

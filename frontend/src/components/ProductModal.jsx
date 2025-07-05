@@ -42,8 +42,8 @@ const ProductModal = ({ product, onClose }) => {
     name: product?.name || "",
     description: product?.description || "",
     price: product?.price || "",
-    category: product?.category?._id ||product?.category || "", // Added category
-    brand: product?.brand?._id ||product?.brand || "", // Added brand
+    category: product?.category?._id ||product?.category || "",
+    brand: product?.brand?._id ||product?.brand || "", 
     images: [], // New images to upload
     variants: initialVariants,
   });
@@ -78,19 +78,18 @@ const ProductModal = ({ product, onClose }) => {
       images: [...prev.images, file],
     }));
     setImagePreviews((prev) => [...prev, imageUrl]);
-    e.target.value = ""; // Reset file input
+    e.target.value = ""; 
   };
 
   const onImageLoad = (e) => {
     const { width, height } = e.currentTarget;
-    // Create a smaller initial crop area for better control
     const crop = centerCrop(
       makeAspectCrop(
         {
           unit: "%",
           width: 70,
         },
-        4 / 3, // Aspect ratio
+        4 / 3, 
         width,
         height
       ),
@@ -103,24 +102,20 @@ const ProductModal = ({ product, onClose }) => {
   const handleCropStart = (index) => {
     setCroppingIndex(index);
     
-    // Create a new image with crossOrigin attribute to avoid tainted canvas issues
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      // Once loaded, create a canvas to get the image data
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
       
-      // Convert to data URL to avoid CORS issues
       try {
         const dataUrl = canvas.toDataURL("image/jpeg");
         setCroppedImage(dataUrl);
       } catch (error) {
         console.error("Error creating data URL:", error);
-        // Fallback to direct image preview (may cause CORS issues)
         setCroppedImage(imagePreviews[index]);
         toast.warning("Image may not be croppable due to security restrictions");
       }
@@ -132,7 +127,6 @@ const ProductModal = ({ product, onClose }) => {
       toast.warning("Could not prepare image for cropping");
     };
     
-    // Set the source last to trigger loading
     img.src = imagePreviews[index];
   };
 
@@ -172,7 +166,6 @@ const ProductModal = ({ product, onClose }) => {
       });
       const croppedUrl = URL.createObjectURL(croppedFile);
 
-      // Update the preview image regardless of whether it's existing or new
       const newPreviews = [...imagePreviews];
       if (newPreviews[croppingIndex]) {
         URL.revokeObjectURL(newPreviews[croppingIndex]);
@@ -180,20 +173,16 @@ const ProductModal = ({ product, onClose }) => {
       newPreviews[croppingIndex] = croppedUrl;
       setImagePreviews(newPreviews);
       
-      // Handle existing images differently from new images
       if (croppingIndex < existingImages.length) {
-        // Mark the existing image for removal
         const newExistingImages = [...existingImages];
-        newExistingImages[croppingIndex] = null; // Mark for removal
+        newExistingImages[croppingIndex] = null; 
         setExistingImages(newExistingImages);
         
-        // Add the cropped image as a new image
         setFormData((prev) => ({
           ...prev,
           images: [...prev.images, croppedFile],
         }));
       } else {
-        // For new images, replace the file in the array
         const newImages = [...formData.images];
         const fileIndex = croppingIndex - existingImages.length;
         if (fileIndex >= 0 && fileIndex < newImages.length) {
@@ -205,7 +194,6 @@ const ProductModal = ({ product, onClose }) => {
         }
       }
 
-      // Reset cropping state
       setCroppingIndex(null);
       setCroppedImage(null);
       setCrop(null);
@@ -294,34 +282,29 @@ const ProductModal = ({ product, onClose }) => {
     data.append("name", formData.name);
     data.append("description", formData.description);
     data.append("price", formData.price);
-    data.append("category", formData.category); // Add category to FormData
-    data.append("brand", formData.brand); // Add brand to FormData
+    data.append("category", formData.category); 
+    data.append("brand", formData.brand); 
     // formData.images.forEach((image) => data.append("images", image));
     // data.append("variants", JSON.stringify(formData.variants));
 
     if (isEdit) {
-      // Filter out null values (images that were cropped)
       const filteredExistingImages = existingImages.filter(img => img !== null);
       data.append("existImgs", JSON.stringify(filteredExistingImages));
     }
 
 
-    // Append new images (including cropped ones)
   formData.images.forEach((image) => {
     if (image instanceof File) {
       data.append("images", image);
     } else if (image.url) {
-      // If you have image objects with URLs
       data.append("images", image.url);
     }
   });
 
-  // Append variants after filtering empty stocks
   data.append("variants", JSON.stringify(
     formData.variants.filter(v => v.stock !== "")
   ));
 
-  // Debug: Log FormData contents before sending
   for (let [key, value] of data.entries()) {
   }
 

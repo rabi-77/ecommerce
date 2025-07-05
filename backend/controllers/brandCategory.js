@@ -5,7 +5,6 @@ const getBrands = async (req, res) => {
   try {
     const brands = await brandModel.find({ isDeleted: false, isListed: true });
 
-    // Return empty array with 200 status instead of 400 error
     return res.status(200).json({ 
       message: brands.length === 0 ? "No brands available" : "Successfully fetched", 
       brands 
@@ -19,7 +18,6 @@ const getCategories = async (req, res) => {
   try {
     const categories = await categoryModel.find({ isDeleted: false, isListed: true });
     
-    // Return empty array with 200 status instead of 400 error
     return res.status(200).json({ 
       message: categories.length === 0 ? "No categories available" : "Success", 
       categories 

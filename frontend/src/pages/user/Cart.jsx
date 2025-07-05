@@ -15,10 +15,8 @@ const Cart = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get auth state from Redux
   const { user } = useSelector((state) => state.auth);
   
-  // Get cart state from Redux
   const { 
     items, 
     summary, 
@@ -30,7 +28,6 @@ const Cart = () => {
     coupon 
   } = useSelector((state) => state.cart);
 
-  // Track which items are valid for checkout
   const [validItems, setValidItems] = useState([]);
   const [hasInvalidItems, setHasInvalidItems] = useState(false);
 
@@ -58,10 +55,8 @@ const Cart = () => {
       return;
     }
     
-    // Scroll to top when component mounts
     window.scrollTo(0, 0);
     
-    // Fetch cart items when component mounts
     dispatch(fetchCart());
   }, [user, navigate, dispatch]);
   
@@ -71,7 +66,6 @@ const Cart = () => {
     }
   }, [location.key]);
   
-  // Handle error state
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -79,14 +73,12 @@ const Cart = () => {
     }
   }, [error, dispatch]);
 
-  // Validate cart items for checkout
   useEffect(() => {
     if (items && items.length > 0) {
       const valid = items.filter(item => {
         const product = item.product;
         const variant = product.variants.find(v => v.size === item.variant.size);
         
-        // Check if product is available and has stock
         return product.isListed && 
                !product.isDeleted && 
                product.category && 
@@ -110,23 +102,19 @@ const Cart = () => {
   const handleUpdateQuantity = (cartItemId, currentQuantity, change) => {
     const newQuantity = currentQuantity + change;
     
-    // Validate quantity
     if (newQuantity < 1) return;
     
-    // Find the item to check stock
     const item = items.find(item => item._id === cartItemId);
     if (!item) return;
     
     const variant = item.product.variants.find(v => v.size === item.variant.size);
     if (!variant) return;
     
-    // Check if new quantity exceeds stock for this variant
     if (newQuantity > variant.stock) {
       toast.error(`Only ${variant.stock} items available in this size`);
       return;
     }
     
-    // Calculate total quantity for this product across all variants
     const productId = item.product._id;
     const otherVariantsOfSameProduct = items.filter(i => 
       i.product._id === productId && i._id !== cartItemId
@@ -136,7 +124,6 @@ const Cart = () => {
       (total, i) => total + i.quantity, 0
     );
     
-    // Check if new total quantity exceeds maximum allowed per product
     if (totalProductQuantity + newQuantity > MAX_QUANTITY_PER_PRODUCT) {
       toast.error(`You can only have ${MAX_QUANTITY_PER_PRODUCT} items of this product in your cart (across all sizes)`);
       return;
@@ -160,7 +147,6 @@ const Cart = () => {
         dispatch(fetchCart());
       })
       .catch((error) => {
-        // Error is already handled in the error useEffect
       });
   };
 
@@ -172,29 +158,24 @@ const Cart = () => {
           toast.success('Cart cleared');
         })
         .catch((error) => {
-          // Error is already handled in the error useEffect
         });
     }
   };
 
   const handleCheckout = () => {
-    // Check if there are valid items for checkout
     if (validItems.length === 0) {
       toast.error('No valid items in cart for checkout');
       return;
     }
     
-    // Navigate to checkout page
     navigate('/checkout');
   };
 
-  // Return price considering offer
   const getEffectivePrice = (product) => {
     
     return product.effectivePrice ?? product.price;
   };
 
-  // Check if an item is valid for checkout
   const isItemValid = (item) => {
     const product = item.product;
     const variant = product.variants.find(v => v.size === item.variant.size);
@@ -208,7 +189,6 @@ const Cart = () => {
            variant.stock >= item.quantity;
   };
 
-  // Derive applied coupon object for CouponForm success banner
   const appliedCouponObj = coupon ? {
     code: coupon.code,
     discountAmount: summary?.couponDiscount || 0,

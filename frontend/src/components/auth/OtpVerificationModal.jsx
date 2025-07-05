@@ -5,7 +5,7 @@ import { resendPasswordOtp, resetPasswordWithOtp, clearPasswordResetErrors } fro
 
 const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
   const [otp, setOtp] = useState("");
-  const [countdown, setCountdown] = useState(60); // 60 seconds countdown
+  const [countdown, setCountdown] = useState(60); 
   const dispatch = useDispatch();
   
   const { 
@@ -16,7 +16,6 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
     passwordResetMessage 
   } = useSelector((state) => state.auth);
   
-  // Effect for OTP countdown timer
   useEffect(() => {
     let timer;
     if (isOpen && countdown > 0) {
@@ -28,16 +27,11 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
     };
   }, [countdown, isOpen]);
   
-  // Reset countdown when modal opens or when OTP is resent
   useEffect(() => {
     if (isOpen) {
       setCountdown(60);
-      // Log the email for debugging
       
-      // We're not resetting the password state here to preserve the email
-      // Only clear error messages if needed
       if (passwordResetError) {
-        // Use the exported action to clear only errors, not email
         dispatch(clearPasswordResetErrors());
       }
     }
@@ -46,7 +40,7 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
   useEffect(() => {
     if (passwordResetMessage && isOpen && passwordResetSuccess && passwordResetMessage.includes("sent")) {
       toast.success(passwordResetMessage);
-      setCountdown(60); // Reset countdown when OTP is resent
+      setCountdown(60); 
     }
   }, [passwordResetMessage, passwordResetSuccess, isOpen]);
   
@@ -66,16 +60,13 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
       return;
     }
     
-    // Validate OTP format
     if (otp.length !== 6 || !/^\d+$/.test(otp)) {
       toast.error("OTP must be a 6-digit number");
       return;
     }
     
-    // Clear only errors, not email
     dispatch(clearPasswordResetErrors());
     
-    // Log the email and OTP for debugging
     
     if (!passwordResetEmail) {
       toast.error("Email information is missing. Please start over.");
@@ -83,17 +74,14 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
       return;
     }
     
-    // First verify the OTP is valid before proceeding to password reset
     dispatch(resetPasswordWithOtp({
       email: passwordResetEmail,
       otp: otp,
-      newPassword: null, // This is just to check OTP validity, not to reset password yet
+      newPassword: null, 
       validateOnly: true
     })).then(result => {
       if (!result.error) {
-        // Clear only errors, not email
         dispatch(clearPasswordResetErrors());
-        // Pass both OTP and email to the next step
         onVerify(otp);
       } else {
         toast.error(result.payload || "Invalid OTP");

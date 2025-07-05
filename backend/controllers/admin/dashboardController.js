@@ -6,7 +6,6 @@ import Brand from '../../models/brandModel.js';
 import User from '../../models/userModel.js';
 import PDFDocument from 'pdfkit';
 
-// util copied from manageSalesReport
 export const buildDateMatch = (range = 'today', from, to) => {
   const match = {};
   switch (range) {
@@ -66,7 +65,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     orderMatch.createdAt = dateMatch;
   }
 
-  // Base pipeline to get sale items (excluding cancelled/returned items)
   const basePipeline = [
     { $match: orderMatch },
     { $unwind: '$items' },
@@ -87,7 +85,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     { $unwind: '$product' },
   ];
 
-  // --------- Top Products ---------
   const topProducts = await Order.aggregate([
     ...basePipeline,
     {
@@ -103,7 +100,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     { $limit: 10 },
   ]);
 
-  // --------- Top Categories ---------
   const topCategories = await Order.aggregate([
     ...basePipeline,
     {
@@ -119,7 +115,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     { $limit: 10 },
   ]);
 
-  // --------- Top Brands ---------
   const topBrands = await Order.aggregate([
     ...basePipeline,
     {
@@ -135,7 +130,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     { $limit: 10 },
   ]);
 
-  // --------- Ledger (simple) ---------
   const ledger = await Order.aggregate([
     { $match: orderMatch },
     {
@@ -150,7 +144,6 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     { $sort: { date: -1 } },
   ]);
 
-  // --------- Global Counts ---------
   const [totalUsers, totalProducts, totalCategories, totalBrands, totalOrders] = await Promise.all([
     User.countDocuments(),
     Product.countDocuments(),
@@ -159,20 +152,17 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     Order.countDocuments(),
   ]);
 
-  // --------- Latest 5 Orders ---------
   const latestOrders = await Order.find()
     .sort({ createdAt: -1 })
     .limit(5)
     .select('orderNumber user totalPrice status createdAt')
     .populate({ path: 'user', select: 'username email' });
 
-  // --------- Latest 5 Users ---------
   const latestUsers = await User.find()
     .sort({ createdAt: -1 })
     .limit(5)
     .select('username email createdAt');
 
-  // If client requests PDF ledger, stream it and return early
   if (format === 'pdf') {
     const doc = new PDFDocument({ margin: 30, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');

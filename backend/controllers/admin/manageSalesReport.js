@@ -164,7 +164,6 @@ export const getSalesReport = asyncHandler(async (req, res) => {
       summarySheet.addRow({ metric: k, value: v });
     });
 
-    // Orders Sheet
     const orderSheet = workbook.addWorksheet('Paid Orders');
     orderSheet.columns = [
       { header: 'Order ID', key: 'orderNumber', width: 25 },
