@@ -123,11 +123,12 @@ export default function Navbar() {
         {/* Desktop Menu */}
         <nav className="hidden md:flex gap-8 text-sm font-alt font-medium">
           <Link to="/" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">Home</Link>
+         
           <Link to="/products" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">Shop</Link>
           <Link to="/new-arrivals" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">New Arrivals</Link>
           <Link to="/featured" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">Featured</Link>
-          <Link to="/contact" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">Contact</Link>
           <Link to="/about" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">About</Link>
+          <Link to="/contact" className="hover:text-[var(--primary)] transition-colors py-2 border-b-2 border-transparent hover:border-[var(--primary)]">Contact</Link>       
         </nav>
 
         <div className="flex items-center gap-4 text-[var(--text-light)]">
@@ -302,6 +303,22 @@ export default function Navbar() {
               Home
             </Link>
             <Link 
+              to="/about" 
+              className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Info size={18} className="mr-3" />
+              About
+            </Link>
+            <Link 
+              to="/contact" 
+              className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Phone size={18} className="mr-3" />
+              Contact
+            </Link>
+            <Link 
               to="/products" 
               className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
               onClick={() => setMobileMenuOpen(false)}
@@ -324,22 +341,6 @@ export default function Navbar() {
             >
               <ShoppingBag size={20} className="mr-4 text-gray-500" />
               Featured
-            </Link>
-            <Link 
-              to="/contact" 
-              className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Phone size={20} className="mr-4 text-gray-500" />
-              Contact
-            </Link>
-            <Link 
-              to="/about" 
-              className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Info size={20} className="mr-4 text-gray-500" />
-              About
             </Link>
             <Link 
               to="/wallet" 
