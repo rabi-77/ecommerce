@@ -49,7 +49,7 @@ const OrderDetails = () => {
 
     if (!id) {
       // If no order ID, redirect to orders list
-      navigate('/orders');
+      navigate('/my-orders');
       return;
     }
 
@@ -161,6 +161,8 @@ const OrderDetails = () => {
         return 'bg-red-100 text-red-800';
       case 'returned':
         return 'bg-purple-100 text-purple-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -205,6 +207,15 @@ const OrderDetails = () => {
         { label: 'Delivered', completed: true },
         { label: 'Return Requested', completed: true, status: 'pending' }
       ];
+    } else if (order?.returnRequestStatus === 'rejected') {
+      return [
+        { label: 'Order Placed', completed: true },
+        { label: 'Processing', completed: true },
+        { label: 'Shipped', completed: true },
+        { label: 'Out for Delivery', completed: true },
+        { label: 'Delivered', completed: true },
+        { label: 'Return Rejected', completed: true, status: 'rejected' }
+      ];
     }
 
     return steps;
@@ -228,7 +239,7 @@ const OrderDetails = () => {
     <div className="container mx-auto px-4 py-8 mt-16">
       <div className="flex items-center mb-6">
         <button 
-          onClick={() => navigate('/orders')} 
+          onClick={() => navigate('/my-orders')} 
           className="mr-4 p-2 rounded-full hover:bg-gray-100"
         >
           <ArrowLeft size={20} />
@@ -310,11 +321,11 @@ const OrderDetails = () => {
         <div className="space-y-4">
           {order.items.map((item) => (
             <div key={item._id} className="relative">
-              <div className={`${item.isCancelled || item.isReturned ? 'opacity-60' : ''}`}>
-                {(item.isCancelled || item.isReturned) && (
+              <div className={(item.isCancelled || item.isReturned || ['pending','rejected','approved'].includes(item.returnRequestStatus)) ? 'opacity-60' : ''}>
+                {(item.isCancelled || item.isReturned || ['pending','rejected','approved'].includes(item.returnRequestStatus)) && (
                   <div className="absolute inset-0 flex items-center justify-center z-10">
                     <span 
-                      className={`px-3 py-1 text-sm font-bold rounded-full transform -rotate-12 ${item.isCancelled ? 'bg-red-100 text-red-800' : item.returnRequestStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-purple-100 text-purple-800'}`}
+                      className={`px-3 py-1 text-sm font-bold rounded-full transform -rotate-12 ${item.isCancelled ? 'bg-red-100 text-red-800' : item.returnRequestStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : item.returnRequestStatus === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-800'}`}
                     >
                       {item.isCancelled ? 'CANCELLED' : item.returnRequestStatus === 'pending' ? 'RETURN REQUESTED' : item.returnRequestStatus === 'rejected' ? 'RETURN REJECTED' : 'RETURNED'}
                     </span>
@@ -381,7 +392,7 @@ const OrderDetails = () => {
                               Cancel
                             </button>
                           )}
-                          {!item.isCancelled && !item.isReturned && order.status === 'delivered' && (
+                          {!item.isCancelled && !item.isReturned && !['pending','approved','rejected'].includes(item.returnRequestStatus) && order.status === 'delivered' && (
                             <button 
                               className="inline-flex items-center px-3 py-1 text-sm font-medium text-purple-700 bg-purple-50 rounded-md hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={() => handleReturnItem(item)}

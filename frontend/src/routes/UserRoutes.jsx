@@ -48,7 +48,7 @@ const UserRoutes = () => {
         <Route path="featured" element={<FeaturedProductsPage />} />
         <Route path="wishlist" element={<Wishlist />} />
         <Route path="cart" element={<Cart />} />
-        <Route path="orders" element={<Orders />} />
+        <Route path="my-orders" element={<Orders />} />
         <Route path="order/:id" element={<OrderDetails />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="order/success/:id" element={<OrderSuccess />} />

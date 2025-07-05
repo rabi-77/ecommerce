@@ -137,7 +137,8 @@ const AddEditCoupon = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    if (startDate < today) {
+    // Only enforce "start date cannot be in the past" for NEW coupons.
+    if (!isEditMode && startDate < today) {
       newErrors.startDate = 'Start date cannot be in the past';
     }
     
@@ -381,7 +382,7 @@ const AddEditCoupon = () => {
                 id="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                min={new Date().toISOString().split('T')[0]}
+                min={!isEditMode ? new Date().toISOString().split('T')[0] : undefined}
                 className={`block w-full px-3 py-2 border ${
                   errors.startDate ? 'border-red-500' : 'border-gray-300'
                 } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
