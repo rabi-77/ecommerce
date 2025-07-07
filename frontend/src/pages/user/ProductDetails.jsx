@@ -65,12 +65,23 @@ const ProductDetails = () => {
   }, [product]);
 
   const handleQuantityChange = (change) => {
+
+
+    if(selectedSize){
+      const variant = product.variants.find((v) => v.size === selectedSize);
+      if (!variant) return;
+      if (variant.stock < quantity + change) {
+        toast.error(`Only ${variant.stock} item available in this size`);
+        return;
+      }
+    }
     const newQuantity = quantity + change;
 
     if (newQuantity < 1) return;
 
     if (product?.totalStock && newQuantity > product.totalStock) {
-      toast.error(`Only ${product.totalStock} items available in stock`);
+      // toast.error(`Only ${product.totalStock} items available in stock`);
+      toast.error("you can only buy " + product.totalStock + " items");
       return;
     }
 
@@ -274,14 +285,14 @@ const ProductDetails = () => {
                 {product.name}
               </h1>
 
-              <div className="flex items-center mb-4">
+              {/* <div className="flex items-center mb-4">
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 fill-current" />
                   ))}
                 </div>
                 <span className="text-sm text-gray-500 ml-2">(0 reviews)</span>
-              </div>
+              </div> */}
 
               {renderPrice()}
 
@@ -340,13 +351,13 @@ const ProductDetails = () => {
                   </span>
                   <button
                     onClick={() => handleQuantityChange(1)}
-                    disabled={
-                      selectedSize &&
-                      (quantity >=
-                        product.variants.find((v) => v.size === selectedSize)
-                          ?.stock ||
-                        quantity >= 10)
-                    }
+                    // disabled={
+                    //   selectedSize &&
+                    //   (quantity >=
+                    //     product.variants.find((v) => v.size === selectedSize)
+                    //       ?.stock ||
+                    //     quantity >= 10)
+                    // }
                     className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-r-md bg-gray-50 hover:bg-gray-100 disabled:opacity-50"
                   >
                     <span className="text-gray-500">+</span>
@@ -386,7 +397,7 @@ const ProductDetails = () => {
               >
                 Description
               </button>
-              <button
+              {/* <button
                 onClick={() => setActiveTab("specifications")}
                 className={`py-4 px-6 font-medium text-sm border-b-2 ${
                   activeTab === "specifications"
@@ -395,7 +406,7 @@ const ProductDetails = () => {
                 }`}
               >
                 Specifications
-              </button>
+              </button> */}
             </nav>
 
             <div className="p-6">
@@ -405,7 +416,7 @@ const ProductDetails = () => {
                 </div>
               )}
 
-              {activeTab === "specifications" && (
+              {/* {activeTab === "specifications" && (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <tbody className="divide-y divide-gray-200">
@@ -435,7 +446,7 @@ const ProductDetails = () => {
                     </tbody>
                   </table>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -461,6 +472,16 @@ const ProductDetails = () => {
                 
                return <ProductCard key={relatedProduct._id} product={productshow} />;
               })}
+            </div>
+          </div>
+        )}
+             {relatedProducts && relatedProducts.length === 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+               Related Products
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <p>ciuldnt find any related products</p>
             </div>
           </div>
         )}

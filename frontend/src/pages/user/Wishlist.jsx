@@ -207,7 +207,7 @@ const Wishlist = () => {
                   <span className="mx-2">•</span>
                   <span>{item.product.category.name}</span>
                 </div>
-                <div className="font-bold text-lg mb-3">${item.product.price.toFixed(2)}</div>
+                <div className="font-bold text-lg mb-3">₹{item.product.price.toFixed(2)}</div>
                 <AddToCartButton
                   productId={item.product._id}
                   product={item.product}

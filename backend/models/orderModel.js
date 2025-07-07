@@ -23,6 +23,16 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  // Per-unit discount from active PRODUCT/CATEGORY offer
+  offerDiscount: {
+    type: Number,
+    default: 0
+  },
+  // Final per-unit price after all discounts (for refund calculations)
+  finalUnitPrice: {
+    type: Number,
+    required: true
+  },
   discount: {
     type: Number,
     default: 0
