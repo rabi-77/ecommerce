@@ -358,9 +358,9 @@ const OrderDetails = () => {
                           return (
                             <>
                               {effective < original && (
-                                <span className="text-sm text-gray-500 line-through mr-2">${original.toFixed(2)}</span>
+                                <span className="text-sm text-gray-500 line-through mr-2">₹{original.toFixed(2)}</span>
                               )}
-                              <span className="text-blue-600 font-medium">${effective.toFixed(2)}</span>
+                              <span className="text-blue-600 font-medium">₹{effective.toFixed(2)}</span>
                               {effective < original && (
                                 <span className="ml-2 px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
                                   {item.discount ? `${item.discount}% OFF` : 'OFFER'}
@@ -378,7 +378,7 @@ const OrderDetails = () => {
                               (item.totalPrice && item.totalPrice < item.price ? item.totalPrice : null) ??
                               (item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price)
                             );
-                            return `Total: $${(effective * item.quantity).toFixed(2)}`;
+                            return `Total: ₹${(effective * item.quantity).toFixed(2)}`;
                           })()}
                         </span>
                         <div className="flex space-x-2">
@@ -438,32 +438,32 @@ const OrderDetails = () => {
             <div className="space-y-3">
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">Items Price</span>
-                <span className="font-medium">${itemsPriceBeforeDiscount.toFixed(2)}</span>
+                <span className="font-medium">₹{itemsPriceBeforeDiscount.toFixed(2)}</span>
               </div>
               {offerDiscount > 0 && (
                 <div className="flex justify-between py-2">
                   <span className="text-gray-600">Offer Discount</span>
-                  <span className="text-red-600">-${offerDiscount.toFixed(2)}</span>
+                  <span className="text-red-600">-₹{offerDiscount.toFixed(2)}</span>
                 </div>
               )}
               {couponDiscount > 0 && (
                 <div className="flex justify-between py-2">
                   <span className="text-gray-600">Coupon Discount</span>
-                  <span className="text-red-600">-${couponDiscount.toFixed(2)}</span>
+                  <span className="text-red-600">-₹{couponDiscount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">${order.shippingPrice.toFixed(2)}</span>
+                <span className="font-medium">₹{order.shippingPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between py-2">
                 <span className="text-gray-600">Tax</span>
-                <span className="font-medium">${order.taxPrice.toFixed(2)}</span>
+                <span className="font-medium">₹{order.taxPrice.toFixed(2)}</span>
               </div>
               <div className="border-t border-gray-200 my-2"></div>
               <div className="flex justify-between py-2">
                 <span className="text-lg font-semibold">Total</span>
-                <span className="text-lg font-bold text-blue-600">${order.totalPrice.toFixed(2)}</span>
+                <span className="text-lg font-bold text-blue-600">₹{order.totalPrice.toFixed(2)}</span>
               </div>
 
               {/* Pay Now button for unpaid Razorpay orders */}

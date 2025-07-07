@@ -212,13 +212,13 @@ const Coupons = () => {
                       <div className="text-sm text-gray-900">
                         {coupon.discountType === 'percentage'
                           ? `${coupon.discountValue || 0}%`
-                          : `$${(coupon.discountValue || 0).toFixed(2)}`}
+                          : `₹${(coupon.discountValue || 0).toFixed(2)}`}
                         {coupon.discountType === 'percentage' && coupon.maxDiscountAmount && (
-                          <span className="text-xs text-gray-500 ml-1">(max ${coupon.maxDiscountAmount})</span>
+                          <span className="text-xs text-gray-500 ml-1">(max ₹{coupon.maxDiscountAmount})</span>
                         )}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Min. ${coupon.minPurchaseAmount}
+                        Min. ₹{coupon.minPurchaseAmount}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

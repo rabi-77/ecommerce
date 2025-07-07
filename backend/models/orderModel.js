@@ -23,6 +23,14 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  offerDiscount: {
+    type: Number,
+    default: 0
+  },
+  finalUnitPrice: {
+    type: Number,
+    default: 0
+  },
   discount: {
     type: Number,
     default: 0
@@ -150,6 +158,11 @@ const orderSchema = new mongoose.Schema(
       ref: 'Coupon',
     },
     couponDiscount: {
+      type: Number,
+      default: 0.0,
+    },
+    // Total discount from product/category offers (excluding coupons)
+    offerDiscount: {
       type: Number,
       default: 0.0,
     },

@@ -110,6 +110,11 @@ const AddToCartButton = ({
   };
 
   const addToCartWithSize = (selectedSize) => {
+    if(quantity > MAX_QUANTITY_PER_PRODUCT){
+      toast.error(`You can only have ${MAX_QUANTITY_PER_PRODUCT} items of this product in your cart (across all sizes)`);
+      setIsAdding(false);
+      return;
+    }
     dispatch(addToCart({ productId, size: selectedSize, quantity }))
       .unwrap()
       .then(() => {

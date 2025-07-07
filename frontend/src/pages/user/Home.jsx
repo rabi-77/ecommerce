@@ -292,7 +292,7 @@ const Home = () => {
               )}
               {(filters.priceMin || filters.priceMax) && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  ${filters.priceMin || '0'} - ${filters.priceMax || '∞'}
+                  ₹{filters.priceMin || '0'} - ₹{filters.priceMax || '∞'}
                   <button
                     onClick={() => setFilters(prev => ({ ...prev, priceMin: '', priceMax: '' }))}
                     className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-200 text-yellow-600 hover:bg-yellow-300"

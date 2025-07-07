@@ -11,6 +11,8 @@ import { fetchActiveOffers, applyBestOffer } from "../services/offerService.js";
 import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/pricing.js';
 
 const createOrder = asyncHandler(async (req, res) => {
+  console.log('hi');
+  
   const { address, paymentMethod = "COD" } = req.body;
   const userId = req.user;
   const cart = await Cart.findOne({ user: userId }).populate({
@@ -44,7 +46,8 @@ const createOrder = asyncHandler(async (req, res) => {
   const offerMaps = await fetchActiveOffers(productIdsForOffer, categoryIdsForOffer);
 
   let itemsPrice = 0;
-  let discountAmount = 0;
+  let offerDiscountTotal = 0; // accumulate product/category offer savings
+  let discountAmount = 0; // will become offerDiscountTotal + couponDiscount
   const orderItems = [];
 
   for (const cartItem of cart.items) {
@@ -77,10 +80,12 @@ const createOrder = asyncHandler(async (req, res) => {
     })();
     const price = product.price;
     const discount = discountPercent;
-    const discountedPrice = effectivePrice;
+    const discountedPrice = effectivePrice; // price after offer (per unit)
+    const offerDiscount = price - discountedPrice; // per-unit discount from offer
 
     itemsPrice += price * cartItem.quantity;
-    discountAmount += (price - discountedPrice) * cartItem.quantity;
+    offerDiscountTotal += offerDiscount * cartItem.quantity;
+    discountAmount += offerDiscount * cartItem.quantity;
 
     orderItems.push({
       product: product._id,
@@ -93,6 +98,8 @@ const createOrder = asyncHandler(async (req, res) => {
       price: price,
       discount: discount,
       totalPrice: discountedPrice,
+      offerDiscount: offerDiscount,
+      // finalUnitPrice will be added after coupon allocation
     });
 
     await Product.updateOne(
@@ -158,7 +165,7 @@ const createOrder = asyncHandler(async (req, res) => {
       return res.status(400).json({ success: false, message: err.message });
     }
 
-    discountAmount += couponDiscount;
+    discountAmount = offerDiscountTotal + couponDiscount;
     appliedCoupon = couponDoc._id;
     
   }
@@ -176,8 +183,22 @@ const createOrder = asyncHandler(async (req, res) => {
 
       itm.couponShare = couponShare;
       itm.taxShare = taxShare;
+
+      // ---- Compute finalUnitPrice per unit (price after offer + coupon) ----
+      const totalAfterAllDiscounts = (itm.totalPrice * itm.quantity) - couponShare; // total after offer + coupon, before tax
+      const finalUnit = parseFloat((totalAfterAllDiscounts / itm.quantity).toFixed(2));
+      itm.finalUnitPrice = finalUnit;
+      console.log(itm.finalUnitPrice,'finalUnitPrice');
+      
     });
   }
+
+ 
+  // After coupon share loop, recalc offerDiscountTotal in case of rounding adjustments
+  orderItems.forEach(itm => {
+    // ensure aggregate stays precise to 2 decimals
+    offerDiscountTotal = parseFloat((offerDiscountTotal).toFixed(2));
+  });
 
   const baseForShipping = netAmount + couponDiscount; 
   const shippingPrice = baseForShipping >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
@@ -209,6 +230,7 @@ const createOrder = asyncHandler(async (req, res) => {
     .padStart(3, "0");
   const orderNumber = `ORD-${year}${month}${day}-${timestamp}-${random}`;
 
+  console.log(offerDiscountTotal?'offerDiscountTotal':'no');
   const order = new Order({
     orderNumber,
     user: userId,
@@ -218,6 +240,8 @@ const createOrder = asyncHandler(async (req, res) => {
     itemsPrice,
     taxPrice,
     shippingPrice,
+    offerDiscount: offerDiscountTotal,
+    
     discountAmount,
     couponDiscount,
     coupon: appliedCoupon,
@@ -439,13 +463,13 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     const activeItems = order.items.filter(i => !i.isCancelled);
     const activeSubtotal = activeItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
-    // Compute per-item product-level discount to maintain discountAmount when items are cancelled
-    const unitBefore = item.price;
-    const unitAfter = item.totalPrice || (item.price * (1 - item.discount / 100));
-    const cancelledItemDiscount = (unitBefore - unitAfter) * item.quantity;
+    // Compute per-item offer discount removed and update aggregated offerDiscount
+    const unitBefore = item.price; // MRP per unit
+    const unitAfterOffer = item.totalPrice; // price after offer (before coupon)
+    const cancelledOfferDiscount = (unitBefore - unitAfterOffer) * item.quantity;
 
-    if (order.discountAmount) {
-      order.discountAmount = parseFloat(Math.max(order.discountAmount - cancelledItemDiscount, 0).toFixed(2));
+    if (order.offerDiscount) {
+      order.offerDiscount = parseFloat(Math.max(order.offerDiscount - cancelledOfferDiscount, 0).toFixed(2));
     }
 
     let couponStillValid = true;
@@ -458,10 +482,12 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     if (!couponStillValid) {
       const prevCouponDiscount = order.couponDiscount || 0;
       order.couponDiscount = 0;
-      order.discountAmount = parseFloat((order.discountAmount - prevCouponDiscount).toFixed(2));
     }
+ 
+    // Recompute total discountAmount after any adjustments
+    order.discountAmount = parseFloat(((order.offerDiscount || 0) + (order.couponDiscount || 0)).toFixed(2));
 
-    const netAfterDiscounts = activeSubtotal - (order.discountAmount || 0);
+    const netAfterDiscounts = activeSubtotal - order.discountAmount;
 
     order.itemsPrice = activeSubtotal;
     order.shippingPrice = activeSubtotal === 0 ? 0 : (activeSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE);
@@ -475,7 +501,7 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
 
     const subtotalBefore = order.itemsPrice; 
     const itemOriginalPrice = item.price * item.quantity;
-    const itemPaidPrice = (item.totalPrice || item.price) * item.quantity; 
+    const itemPaidPrice = (item.finalUnitPrice || item.totalPrice || item.price) * item.quantity;
     const remainingSubtotal = subtotalBefore - itemOriginalPrice;
 
     const isLastActive = remainingSubtotal === 0;
@@ -500,13 +526,15 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
     } else {
       const couponShare = item.couponShare || 0;
       const itemTax = item.taxShare || 0;
-      const priceAfterCoupon = itemPaidPrice - couponShare;
 
-      refundAmount = priceAfterCoupon + itemTax;
+      refundAmount = itemPaidPrice + itemTax;
 
       order.itemsPrice -= itemOriginalPrice;
       order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
-      order.discountAmount = parseFloat((order.discountAmount - couponShare - ((item.price - item.totalPrice) * item.quantity)).toFixed(2));
+      // offerDiscount portion to remove is (item.price - item.totalPrice) * qty (already per-unit offer saving)
+      const removedOfferDisc = (item.price - item.totalPrice) * item.quantity;
+      order.offerDiscount = parseFloat(Math.max((order.offerDiscount || 0) - removedOfferDisc, 0).toFixed(2));
+      order.discountAmount = parseFloat(((order.offerDiscount || 0) + (order.couponDiscount || 0)).toFixed(2));
       order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
       order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
     }

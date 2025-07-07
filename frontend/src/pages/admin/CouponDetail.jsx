@@ -240,16 +240,16 @@ const CouponDetail = () => {
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 {currentCoupon.discountType === 'percentage' 
                   ? `${currentCoupon.discountValue}%` 
-                  : `$${currentCoupon.discountValue.toFixed(2)}`}
+                  : `₹${currentCoupon.discountValue.toFixed(2)}`}
                 {currentCoupon.discountType === 'percentage' && currentCoupon.maxDiscountAmount && (
-                  <span className="ml-2 text-gray-500">(max ${currentCoupon.maxDiscountAmount})</span>
+                  <span className="ml-2 text-gray-500">(max ₹{currentCoupon.maxDiscountAmount})</span>
                 )}
               </dd>
             </div>
             <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Minimum Purchase Amount</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                ${currentCoupon.minPurchaseAmount.toFixed(2)}
+              ₹{currentCoupon.minPurchaseAmount.toFixed(2)}
               </dd>
             </div>
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">

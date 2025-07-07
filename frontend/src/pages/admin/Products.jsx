@@ -163,7 +163,7 @@ const Products = () => {
                       >
 
                       <td className="px-4 py-3.5 font-medium text-gray-900 text-sm">{product.name}</td>
-                      <td className="px-4 py-3.5 text-gray-700 text-sm">${product.price}</td>
+                      <td className="px-4 py-3.5 text-gray-700 text-sm">₹{product.price}</td>
                       <td className="px-4 py-3.5 text-gray-700 text-sm">{product.totalStock}</td>
                       <td className="px-4 py-3.5">
                         {product.images?.[0] ? (

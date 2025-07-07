@@ -66,7 +66,14 @@ const ProductDetails = () => {
 
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
-
+    if(selectedSize){
+      const variant = product.variants.find((v) => v.size === selectedSize);
+      if (!variant) return;
+      if (newQuantity > variant.stock) {
+        toast.error(`Only ${variant.stock} items available in this size`);
+        return;
+      }
+    }
     if (newQuantity < 1) return;
 
     if (product?.totalStock && newQuantity > product.totalStock) {
@@ -340,13 +347,13 @@ const ProductDetails = () => {
                   </span>
                   <button
                     onClick={() => handleQuantityChange(1)}
-                    disabled={
-                      selectedSize &&
-                      (quantity >=
-                        product.variants.find((v) => v.size === selectedSize)
-                          ?.stock ||
-                        quantity >= 10)
-                    }
+                    // disabled={
+                    //   selectedSize &&
+                    //   (quantity >=
+                    //     product.variants.find((v) => v.size === selectedSize)
+                    //       ?.stock ||
+                    //     quantity >= 10)
+                    // }
                     className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-r-md bg-gray-50 hover:bg-gray-100 disabled:opacity-50"
                   >
                     <span className="text-gray-500">+</span>
@@ -386,16 +393,7 @@ const ProductDetails = () => {
               >
                 Description
               </button>
-              <button
-                onClick={() => setActiveTab("specifications")}
-                className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                  activeTab === "specifications"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                Specifications
-              </button>
+       
             </nav>
 
             <div className="p-6">
@@ -405,37 +403,7 @@ const ProductDetails = () => {
                 </div>
               )}
 
-              {activeTab === "specifications" && (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <tbody className="divide-y divide-gray-200">
-                      {product.specifications ? (
-                        Object.entries(product.specifications).map(
-                          ([key, value]) => (
-                            <tr key={key}>
-                              <td className="py-3 px-4 text-sm font-medium text-gray-900 bg-gray-50 w-1/3">
-                                {key}
-                              </td>
-                              <td className="py-3 px-4 text-sm text-gray-500">
-                                {value}
-                              </td>
-                            </tr>
-                          )
-                        )
-                      ) : (
-                        <tr>
-                          <td
-                            className="py-3 px-4 text-sm text-gray-500"
-                            colSpan="2"
-                          >
-                            No specifications available.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+             
             </div>
           </div>
         </div>
