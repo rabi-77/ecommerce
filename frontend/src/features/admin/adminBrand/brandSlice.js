@@ -83,7 +83,11 @@ const brandSlice = createSlice({
     total: 0,
     sizes: 10,
   },
-  reducers: {},
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getBrandsThunk.pending, (state) => {
@@ -175,3 +179,4 @@ const brandSlice = createSlice({
 });
 
 export default brandSlice.reducer
+export const { clearError } = brandSlice.actions

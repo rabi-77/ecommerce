@@ -82,8 +82,10 @@ const addProduct = async (req, res) => {
     await newProduct.save();
     res.status(201).json({message:'successfully added',product:newProduct})
   } catch (err) {
-
-    res.status(500).json({ message: "some internal server error ishappening" });
+    if(err?.message?.includes('duplicate key error collection')){
+      return res.status(400).json({ message: "product already exist" });
+    }
+    res.status(500).json({ message:err?.message || "some internal server error ishappening" });
   }
 };
 

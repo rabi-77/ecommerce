@@ -82,8 +82,8 @@ const register = async (req, res) => {
         .json({ message: "Password must be between 8 and 16 characters" });
     }
     const { otp, expiresAt } = await generateAndSendOtp(email);
-    (otp);
-    ("old otp");
+   console.log(otp);
+    console.log('fresh');
     const hashedPassword = await bcrypt.hash(password, 10);
     const hashedOtp = await bcrypt.hash(otp, 10);
     const token = jwt.sign(
@@ -206,7 +206,7 @@ const resend = async (req, res) => {
     }
 
     const { otp, expiresAt } = await generateAndSendOtp(email);
-    ("resendotp", otp);
+    console.log("resendotp", otp);
     
     const hashedOtp = await bcrypt.hash(otp, 10);
     
@@ -436,7 +436,7 @@ if (user.authProvider === 'google' && !user.password) {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
       
-      ('Password reset OTP for', email, ':', otp);
+      console.log('Password reset OTP for', email, ':', otp);
       
       user.otp = {
         code: otp,
@@ -532,7 +532,7 @@ if (user.authProvider === 'google' && !user.password) {
     try {
       const { otp, expiresAt } = await generateAndSendOtp(email);
       
-      ('Password reset OTP for', email, ':', otp);
+      console.log('Password reset resend OTP for', email, ':', otp);
       
       user.otp = {
         code: otp,

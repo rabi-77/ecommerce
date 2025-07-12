@@ -281,14 +281,14 @@ const ProductDetails = () => {
                 {product.name}
               </h1>
 
-              <div className="flex items-center mb-4">
+              {/* <div className="flex items-center mb-4">
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 fill-current" />
                   ))}
                 </div>
                 <span className="text-sm text-gray-500 ml-2">(0 reviews)</span>
-              </div>
+              </div> */}
 
               {renderPrice()}
 

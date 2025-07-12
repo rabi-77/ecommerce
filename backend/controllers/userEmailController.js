@@ -88,9 +88,9 @@ export const requestEmailChange = async (req, res) => {
     const verificationURL = `${frontendURL}/verify-email?token=${token}`;
 
     if (process.env.NODE_ENV !== "production") {
-      ("\n\n==== EMAIL VERIFICATION LINK ====");
-      (verificationURL);
-      ("==================================\n\n");
+      console.log("\n\n==== EMAIL VERIFICATION LINK ====");
+      console.log(verificationURL);
+      console.log("==================================\n\n");
     }
 
     await transporter.sendMail({
@@ -115,11 +115,11 @@ export const requestEmailChange = async (req, res) => {
     });
 
     if (process.env.NODE_ENV !== "production") {
-      ("\n\n==== EMAIL CONTENT ====");
-      (`To: ${newEmail}`);
-      (`Subject: Verify Your New Email Address`);
-      (`Verification Link: ${verificationURL}`);
-      ("========================\n\n");
+      console.log("\n\n==== EMAIL CONTENT ====");
+      console.log(`To: ${newEmail}`);
+      console.log(`Subject: Verify Your New Email Address`);
+      console.log(`Verification Link: ${verificationURL}`);
+      console.log("========================\n\n");
     }
 
     res.status(200).json({

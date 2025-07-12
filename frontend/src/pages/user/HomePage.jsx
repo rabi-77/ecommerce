@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { fetchCategoriesThunk, fetchBrandsThunk, fetchProductsThunk } from '../../features/userHomeSlice';
 import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
+import HeroBanner from '../../components/HeroBanner';
 import { fetchUserProfile } from '../../features/userprofile/profileSlice';
 
 const HomePage = () => {
@@ -35,30 +36,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-[var(--background-light)]">
       {/* Hero Section */}
-      <section className="relative bg-[var(--primary)] text-white">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-black opacity-30"></div>
-          {/* <img 
-            src="https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1950&q=80" 
-            alt="Shoes Collection" 
-            className="w-full h-full object-cover object-center"
-          /> */}
-        </div>
-        <div className="container mx-auto px-4 py-32 relative z-10">
-          <div className="max-w-2xl">
-            <h1 className="text-5xl font-heading mb-4">Step into Style and Comfort</h1>
-            <p className="text-xl mb-8 opacity-90 font-light">Discover our premium collection of shoes designed for every occasion. From casual to formal, we've got you covered.</p>
-            <Link 
-              to="/products" 
-              className="inline-flex items-center bg-[var(--secondary)] text-[var(--text-dark)] px-8 py-3 rounded-md font-medium hover:bg-[var(--secondary-dark)] transition-colors"
-            >
-              Shop Now
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
+      <HeroBanner />
       {/*new arrival*/}
       <section className="py-16">
         <div className="container mx-auto px-4">

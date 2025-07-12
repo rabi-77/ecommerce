@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -27,36 +27,42 @@ const Register = () => {
 
   const [timeLeft, setTimeLeft] = useState(30);
   const [resendDisabled, setResendDisabled] = useState(true);
+  const timerRef = useRef(null);
+
+  const startTimer = () => {
+    // clear existing interval
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          setResendDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   useEffect(() => {
     if (success && showOtpModal) {
       toast.success('OTP sent to your email');
       resetOtpForm();
-      
+      // Disable until success arrives; countdown will restart in success handler
       setTimeLeft(30);
       setResendDisabled(true);
+      startTimer();
     }
   }, [success, showOtpModal, resetOtpForm]);
   
   useEffect(() => {
     if (showOtpModal) {
-      let timer = null;
-      
-      timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setResendDisabled(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => {
-        if (timer) clearInterval(timer);
-      };
+      startTimer();
     }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [showOtpModal]);
   
   useEffect(() => {
@@ -106,12 +112,10 @@ const Register = () => {
 
   const handleResend = async () => {
     dispatch(resend({ email, token }));
-    setTimeLeft(30);
+    // Disable until success arrives; countdown will restart in success handler
     setResendDisabled(true);
-    resetOtpForm()
-    // setTimeout(() => {
-    //   setResendDisabled(false);
-    // }, 30000);
+    resetOtpForm();
+    // Do not start timer yet – wait for success effect
   };
 
   const closeModal = () => {
@@ -181,6 +185,13 @@ const Register = () => {
       >
         Sign in with Google
       </button>
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="w-full p-2 mt-3 bg-gray-200 text-gray-800 rounded"
+      >
+        Browse as Guest
+      </button>
       <p className="mt-2 text-center">
         Already have an account? <a href="/login" className="text-blue-500">Login</a>
       </p>
@@ -232,7 +243,7 @@ const Register = () => {
         </div>
       )}
 
-      <ToastContainer />
+      {/* <ToastContainer /> */}
     </div>
   );
 };

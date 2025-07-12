@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getSalesReportThunk, setFilters } from '../../features/admin/salesReportSlice';
 import { downloadSalesReport } from '../../services/admin/salesReportService';
@@ -48,6 +48,12 @@ const SalesReport = () => {
       toast.error('Download failed');
     }
   };
+
+  const profit = useMemo(() => {
+    if (!data?.summary) return 0;
+    const { totalSales = 0, totalTax = 0, totalShipping = 0 } = data.summary;
+    return totalSales - totalTax - totalShipping;
+  }, [data?.summary]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
@@ -124,10 +130,9 @@ const SalesReport = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard 
-              title="Total Orders" 
+              title="Total Orders(paid)" 
               value={data?.summary?.totalOrders || 0} 
               className="border-l-4 border-blue-500"
-              
             />
             <StatCard 
               title="Gross Sales" 
@@ -135,14 +140,39 @@ const SalesReport = () => {
               className="border-l-4 border-green-500"
             />
             <StatCard 
-              title="Total Discounts" 
-              value={`₹${Math.ceil(data?.summary?.totalDiscount || 0)}`} 
+              title="Total Product Discount" 
+              value={`₹${Math.ceil(data?.summary?.totalProductDiscount || 0)}`} 
               className="border-l-4 border-yellow-500"
             />
             <StatCard 
+              title="Total Coupon Discount" 
+              value={`₹${Math.ceil(data?.summary?.totalCouponDiscount || 0)}`} 
+              className="border-l-4 border-orange-500"
+            />
+            <StatCard 
+              title="Total Offer Discount" 
+              value={`₹${Math.ceil(data?.summary?.totalOfferDiscount || 0)}`} 
+              className="border-l-4 border-purple-500"
+            />
+            <StatCard 
+              title="Total Discounts" 
+              value={`₹${Math.ceil(data?.summary?.totalDiscount || 0)}`} 
+              className="border-l-4 border-red-500"
+            />
+            <StatCard 
               title="Net Revenue" 
-              value={`₹${Math.ceil(data?.summary ? (data.summary.grossSales - (data.summary.totalDiscount || 0)) : 0)}`} 
+              value={`₹${Math.ceil(data?.summary?.grossSales - (data?.summary?.totalDiscount || 0))}`} 
               className="border-l-4 border-purple-500 bg-purple-50"
+            />
+            <StatCard 
+              title="Total Tax" 
+              value={`₹${Math.ceil(data?.summary?.totalTax || 0)}`} 
+              className="border-l-4 border-blue-500"
+            />
+            <StatCard 
+              title="Total Shipping"
+              value={`₹${Math.ceil(data?.summary?.totalShipping || 0)}`} 
+              className="border-l-4 border-green-500"
             />
           </div>
         )}
@@ -158,35 +188,74 @@ const SalesReport = () => {
                     <tr className="bg-gray-100">
                       <th className="px-4 py-2 text-left">Order ID</th>
                       <th className="px-4 py-2 text-left">Subtotal</th>
-                      <th className="px-4 py-2 text-left">Offer</th>
+                      <th className="px-4 py-2 text-left">Product Discount</th>
                       <th className="px-4 py-2 text-left">Coupon Discount</th>
+                      <th className="px-4 py-2 text-left">Offer Discount</th>
                       <th className="px-4 py-2 text-left">Tax</th>
                       <th className="px-4 py-2 text-left">Shipping</th>
                       <th className="px-4 py-2 text-left">Total</th>
                       <th className="px-4 py-2 text-left">Payment</th>
-                      {/* <th className="px-4 py-2 text-left">Paid At</th> */}
                     </tr>
                   </thead>
                   <tbody>
                     {data.orders.map((o) => (
-                      <tr key={o._id} className="border-b">
+                      <tr key={o.orderNumber} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap">{o.orderNumber}</td>
                         <td className="px-4 py-2">₹{o.itemsPrice.toFixed(2)}</td>
                         <td className="px-4 py-2">₹{o.discountAmount.toFixed(2)}</td>
                         <td className="px-4 py-2">₹{o.couponDiscount.toFixed(2)}</td>
+                        <td className="px-4 py-2">₹{o.offerDiscount.toFixed(2)}</td>
                         <td className="px-4 py-2">₹{o.taxPrice.toFixed(2)}</td>
                         <td className="px-4 py-2">₹{o.shippingPrice.toFixed(2)}</td>
-                        <td className="px-4 py-2 font-semibold">₹{o.totalPrice.toFixed(2)}</td>
+                        <td className="px-4 py-2">₹{o.totalPrice.toFixed(2)}</td>
                         <td className="px-4 py-2">{o.paymentMethod}</td>
-                        {/* <td className="px-4 py-2">{o.paidAt ? new Date(o.paidAt).toLocaleDateString() : ''}</td> */}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500">No paid orders found for this range.</p>
+              <p className="text-gray-500 text-center py-4">No orders found</p>
             )}
+          </div>
+        )}
+
+        {/* Summary Section */}
+        {!loading && data?.summary && (
+          <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border border-gray-100 max-w-md">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Summary Totals</h3>
+            <table className="w-full text-sm">
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-gray-600">Total Orders</td>
+                  <td className="py-2 text-right">{data.summary.totalOrders}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-gray-600">Gross Sales</td>
+                  <td className="py-2 text-right">₹{data.summary.grossSales.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-gray-600">Total Discounts</td>
+                  <td className="py-2 text-right">₹{data.summary.totalDiscount.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-gray-600">Net Sales</td>
+                  <td className="py-2 text-right">₹{data.summary.totalSales.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-gray-600">Total Tax</td>
+                  <td className="py-2 text-right">₹{data.summary.totalTax.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-gray-600">Total Shipping</td>
+                  <td className="py-2 text-right">₹{data.summary.totalShipping.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-gray-800">Estimated Revenue</td>
+                  <td className="py-2 text-right font-semibold text-green-600">₹{profit.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
       </div>

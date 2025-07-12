@@ -11,7 +11,7 @@ import Inventory from "../pages/admin/Inventory";
 import Users from "../pages/admin/Users";
 import Brand from "../pages/admin/Brand";
 import Offers from "../pages/admin/Offers";
-import Banner from "../pages/admin/Banner";
+import Banners from "../pages/admin/Banners";
 import Coupons from "../pages/admin/Coupons";
 import Category from "../pages/admin/Category";
 import AdminNotFound from "../pages/admin/NotFound";
@@ -39,7 +39,7 @@ const AdminRoutes = () => {
             <Route path="add" element={<AddEditOffer />} />
             <Route path="edit/:id" element={<AddEditOffer />} />
           </Route>
-          <Route path="banner" element={<Banner />} />
+          <Route path="banner" element={<Banners />} />
           <Route path="coupons">
             <Route index element={<Coupons />} />
             <Route path="add" element={<AddEditCoupon />} />

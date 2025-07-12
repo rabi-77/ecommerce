@@ -9,6 +9,7 @@ import asyncHandler from "express-async-handler";
 import { creditWallet, debitWallet } from "../services/walletService.js";
 import { fetchActiveOffers, applyBestOffer } from "../services/offerService.js";
 import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/pricing.js';
+import mongoose from 'mongoose';
 
 const createOrder = asyncHandler(async (req, res) => {
   console.log('hi');
@@ -301,8 +302,18 @@ const createOrder = asyncHandler(async (req, res) => {
 });
 
 const getOrderById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Safely build query to avoid CastError on invalid ObjectId
+  const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+
+  const orConditions = [{ orderNumber: id }];
+  if (isValidObjectId) {
+    orConditions.unshift({ _id: id });
+  }
+
   const order = await Order.findOne({
-    $or: [{ _id: req.params.id }, { orderNumber: req.params.id }],
+    $or: orConditions,
     user: req.user,
   }).populate({
     path: "items.product",
@@ -773,9 +784,10 @@ const generateInvoice = asyncHandler(async (req, res) => {
   const tableTop = doc.y;
   const itemX = 50;
   const descriptionX = 100;
-  const quantityX = 300;
-  const priceX = 350;
-  const amountX = 450;
+  const quantityX = 280; // shift left to make space for new column
+  const priceX = 330;
+  const offerX = 400; // new column for offer discount
+  const amountX = 470;
 
   doc
     .fontSize(10)
@@ -783,6 +795,7 @@ const generateInvoice = asyncHandler(async (req, res) => {
     .text("Description", descriptionX, tableTop)
     .text("Qty", quantityX, tableTop)
     .text("Price", priceX, tableTop)
+    .text("Offer Disc", offerX, tableTop)
     .text("Amount", amountX, tableTop);
 
   doc
@@ -796,16 +809,19 @@ const generateInvoice = asyncHandler(async (req, res) => {
     if (item.isCancelled) return;
 
     const y = tableY + i * 25;
-    const itemPrice = item.price * (1 - item.discount / 100);
-    const amount = itemPrice * item.quantity;
+    const itemPrice = item.price; // original price per unit
+    const offerDiscPerUnit = item.offerDiscount || 0; // per-unit offer discount saved in order item
+    const effectiveUnitPrice = itemPrice - offerDiscPerUnit; // price after offer
+    const amount = effectiveUnitPrice * item.quantity;
 
     doc
       .fontSize(10)
       .text((i + 1).toString(), itemX, y)
       .text(item.product.name, descriptionX, y)
       .text(item.quantity.toString(), quantityX, y)
-      .text(`$${itemPrice.toFixed(2)}`, priceX, y)
-      .text(`$${amount.toFixed(2)}`, amountX, y);
+      .text(`Rs.${itemPrice.toFixed(2)}`, priceX, y)
+      .text(`-Rs.${(offerDiscPerUnit * item.quantity).toFixed(2)}`, offerX, y)
+      .text(`Rs.${amount.toFixed(2)}`, amountX, y);
   });
 
   const bottomY = tableY + order.items.length * 25 + 10;
@@ -815,27 +831,27 @@ const generateInvoice = asyncHandler(async (req, res) => {
   doc
     .fontSize(10)
     .text("Subtotal:", 350, totalsY)
-    .text(`$${order.itemsPrice.toFixed(2)}`, amountX, totalsY);
+    .text(`Rs.${order.itemsPrice.toFixed(2)}`, amountX, totalsY);
 
   doc
     .fontSize(10)
     .text("Discount:", 350, totalsY + 15)
-    .text(`-$${order.discountAmount.toFixed(2)}`, amountX, totalsY + 15);
+    .text(`-Rs.${order.discountAmount.toFixed(2)}`, amountX, totalsY + 15);
 
   doc
     .fontSize(10)
     .text("Shipping:", 350, totalsY + 30)
-    .text(`$${order.shippingPrice.toFixed(2)}`, amountX, totalsY + 30);
+    .text(`Rs.${order.shippingPrice.toFixed(2)}`, amountX, totalsY + 30);
 
   doc
     .fontSize(10)
     .text("Tax:", 350, totalsY + 45)
-    .text(`$${order.taxPrice.toFixed(2)}`, amountX, totalsY + 45);
+    .text(`Rs.${order.taxPrice.toFixed(2)}`, amountX, totalsY + 45);
 
   doc
     .fontSize(12)
     .text("Total:", 350, totalsY + 65, { font: "Helvetica-Bold" })
-    .text(`$${order.totalPrice.toFixed(2)}`, amountX, totalsY + 65, {
+    .text(`Rs.${order.totalPrice.toFixed(2)}`, amountX, totalsY + 65, {
       font: "Helvetica-Bold",
     });
 

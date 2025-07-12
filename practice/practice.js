@@ -55,7 +55,7 @@ const bonusRefund = async (orderId, itemId) => {
 
   await product.save();
   await order.save();
-};
+}
 
 const cancelEveryItem = async (orderId, itemId) => {
   const order = await Order.findById(orderId);
@@ -84,57 +84,108 @@ let  newTotalAfterTax=newTotal+(newTotal*0.18)
   refundAmount+=itemsPrice*0.18;
   order.totalPrice=orderPaid-refundAmount
   
-};
+}
 
-const topFive= async ()=>{
+// const topFive= async ()=>{
 
-    const ordersFive= await Order.aggregate([
-        {$match:{isPaid:true,status:{$nin:['cancelled','payment_failed','returned']}}},
-        {$unwind:'$items'},
-        {$match:{'items.isCancelled':{$ne:true},'items.isReturned':{$ne:true}}},
-        ,
-        {$lookup:{
-            from:'products',
-            localField:'items.product',
-            foreignField:'_id',
-            as:'product'
-        }},
-        {$unwind:'$product'},
-        {$group:{
-            _id:'$product._id',
-            totalQuantity:'items.quantity',
-            totalSum:'$items.totalPrice'
-        }},
-        {$sort:{totalQuantity:-1}},
-        {$limit:10}
-    ])
+//     const ordersFive= await Order.aggregate([
+//         {$match:{isPaid:true,status:{$nin:['cancelled','payment_failed','returned']}}},
+//         {$unwind:'$items'},
+//         {$match:{'items.isCancelled':{$ne:true},'items.isReturned':{$ne:true}}},
+//         ,
+//         {$lookup:{
+//             from:'products',
+//             localField:'items.product',
+//             foreignField:'_id',
+//             as:'product'
+//         }},
+//         {$unwind:'$product'},
+//         {$group:{
+//             _id:'$product._id',
+//             totalQuantity:'items.quantity',
+//             totalSum:'$items.totalPrice'
+//         }},
+//         {$sort:{totalQuantity:-1}},
+//         {$limit:10}
+//     ])
 
-    const topBrands= await Order.aggregate([
-        {$match:{isPaid:true,status:{$nin:['failed','cancelled']}}},
-        {$unwind:'$items'},
-        {$match:{'items.isCancelled':{$ne:true},'items.isReturned':{$ne:true}}},
-        {$lookup:{
-            from:'products',
-            localField:'items.product',
-            foreignField:'_id',
-            as:'product'
-        }},
-        {$unwind:"$product"},
-        {$group:{
-            _id:'$product.brand',
-            totalSum:'$items.totalPrice',
-            totalQuantity:'$items.totalPrice',
-        }},
-        {$lookup:{
-            from:'brands',
-            localField:'product._id',
-            foreignField:'_id',
-            as:'brand'
-        }},
-        {$unwind:"$brand"},
-        {$project:{totalQuantity:1,
-            _id:'$brand._id',
-            name:'$brand.name'
-        }}
-    ])
+//     const topBrands= await Order.aggregate([
+//         {$match:{isPaid:true,status:{$nin:['failed','cancelled']}}},
+//         {$unwind:'$items'},
+//         {$match:{'items.isCancelled':{$ne:true},'items.isReturned':{$ne:true}}},
+//         {$lookup:{
+//             from:'products',
+//             localField:'items.product',
+//             foreignField:'_id',
+//             as:'product'
+//         }},
+//         {$unwind:"$product"},
+//         {$group:{
+//             _id:'$product.brand',
+//             totalSum:'$items.totalPrice',
+//             totalQuantity:'$items.totalPrice',
+//         }},
+//         {$lookup:{
+//             from:'brands',
+//             localField:'product._id',
+//             foreignField:'_id',
+//             as:'brand'
+//         }},
+//         {$unwind:"$brand"},
+//         {$project:{totalQuantity:1,
+//             _id:'$brand._id',
+//             name:'$brand.name'
+//         }}
+//     ])
+// }
+
+const returnRefund= async (orderId,itemId) =>{
+let bonus;
+  const order= await Order.findById(orderId)
+  const item= order.items.id(itemId)
+  const itemQuantity= item.quantity
+
+  const product= await Product.findById(item.product)
+  const variant= product.variants.id(item.variant)
+
+  product.totalStock-=1
+  variant.stock-=1
+  await product.save()
+
+  if(variant.stock<3){
+    bonus= product.price*0.30
+  }
+  await Wallet.findOneAndUpdate({user:req.user},
+    {$inc:{balance:bonus},
+    $push:{
+      transactions:{
+        amount:bonus,
+        source:'refund',
+        type
+      }
+    }
+  },{new:true}
+  )
+}
+
+const deletebrand= async (brandId)=>{
+        const brand= await Brands.findByIdAndDelete(brandId)
+    const product= await Product.updateMany({brand:brandId,totalStock:{$lt:5}},{isListed:false})
+
+
+}
+
+const updateEverything= async (orderId)=>{
+    const order = await Order.findById(orderId)   
+    let isValid;
+    isValid=order.items.every((item)=>{
+      return item.isCancelled
+    })
+
+    if(isValid){
+        order.status='cancelled'
+    }
+
+    await order.save()
+
 }

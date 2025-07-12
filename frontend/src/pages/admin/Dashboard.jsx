@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setFilters, getDashboardStatsThunk } from '../../features/admin/adminDashboard/dashboardSlice';
-import { FaUsers, FaBoxOpen, FaShoppingCart, FaTag } from 'react-icons/fa';
+import { FaUsers, FaBoxOpen, FaShoppingCart, FaTag, FaRupeeSign } from 'react-icons/fa';
 import { MdCategory } from 'react-icons/md';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const statsLoading = loading || !data;
 
   const counts = data?.counts || {};
+  const totalRevenue = data?.totalRevenue || 0;
 
   const productChartData = useMemo(() => {
     if (!data) return { labels: [], datasets: [] };
@@ -89,13 +90,14 @@ const Dashboard = () => {
         </div>
 
         {/* Totals Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           {[ 
             { label: 'Total Users', value: counts.users, icon: <FaUsers className="text-2xl" />, colors: 'from-indigo-50 to-blue-50 border-indigo-100 text-indigo-700 text-indigo-900' },
             { label: 'Total Products', value: counts.products, icon: <FaBoxOpen className="text-2xl" />, colors: 'from-purple-50 to-pink-50 border-purple-100 text-purple-700 text-purple-900' },
             { label: 'Total Categories', value: counts.categories, icon: <MdCategory className="text-2xl" />, colors: 'from-pink-50 to-rose-50 border-pink-100 text-pink-700 text-pink-900' },
             { label: 'Total Brands', value: counts.brands, icon: <FaTag className="text-2xl" />, colors: 'from-rose-50 to-orange-50 border-rose-100 text-rose-700 text-rose-900' },
             { label: 'Total Orders', value: counts.orders, icon: <FaShoppingCart className="text-2xl" />, colors: 'from-indigo-50 to-purple-50 border-indigo-100 text-indigo-700 text-indigo-900' },
+            { label: 'Total Revenue', value: `₹${totalRevenue.toFixed(2)}`, colors: 'from-green-50 to-emerald-50 border-green-100 text-green-700 text-green-900' },
           ].map((c, idx) => (
             <div key={idx} className={`bg-gradient-to-br ${c.colors.split(' ')[0]} ${c.colors.split(' ')[1]} rounded-2xl shadow-md border-2 ${c.colors.split(' ')[2]} p-6 transition-all hover:shadow-lg hover:-translate-y-1`}>
               <div className="flex items-center justify-between">
