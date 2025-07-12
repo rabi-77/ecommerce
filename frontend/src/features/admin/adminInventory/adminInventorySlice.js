@@ -18,7 +18,6 @@ const initialState = {
   lowStockLoading: false
 };
 
-// Get inventory with pagination, search, and sorting
 export const getInventory = createAsyncThunk(
   'adminInventory/getAll',
   async ({ page = 1, size = 10, search = '', sort = 'name-asc' }, thunkAPI) => {
@@ -38,7 +37,6 @@ export const getInventory = createAsyncThunk(
   }
 );
 
-// Update inventory for a product
 export const updateInventory = createAsyncThunk(
   'adminInventory/update',
   async ({ productId, variants }, thunkAPI) => {
@@ -58,7 +56,6 @@ export const updateInventory = createAsyncThunk(
   }
 );
 
-// Get inventory history for a product
 export const getInventoryHistory = createAsyncThunk(
   'adminInventory/getHistory',
   async (productId, thunkAPI) => {
@@ -78,7 +75,6 @@ export const getInventoryHistory = createAsyncThunk(
   }
 );
 
-// Get low stock products
 export const getLowStockProducts = createAsyncThunk(
   'adminInventory/getLowStock',
   async (threshold = 5, thunkAPI) => {
@@ -113,7 +109,6 @@ export const adminInventorySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get inventory
       .addCase(getInventory.pending, (state) => {
         state.loading = true;
       })
@@ -131,7 +126,6 @@ export const adminInventorySlice = createSlice({
         state.error = action.payload;
       })
       
-      // Update inventory
       .addCase(updateInventory.pending, (state) => {
         state.updating = true;
       })
@@ -139,7 +133,6 @@ export const adminInventorySlice = createSlice({
         state.updating = false;
         state.updateSuccess = true;
         
-        // Update the product in the inventory state
         const updatedProduct = action.payload.product;
         state.inventory = state.inventory.map(product => 
           product._id === updatedProduct._id ? updatedProduct : product
@@ -150,7 +143,6 @@ export const adminInventorySlice = createSlice({
         state.error = action.payload;
       })
       
-      // Get inventory history
       .addCase(getInventoryHistory.pending, (state) => {
         state.historyLoading = true;
       })
@@ -164,7 +156,6 @@ export const adminInventorySlice = createSlice({
         state.error = action.payload;
       })
       
-      // Get low stock products
       .addCase(getLowStockProducts.pending, (state) => {
         state.lowStockLoading = true;
       })

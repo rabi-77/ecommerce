@@ -25,17 +25,14 @@ api.interceptors.response.use(
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         try {
-          // Use Redux store to dispatch the refresh token action
+
           const result = await store.dispatch(refreshTokenThunk());
           
-          // Check if the refresh was successful
           if (result.type.endsWith('/fulfilled')) {
             const newAccessToken = result.payload;
-            // Update the original request with the new token
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
             return api(originalRequest);
           } else {
-            // If refresh failed, throw an error to trigger the catch block
             throw new Error('Token refresh failed');
           }
         } catch (refreshError) {

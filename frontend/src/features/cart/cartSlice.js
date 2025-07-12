@@ -331,7 +331,6 @@ const cartSlice = createSlice({
         state.couponLoading = false;
         state.coupon = action.payload.coupon;
 
-        // Backend may return full summary OR just discount/total
         if (action.payload.summary) {
           state.summary = action.payload.summary;
         } else {
@@ -349,7 +348,6 @@ const cartSlice = createSlice({
         state.couponError = action.payload || 'Failed to apply coupon';
       })
       
-      // Remove coupon
       .addCase(removeCoupon.pending, (state) => {
         state.removingCoupon = true;
         state.couponError = null;
@@ -375,7 +373,6 @@ const cartSlice = createSlice({
         state.couponError = action.payload || 'Failed to remove coupon';
       })
 
-      // Available coupons
       .addCase(fetchAvailableCoupons.pending, (state) => {
         state.loadingCoupons = true;
         state.couponsError = null;

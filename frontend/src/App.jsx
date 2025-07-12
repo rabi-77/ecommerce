@@ -12,7 +12,6 @@ import { checkForGoogleRedirect } from "./utils/handleGoogleRedirect";
 import UserRoutes from "./routes/UserRoutes";
 import AdminRoutes from "./routes/AdminRoutes";
 function App() {
-  // persistor.purge(); // Wipes persisted state
 
   // Check for Google authentication on mount
   useEffect(() => {

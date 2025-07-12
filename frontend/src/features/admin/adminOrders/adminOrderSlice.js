@@ -15,8 +15,7 @@ const initialState = {
   verifyingReturn: false,
   verifyReturnSuccess: false
 };
-
-// Get all orders with pagination and search
+//thunk
 export const getAllOrders = createAsyncThunk(
   'adminOrders/getAll',
   async ({ page = 1, size = 10, keyword = '', status = '', sort = 'newest' } = {}, thunkAPI) => {
@@ -36,7 +35,6 @@ export const getAllOrders = createAsyncThunk(
   }
 );
 
-// Update order status
 export const updateOrderStatus = createAsyncThunk(
   'adminOrders/updateStatus',
   async ({ orderId, status }, thunkAPI) => {
@@ -55,7 +53,6 @@ export const updateOrderStatus = createAsyncThunk(
   }
 );
 
-// Verify return request
 export const verifyReturnRequest = createAsyncThunk(
   'adminOrders/verifyReturn',
   async ({ orderId, itemId, approved, notes }, thunkAPI) => {
@@ -90,7 +87,6 @@ export const adminOrderSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get all orders
       .addCase(getAllOrders.pending, (state) => {
         state.loading = true;
       })
@@ -108,7 +104,6 @@ export const adminOrderSlice = createSlice({
         state.error = action.payload;
       })
       
-      // Update order status
       .addCase(updateOrderStatus.pending, (state) => {
         state.updatingStatus = true;
       })
@@ -126,7 +121,6 @@ export const adminOrderSlice = createSlice({
         state.error = action.payload;
       })
       
-      // Verify return request
       .addCase(verifyReturnRequest.pending, (state) => {
         state.verifyingReturn = true;
       })
@@ -134,7 +128,6 @@ export const adminOrderSlice = createSlice({
         state.verifyingReturn = false;
         state.verifyReturnSuccess = true;
         
-        // Update the order in the state with the populated data
         const updatedOrder = action.payload.order;
         state.orders = state.orders.map(order => 
           order._id === updatedOrder._id ? updatedOrder : order

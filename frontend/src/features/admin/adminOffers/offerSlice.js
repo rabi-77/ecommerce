@@ -122,28 +122,22 @@ const offerSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Delete offer
       .addCase(deleteOffer.fulfilled, (state, action) => {
         state.offers = state.offers.filter((o) => o._id !== action.payload);
       })
-      // Toggle status
       .addCase(toggleStatus.fulfilled, (state, action) => {
         const target = state.offers.find((o) => o._id === action.payload.id);
         if (target) target.isActive = action.payload.isActive;
       })
-      // Create Offer
       .addCase(createNewOffer.fulfilled, (state) => {
         state.success = true;
       })
-      // Update Offer
       .addCase(updateExistingOffer.fulfilled, (state) => {
         state.success = true;
       })
-      // Get single
       .addCase(getSingleOffer.fulfilled, (state, action) => {
         state.currentOffer = action.payload;
       })
-      // Generic error handler
       .addMatcher((action) => action.type.endsWith('rejected'), (state, action) => {
         state.error = action.payload;
       });

@@ -1,6 +1,7 @@
 import categoryModel from "../../models/categoryModel.js";
 import { uploadImagesToCloudinary } from "../../utils/imageUpload.js";
-
+import Product from '../../models/productModel.js'
+import Offers from '../../models/offerModel.js'
 
 // const storage = multer.memoryStorage();
 // const uploadCategory = multer({
@@ -153,6 +154,16 @@ const softDeleteCategory = async (req, res) => {
     if (!softDelete) {
       return res.status(500).json({ message: "couldnt found this category" });
     }
+    const offerExist= await Offers.find({category:id})
+
+    if(!offerExist){
+      res.status().json({message:''})
+    }
+
+    const products= await Product.deleteMany({category:id,totalStock:{$lt:5}})
+
+
+
     res.json({ message: "category deleted successfully",deletedId:softDelete._id });
     
   } catch (err) {
