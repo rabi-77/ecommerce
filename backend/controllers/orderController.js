@@ -788,6 +788,7 @@ const generateInvoice = asyncHandler(async (req, res) => {
   const priceX = 330;
   const offerX = 400; // new column for offer discount
   const amountX = 470;
+  const statusX = amountX + 60;
 
   doc
     .fontSize(10)
@@ -796,7 +797,8 @@ const generateInvoice = asyncHandler(async (req, res) => {
     .text("Qty", quantityX, tableTop)
     .text("Price", priceX, tableTop)
     .text("Offer Disc", offerX, tableTop)
-    .text("Amount", amountX, tableTop);
+    .text("Amount", amountX, tableTop)
+    .text("Status", statusX, tableTop);
 
   doc
     .moveTo(50, tableTop + 15)
@@ -806,13 +808,13 @@ const generateInvoice = asyncHandler(async (req, res) => {
   let tableY = tableTop + 25;
 
   order.items.forEach((item, i) => {
-    if (item.isCancelled) return;
-
     const y = tableY + i * 25;
     const itemPrice = item.price; // original price per unit
     const offerDiscPerUnit = item.offerDiscount || 0; // per-unit offer discount saved in order item
     const effectiveUnitPrice = itemPrice - offerDiscPerUnit; // price after offer
     const amount = effectiveUnitPrice * item.quantity;
+
+    const statusLabel = item.isCancelled ? 'Cancelled' : (item.isReturned ? 'Returned' : '');
 
     doc
       .fontSize(10)
@@ -821,44 +823,62 @@ const generateInvoice = asyncHandler(async (req, res) => {
       .text(item.quantity.toString(), quantityX, y)
       .text(`Rs.${itemPrice.toFixed(2)}`, priceX, y)
       .text(`-Rs.${(offerDiscPerUnit * item.quantity).toFixed(2)}`, offerX, y)
-      .text(`Rs.${amount.toFixed(2)}`, amountX, y);
+      .text(`Rs.${amount.toFixed(2)}`, amountX, y)
+      .text(statusLabel, statusX, y);
   });
 
   const bottomY = tableY + order.items.length * 25 + 10;
   doc.moveTo(50, bottomY).lineTo(550, bottomY).stroke();
 
-  const totalsY = bottomY + 20;
+  let lineY = bottomY + 20;
+
+  // Subtotal
   doc
     .fontSize(10)
-    .text("Subtotal:", 350, totalsY)
-    .text(`Rs.${order.itemsPrice.toFixed(2)}`, amountX, totalsY);
+    .text("Subtotal:", 350, lineY)
+    .text(`Rs.${order.itemsPrice.toFixed(2)}`, amountX, lineY);
 
+  // Offer Discount
+  lineY += 15;
   doc
     .fontSize(10)
-    .text("Discount:", 350, totalsY + 15)
-    .text(`-Rs.${order.discountAmount.toFixed(2)}`, amountX, totalsY + 15);
+    .text("Offer Discount:", 350, lineY)
+    .text(`-Rs.${(order.offerDiscount || 0).toFixed(2)}`, amountX, lineY);
 
+  // Coupon Discount (only if applied)
+  lineY += 15;
   doc
     .fontSize(10)
-    .text("Shipping:", 350, totalsY + 30)
-    .text(`Rs.${order.shippingPrice.toFixed(2)}`, amountX, totalsY + 30);
+    .text("Coupon Discount:", 350, lineY)
+    .text(`-Rs.${(order.couponDiscount || 0).toFixed(2)}`, amountX, lineY);
 
+  // Shipping
+  lineY += 15;
   doc
     .fontSize(10)
-    .text("Tax:", 350, totalsY + 45)
-    .text(`Rs.${order.taxPrice.toFixed(2)}`, amountX, totalsY + 45);
+    .text("Shipping:", 350, lineY)
+    .text(`Rs.${order.shippingPrice.toFixed(2)}`, amountX, lineY);
 
+  // Tax
+  lineY += 15;
+  doc
+    .fontSize(10)
+    .text("Tax:", 350, lineY)
+    .text(`Rs.${order.taxPrice.toFixed(2)}`, amountX, lineY);
+
+  // Total
+  lineY += 20;
   doc
     .fontSize(12)
-    .text("Total:", 350, totalsY + 65, { font: "Helvetica-Bold" })
-    .text(`Rs.${order.totalPrice.toFixed(2)}`, amountX, totalsY + 65, {
+    .text("Total:", 350, lineY, { font: "Helvetica-Bold" })
+    .text(`Rs.${order.totalPrice.toFixed(2)}`, amountX, lineY, {
       font: "Helvetica-Bold",
     });
 
   // Add footer
   doc
     .fontSize(10)
-    .text("Thank you for your business!", 50, totalsY + 100, {
+    .text("Thank you for your business!", 50, lineY + 35, {
       align: "center",
     });
 
