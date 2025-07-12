@@ -17,6 +17,7 @@ import { addToCart, updateCartItem, removeFromCart, getCart, clearCart, applyCou
 import {validateAndApplyCoupon,removeCoupon as removecpn,getCouponDetails} from '../controllers/user/userCouponController.js'
 import {createRazorpayOrder,verifyPayment,getRazorpayKey} from '../controllers/razorpayController.js'
 import { getWalletBalance } from '../controllers/walletController.js';
+import { getActiveBanners } from '../controllers/admin/bannerController.js';
 
 user.post('/register',register)
 user.post('/login',userLogin)
@@ -49,6 +50,8 @@ user.get("/products/:id/related", getRelatedProducts);
 user.get("/categories", getCategories);
 user.get("/brands", getBrands);
 
+// Public banners
+user.get('/banners', getActiveBanners)
 
 //user profile
 user.get('/profile',(req,res,next)=>{

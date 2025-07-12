@@ -23,7 +23,6 @@ const OrderDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
   const { user } = useSelector((state) => state.auth);
   const { 
     order, 
@@ -41,6 +40,7 @@ const OrderDetails = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [returnReason, setReturnReason] = useState('');
 
+  // Fetch order details once (or when route param changes)
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -54,16 +54,18 @@ const OrderDetails = () => {
     }
 
     dispatch(getOrderDetails(id));
+  }, [dispatch, navigate, user, id]);
 
-    if (error) {
+  // Detect 404 / not-found responses
+  const isNotFound = error && error.toString().toLowerCase().includes('not found');
+
+  // Show toast for API errors (excluding not-found) just once per change
+  useEffect(() => {
+    if (error && !isNotFound) {
       toast.error(error);
       dispatch(resetOrderState());
     }
-
-    return () => {
-      // Clean up
-    };
-  }, [dispatch, navigate, user, id, error]);
+  }, [error, dispatch, isNotFound]);
 
   const handleCancelItem = (item) => {
     setSelectedItem(item);
@@ -226,11 +228,22 @@ const OrderDetails = () => {
   const itemsPriceBeforeDiscount = order?.itemsPrice ?? 0; // original prices sum
   const subtotalAfterOffer = itemsPriceBeforeDiscount - offerDiscount;
   const couponDiscount = order?.couponDiscount ?? 0;
-
-  if (fetchingOrderDetails || !order) {
+  
+  if (fetchingOrderDetails) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
+        <p className="text-2xl font-semibold text-red-500 mb-4">Order not found</p>
+        <Link to="/my-orders" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+          View My Orders
+        </Link>
       </div>
     );
   }

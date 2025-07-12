@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 const addressSchema = new mongoose.Schema({
   name: {
@@ -161,6 +162,7 @@ const userSchema = new mongoose.Schema({
   referralCode: {
     type: String,
     unique: true,
+    sparse: true, // allow multiple nulls until code is generated
     index: true,
   },
   referredBy: {
@@ -194,13 +196,20 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+// Auto-generate a unique referral code if one is missing (covers Google signup)
+userSchema.pre("save", async function (next) {
+  if (!this.referralCode) {
+    let unique = false;
+    while (!unique) {
+      const code = crypto.randomBytes(4).toString("hex").toUpperCase();
+      const exists = await this.constructor.exists({ referralCode: code });
+      if (!exists) {
+        this.referralCode = code;
+        unique = true;
+      }
+    }
+  }
+  next();
+});
+
 export default mongoose.model("User", userSchema);
-
-
-
-
-
-
-// user.newEmail = newEmail;
-// user.emailChangeToken = token;
-// user.emailChangeTokenExpiry = expiryTime;

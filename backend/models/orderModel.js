@@ -23,15 +23,13 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  // Per-unit discount from active PRODUCT/CATEGORY offer
   offerDiscount: {
     type: Number,
     default: 0
   },
-  // Final per-unit price after all discounts (for refund calculations)
   finalUnitPrice: {
     type: Number,
-    required: true
+    default: 0
   },
   discount: {
     type: Number,
@@ -41,7 +39,6 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  // Proportional values pre-computed at checkout to simplify refunds
   couponShare: {
     type: Number,
     default: 0
@@ -160,6 +157,11 @@ const orderSchema = new mongoose.Schema(
       ref: 'Coupon',
     },
     couponDiscount: {
+      type: Number,
+      default: 0.0,
+    },
+    // Total discount from product/category offers (excluding coupons)
+    offerDiscount: {
       type: Number,
       default: 0.0,
     },

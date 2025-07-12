@@ -808,6 +808,7 @@ const Checkout = () => {
               <h2 className="text-xl font-semibold mb-4">
                 Order Summary
               </h2>
+              <span>If there is any offer on products it will show in the summary</span>
               <div className="space-y-4">
                 {cartItems && cartItems.length > 0 ? cartItems.map((item) => (
                   <div key={item._id} className="py-2 border-b border-gray-100 last:border-b-0">

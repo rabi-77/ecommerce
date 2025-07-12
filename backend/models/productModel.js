@@ -18,12 +18,12 @@ const variantSchema = new mongoose.Schema({
   },
 });
 
-
 const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
+      trim: true,
     },
     description: {
       type: String,
@@ -31,45 +31,55 @@ const productSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
-      min:0
+      min: 0,
     },
     images: [{ type: String, required: true }],
 
-    isListed:{
-      type:Boolean,
-      default:true
+    isListed: {
+      type: Boolean,
+      default: true,
     },
-    isFeatured:{
-      default:false,
-      type:Boolean
+    isFeatured: {
+      default: false,
+      type: Boolean,
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
     },
-    brand:{
-        required:true,
-        type: mongoose.Schema.Types.ObjectId,
-        ref:"Brand",
+    brand: {
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Brand",
     },
-    totalStock:{
-      type:Number,
-      required:true,
-      min:0
+    totalStock: {
+      type: Number,
+      required: true,
+      min: 0,
     },
-    variants:{
-      type:[variantSchema],
-      required:true,
+    variants: {
+      type: [variantSchema],
+      required: true,
       validate: {
         validator: function (value) {
           return value && value.length > 0;
         },
         message: "At least one variant is required.",
       },
-    }
+    },
   },
   { timestamps: true }
+);
+
+// Ensure product names are unique regardless of case (e.g., "nike" === "NIKE")
+// Note: run once in Mongo shell to drop any existing duplicate data before building the index.
+productSchema.index(
+  { name: 1 },
+  {
+    unique: true,
+    collation: { locale: "en", strength: 2 }, // strength 2: case-insensitive, diacritic-sensitive
+  }
 );
 
 export default mongoose.model("Product", productSchema);

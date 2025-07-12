@@ -42,46 +42,22 @@ export const ProductCard = ({ product }) => {
             {product.brand?.name || 'Brand'}
           </Link>
         </div>
-        {/* <div className="flex items-center mb-3">
-          <div className="flex text-[var(--secondary)]">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-4 h-4 fill-current" />
-            ))}
-          </div>
-          <span className="text-xs text-[var(--text-light)] ml-1">(0)</span>
-        </div> */}
-        {/* <div className="mt-auto pt-4 border-t border-[var(--border-light)] flex justify-between items-center">
-          {product.effectivePrice && product.effectivePrice < product.price ? (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500 line-through">₹{product.price}</span>
-              <span className="text-lg font-bold text-[var(--primary)]">₹{product.effectivePrice}</span>
-              {product.appliedOffer && (
-                <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded">
-                  {product.appliedOffer.percentage ? `${product.appliedOffer.percentage}% OFF` : `₹${product.appliedOffer.amount} OFF`}
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-lg font-bold text-[var(--primary)]">₹{product.price}</span>
-          )}
-          <Link 
-            to={`/products/${product._id}`} 
-            className="px-3 py-1.5 bg-[var(--primary)] text-white text-sm font-medium rounded-md hover:bg-[var(--primary-dark)] transition-colors"
-          >
-            View Details
-          </Link>
-        </div> */}
-        <div className="mt-auto pt-4 border-t border-[var(--border-light)]">
+     
+    
+   
+
+<div className="mt-auto pt-4 border-t border-[var(--border-light)]">
   {/* Always render price row with consistent spacing */}
   <div className="flex justify-between items-end mb-1 min-h-[24px]"> {/* Fixed min-height */}
     <div className="flex items-baseline gap-2">
       {product.effectivePrice && product.effectivePrice < product.price ? (
         <>
-          <span className="text-lg font-bold text-[var(--primary)] font-sans">₹{product.effectivePrice}</span>
+          
+          <span className="text-lg font-bold text-[var(--primary)]">₹{product.effectivePrice}</span>
           <span className="text-sm text-gray-500 line-through">₹{product.price}</span>
         </>
       ) : (
-        <span className="text-lg font-bold text-[var(--primary)] font-sans">₹{product.price}</span>
+        <span className="text-lg font-bold text-[var(--primary)]">₹{product.price}</span>
       )}
     </div>
     <Link 
@@ -95,7 +71,7 @@ export const ProductCard = ({ product }) => {
   {/* Offer badge - always takes space but only visible when needed */}
   <div className="min-h-[24px] mt-1"> {/* Fixed min-height */}
     {product.effectivePrice && product.effectivePrice < product.price && product.appliedOffer && (
-      <span className="inline-block text-xs font-medium text-white bg-[var(--primary)] px-2 py-1 rounded-md font-sans">
+      <span className="inline-block text-xs font-medium text-white bg-[var(--primary)] px-2 py-1 rounded-md">
         {product.appliedOffer.percentage ? `${product.appliedOffer.percentage}% OFF` : `₹${product.appliedOffer.amount} OFF`}
       </span>
     )}

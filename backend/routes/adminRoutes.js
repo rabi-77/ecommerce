@@ -42,6 +42,7 @@ import { couponValidationRules as couponCreateValidationRules, couponUpdateValid
 import { createOffer, getOffers, getOfferById, updateOffer, deleteOffer, toggleOfferActive } from '../controllers/admin/manageOffers.js'
 import { getSalesReport } from '../controllers/admin/manageSalesReport.js'
 import { getDashboardStats } from '../controllers/admin/dashboardController.js'
+import { listBanners, createBanner, updateBanner, deleteBanner } from "../controllers/admin/bannerController.js";
 
 const admin = express.Router();
 
@@ -112,6 +113,12 @@ admin.get('/sales-report', getSalesReport)
 
 // dashboard stats
 admin.get('/dashboard-stats', getDashboardStats)
+
+// Banner management
+admin.get('/banners', listBanners)
+admin.post('/banners', uploadCategory, createBanner)
+admin.put('/banners/:id', uploadCategory, updateBanner)
+admin.delete('/banners/:id', deleteBanner)
 
 // Offer management
 admin.get('/offers', getOffers)

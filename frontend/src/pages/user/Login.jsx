@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { setAuthToken, login, resetAuthState, resetPasswordState, clearPasswordResetErrors, clearError } from "../../features/authSlice";
 import ForgotPasswordModal from "../../components/auth/ForgotPasswordModal";
@@ -207,6 +207,15 @@ const Login = () => {
         Sign in with Google
       </button>
       
+      {/* Browse as Guest */}
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="w-full p-2 mt-3 bg-gray-200 text-gray-800 rounded"
+      >
+        Browse as Guest
+      </button>
+      
       <p className="mt-2 text-center">
         Don't have an account? <a href="/register" className="text-blue-500">Register</a>
       </p>
@@ -231,7 +240,7 @@ const Login = () => {
         email={resetEmail} // Pass email directly as prop
       />
       
-      <ToastContainer />
+      {/* Removed ToastContainer */}
     </div>
   );
 };

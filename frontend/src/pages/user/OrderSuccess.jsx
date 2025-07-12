@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { 
   getOrderDetails,
-  downloadInvoice 
+  downloadInvoice,
+  resetOrderState 
 } from '../../features/order/orderSlice';
 import { toast } from 'react-toastify';
 
@@ -19,8 +20,9 @@ const OrderSuccess = () => {
   const navigate = useNavigate();
   
   const { user } = useSelector((state) => state.auth);
-  const { order, fetchingOrderDetails, downloadingInvoice } = useSelector((state) => state.order);
+  const { order, fetchingOrderDetails, downloadingInvoice, error } = useSelector((state) => state.order);
   
+  // Fetch order details once per id
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -31,6 +33,17 @@ const OrderSuccess = () => {
       dispatch(getOrderDetails(id));
     }
   }, [dispatch, navigate, user, id]);
+
+  // Detect 404 / not-found error
+  const isNotFound = error && error.toString().toLowerCase().includes('not found');
+
+  // Show toast for other errors once
+  useEffect(() => {
+    if (error && !isNotFound) {
+      toast.error(error);
+      dispatch(resetOrderState());
+    }
+  }, [error, isNotFound, dispatch]);
   
   const handleDownloadInvoice = () => {
     if (id) {
@@ -57,6 +70,17 @@ const OrderSuccess = () => {
       </div>
     );
   }
+
+  if (isNotFound) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
+        <p className="text-2xl font-semibold text-red-500 mb-4">Order not found</p>
+        <Link to="/my-orders" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+          View Orders
+        </Link>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -67,7 +91,7 @@ const OrderSuccess = () => {
           <p className="mt-2 text-base text-gray-500">Your order has been successfully placed.</p>
         </div>
 
-        {fetchingOrderDetails ? (
+        {fetchingOrderDetails || !order ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
           </div>
@@ -81,7 +105,7 @@ const OrderSuccess = () => {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Date</dt>
-                <dd className="mt-1 text-sm text-gray-900">{new Date(order?.createdAt).toLocaleDateString()}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{order ? new Date(order.createdAt).toLocaleDateString() : '—'}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Total Amount</dt>

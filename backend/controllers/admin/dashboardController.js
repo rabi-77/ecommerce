@@ -163,6 +163,18 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     .limit(5)
     .select('username email createdAt');
 
+  // Calculate total revenue for the selected range
+  const revenueAgg = await Order.aggregate([
+    { $match: orderMatch },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$totalPrice' },
+      },
+    },
+  ]);
+  const totalRevenue = revenueAgg[0]?.totalRevenue || 0;
+
   if (format === 'pdf') {
     const doc = new PDFDocument({ margin: 30, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
@@ -215,6 +227,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     ledger,
     latestOrders,
     latestUsers,
+    totalRevenue,
   });
 });
 

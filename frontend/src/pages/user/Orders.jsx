@@ -227,7 +227,8 @@ const Orders = () => {
                   <td className="px-6 py-4 whitespace-nowrap ">
                     <div className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-sans">
+
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">₹{order.totalPrice.toFixed(2)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

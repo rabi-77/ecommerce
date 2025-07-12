@@ -101,7 +101,7 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
               Coupon <span className="font-bold">{appliedCoupon.code}</span> applied successfully!
             </span>
             <span className="ml-2 text-sm text-green-700">
-              -${appliedCoupon.discountAmount.toFixed(2)}
+              -₹{appliedCoupon.discountAmount.toFixed(2)}
             </span>
           </div>
           <button

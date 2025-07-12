@@ -10,6 +10,7 @@ const Sidebar = ({ onLinkClick = () => {} }) => {
     { name: 'Category', path: '/adm/category' },
     { name: 'Orders', path: '/adm/orders' },
     { name: 'Offers', path: '/adm/offers' },
+    { name: 'Banners', path: '/adm/banner' },
     { name: 'Coupons', path: '/adm/coupons' },
     { name: 'Sales Report', path: '/adm/sales-report' },
   ];

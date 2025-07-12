@@ -134,6 +134,11 @@ export function setupUserTokenRefresh() {
     
     // Function to handle token refresh
     const refreshToken = () => {
+      // Abort if user has logged out and token is gone
+      if (!localStorage.getItem('tokenAccess')) {
+        return;
+      }
+      
       store.dispatch(refreshAccessTokenThunk())
         .then((result) => {
           if (result.payload) {
@@ -149,10 +154,7 @@ export function setupUserTokenRefresh() {
         })
         .catch(error => {
           console.error('Failed to refresh user token:', error);
-          // If there's still a token in localStorage, try again after 30 seconds
-          if (localStorage.getItem('tokenAccess')) {
-            refreshTimer = setTimeout(refreshToken, 30 * 1000);
-          }
+          // If token was removed meanwhile (logout), stop further retries
         });
     };
     

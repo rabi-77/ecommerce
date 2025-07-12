@@ -177,59 +177,41 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
       (order.paymentMethod === 'COD' && order.isDelivered);
     
     if (shouldProcessRefund) {
-      const prevTotal = order.totalPrice;
-
       const subtotalBefore = order.itemsPrice;
-      const itemNetPrice = orderItem.totalPrice;
-      const remainingSubtotal = subtotalBefore - itemNetPrice;
+      const itemOriginalPrice = orderItem.price * orderItem.quantity;
+      const itemPaidPrice = (orderItem.finalUnitPrice || orderItem.totalPrice || orderItem.price) * orderItem.quantity;
+      const remainingSubtotal = subtotalBefore - itemOriginalPrice;
       const isLastActive = remainingSubtotal === 0;
 
       let refundAmount = 0;
 
       if (!order.coupon) {
-        if (isLastActive) {
-          refundAmount = prevTotal;
-          order.itemsPrice = 0;
-          order.discountAmount = 0;
-          order.shippingPrice = 0;
-          order.taxPrice = 0;
-          order.totalPrice = 0;
-        } else {
-          const itemTax = parseFloat((itemNetPrice * TAX_RATE).toFixed(2));
-          const itemShipping = isLastActive ? order.shippingPrice : 0;
-          refundAmount = itemNetPrice + itemTax + itemShipping;
+        const itemTax = orderItem.taxShare || parseFloat(((itemPaidPrice) * TAX_RATE).toFixed(2));
+        const itemShipping = isLastActive ? order.shippingPrice : 0;
+        refundAmount = itemPaidPrice + itemTax + itemShipping;
 
-          order.itemsPrice -= itemNetPrice;
-          // subtract product-level discount share from discountAmount
-          order.discountAmount = parseFloat((order.discountAmount - (orderItem.price - (orderItem.totalPrice / orderItem.quantity)) * orderItem.quantity).toFixed(2));
-          order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
-          if (isLastActive) order.shippingPrice = 0;
-          order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
-        }
+        order.itemsPrice -= itemOriginalPrice;
+        const removedOfferDisc = (orderItem.price - orderItem.totalPrice) * orderItem.quantity;
+        order.offerDiscount = parseFloat(Math.max((order.offerDiscount || 0) - removedOfferDisc, 0).toFixed(2));
+        order.discountAmount = parseFloat(((order.offerDiscount || 0)).toFixed(2));
+        order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
+        if (isLastActive) order.shippingPrice = 0;
+        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
       } else {
-        if (isLastActive) {
-          refundAmount = prevTotal;
-          order.itemsPrice = 0;
-          order.discountAmount = 0;
-          order.couponDiscount = 0;
-          order.shippingPrice = 0;
-          order.taxPrice = 0;
-          order.totalPrice = 0;
-        } else {
-          const couponShare = parseFloat(((itemNetPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
-          const priceAfterCoupon = itemNetPrice - couponShare;
-          const itemTax = parseFloat((priceAfterCoupon * TAX_RATE).toFixed(2));
-          const itemShipping = isLastActive ? order.shippingPrice : 0;
+        const couponShare = orderItem.couponShare || parseFloat(((itemOriginalPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
+        const itemTax = orderItem.taxShare || parseFloat(((itemPaidPrice) * TAX_RATE).toFixed(2));
+        const itemShipping = isLastActive ? order.shippingPrice : 0;
 
-          refundAmount = priceAfterCoupon + itemTax + itemShipping;
+        refundAmount = itemPaidPrice + itemTax + itemShipping;
 
-          order.itemsPrice -= itemNetPrice;
-          order.discountAmount = parseFloat((order.discountAmount - (orderItem.price - (orderItem.totalPrice / orderItem.quantity)) * orderItem.quantity).toFixed(2));
-          order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
-          order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
-          if (isLastActive) order.shippingPrice = 0;
-          order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
-        }
+        order.itemsPrice -= itemOriginalPrice;
+        order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
+        const removedOfferDisc2 = (orderItem.price - orderItem.totalPrice) * orderItem.quantity;
+        order.offerDiscount = parseFloat(Math.max((order.offerDiscount || 0) - removedOfferDisc2, 0).toFixed(2));
+        order.discountAmount = parseFloat(((order.offerDiscount || 0) + (order.couponDiscount || 0)).toFixed(2));
+        order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
+        if (isLastActive) order.shippingPrice = 0;
+        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
       }
 
       if (refundAmount < 0) refundAmount = 0;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import { clearError } from "../features/admin/adminBrand/brandSlice";
 
 const GenericModal = ({ 
   entity, 
@@ -56,7 +57,8 @@ const GenericModal = ({
       }
       onClose();
     } catch (err) {
-      toast.error(err || "Operation failed");
+      toast.error('lol'||err || "Operation failed");
+      dispatch(clearError());
     } finally {
       setIsLoading(false);
     }
