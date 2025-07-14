@@ -179,38 +179,54 @@ export const verifyReturnRequest = asyncHandler(async (req, res) => {
     if (shouldProcessRefund) {
       const subtotalBefore = order.itemsPrice;
       const itemOriginalPrice = orderItem.price * orderItem.quantity;
-      const itemPaidPrice = (orderItem.finalUnitPrice || orderItem.totalPrice || orderItem.price) * orderItem.quantity;
+      const itemPaidPrice = ((orderItem.finalUnitPrice ?? orderItem.totalPrice ?? orderItem.price) * orderItem.quantity);
       const remainingSubtotal = subtotalBefore - itemOriginalPrice;
       const isLastActive = remainingSubtotal === 0;
 
       let refundAmount = 0;
 
-      if (!order.coupon) {
-        const itemTax = orderItem.taxShare || parseFloat(((itemPaidPrice) * TAX_RATE).toFixed(2));
-        const itemShipping = isLastActive ? order.shippingPrice : 0;
-        refundAmount = itemPaidPrice + itemTax + itemShipping;
+      const prevTotal = order.totalPrice; // before adjustments
 
-        order.itemsPrice -= itemOriginalPrice;
-        const removedOfferDisc = (orderItem.price - orderItem.totalPrice) * orderItem.quantity;
-        order.offerDiscount = parseFloat(Math.max((order.offerDiscount || 0) - removedOfferDisc, 0).toFixed(2));
-        order.discountAmount = parseFloat(((order.offerDiscount || 0)).toFixed(2));
-        order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
-        if (isLastActive) order.shippingPrice = 0;
-        order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
+      let itemTax = orderItem.taxShare || 0;
+      if (!itemTax) {
+        // fallback calc if not stored
+        itemTax = parseFloat((itemPaidPrice * TAX_RATE).toFixed(2));
+      }
+
+      if (isLastActive) {
+        // Refund everything the customer paid (includes shipping & coupon impact)
+        refundAmount = prevTotal;
       } else {
+        // Partial return: refund what was paid for this item incl. its tax share only
+        refundAmount = itemPaidPrice + itemTax;
+      }
+
+      // Update aggregates / order fields
+      order.itemsPrice = parseFloat((order.itemsPrice - itemOriginalPrice).toFixed(2));
+
+      // Offer discount removal
+      const removedOfferDisc = (orderItem.price - orderItem.totalPrice) * orderItem.quantity;
+      order.offerDiscount = parseFloat(Math.max((order.offerDiscount || 0) - removedOfferDisc, 0).toFixed(2));
+
+      // Coupon handling
+      if (order.coupon) {
         const couponShare = orderItem.couponShare || parseFloat(((itemOriginalPrice / subtotalBefore) * order.couponDiscount).toFixed(2));
-        const itemTax = orderItem.taxShare || parseFloat(((itemPaidPrice) * TAX_RATE).toFixed(2));
-        const itemShipping = isLastActive ? order.shippingPrice : 0;
+        order.couponDiscount = parseFloat(Math.max(order.couponDiscount - couponShare, 0).toFixed(2));
+      }
 
-        refundAmount = itemPaidPrice + itemTax + itemShipping;
+      // Recompute total discount amount after offer/coupon updates
+      order.discountAmount = parseFloat(((order.offerDiscount || 0) + (order.couponDiscount || 0)).toFixed(2));
 
-        order.itemsPrice -= itemOriginalPrice;
-        order.couponDiscount = parseFloat((order.couponDiscount - couponShare).toFixed(2));
-        const removedOfferDisc2 = (orderItem.price - orderItem.totalPrice) * orderItem.quantity;
-        order.offerDiscount = parseFloat(Math.max((order.offerDiscount || 0) - removedOfferDisc2, 0).toFixed(2));
-        order.discountAmount = parseFloat(((order.offerDiscount || 0) + (order.couponDiscount || 0)).toFixed(2));
+      if (isLastActive) {
+        // last item being returned -> zero everything similar to cancellation flow
+        order.couponDiscount = 0;
+        order.discountAmount = 0;
+        order.shippingPrice = 0;
+        order.taxPrice = 0;
+        order.totalPrice = 0;
+      } else {
+        // partial return → keep shipping as-is; reduce tax & total by same refundAmount logic
         order.taxPrice = parseFloat((order.taxPrice - itemTax).toFixed(2));
-        if (isLastActive) order.shippingPrice = 0;
         order.totalPrice = parseFloat((order.totalPrice - refundAmount).toFixed(2));
       }
 

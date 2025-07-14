@@ -512,7 +512,7 @@ const cancelOrderItem = asyncHandler(async (req, res) => {
 
     const subtotalBefore = order.itemsPrice; 
     const itemOriginalPrice = item.price * item.quantity;
-    const itemPaidPrice = (item.finalUnitPrice || item.totalPrice || item.price) * item.quantity;
+    const itemPaidPrice = ((item.finalUnitPrice ?? item.totalPrice ?? item.price) * item.quantity);
     const remainingSubtotal = subtotalBefore - itemOriginalPrice;
 
     const isLastActive = remainingSubtotal === 0;
