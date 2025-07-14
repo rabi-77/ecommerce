@@ -59,10 +59,29 @@ export async function debitWallet(userId, amount, { orderId = null, source = 'or
   }
 }
 
-export async function getWallet(userId) {
-  const wallet = await Wallet.findOne({ user: userId }) || { balance: 0, transactions: [] };
+export async function getWallet(userId, { page = 1, limit = 10 } = {}) {
+  const wallet = (await Wallet.findOne({ user: userId })) || {
+    balance: 0,
+    transactions: [],
+  };
+
+  // Sort newest first
   if (wallet.transactions && wallet.transactions.length) {
     wallet.transactions.sort((a, b) => b.createdAt - a.createdAt);
   }
-  return wallet;
+
+  // Pagination calculations
+  const totalTransactions = wallet.transactions.length;
+  const totalPages = Math.ceil(totalTransactions / limit) || 1;
+  const currentPage = Math.max(1, Math.min(page, totalPages));
+  const start = (currentPage - 1) * limit;
+  const paginatedTx = wallet.transactions.slice(start, start + limit);
+
+  return {
+    balance: wallet.balance,
+    transactions: paginatedTx,
+    total: totalTransactions,
+    totalPages,
+    currentPage,
+  };
 }

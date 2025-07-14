@@ -334,6 +334,8 @@ const getOrderById = asyncHandler(async (req, res) => {
 const getMyOrders = asyncHandler(async (req, res) => {
   const keyword = req.query.keyword || "";
   const status = req.query.status || "";
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
 
   let query = { user: req.user };
 
@@ -350,15 +352,27 @@ const getMyOrders = asyncHandler(async (req, res) => {
     query.status = status;
   }
 
-  const orders = await Order.find(query)
-    .sort({ createdAt: -1 })
-    .select(
-      "_id orderNumber createdAt totalPrice status isPaid isDelivered items shippingAddress"
-    );
+  const skip = (page - 1) * limit;
+
+  const [orders, total] = await Promise.all([
+    Order.find(query)
+      .sort({ createdAt: -1 })
+      .select(
+        "_id orderNumber createdAt totalPrice status isPaid isDelivered items shippingAddress"
+      )
+      .skip(skip)
+      .limit(limit),
+    Order.countDocuments(query),
+  ]);
+
+  const totalPages = Math.ceil(total / limit) || 1;
 
   res.json({
     success: true,
     orders,
+    total,
+    totalPages,
+    currentPage: page,
   });
 });
 

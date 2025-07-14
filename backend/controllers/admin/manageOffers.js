@@ -17,6 +17,7 @@ const validateRefs = async (type, product, category) => {
 
 export const createOffer = asyncHandler(async (req, res) => {
   const { type, percentage, amount, product, category, startDate, endDate } = req.body;
+  console.log('what is this', type, product, category, startDate, endDate, percentage, amount);
   await validateRefs(type, product, category);
 
   if (!percentage && !amount) {
@@ -65,6 +66,7 @@ export const getOfferById = asyncHandler(async (req, res) => {
 
 export const updateOffer = asyncHandler(async (req, res) => {
   const { type, percentage, amount, product, category, startDate, endDate, isActive } = req.body;
+  console.log('what is this', type, product, category, startDate, endDate, percentage, amount);
   await validateRefs(type ?? undefined, product, category);
   const offer = await Offer.findById(req.params.id);
   if (!offer) {
@@ -73,7 +75,10 @@ export const updateOffer = asyncHandler(async (req, res) => {
   }
   if (type) offer.type = type;
   if (percentage !== undefined) offer.percentage = percentage;
-  if (amount !== undefined) offer.amount = amount;
+  if (amount !== undefined) {
+    offer.amount = amount
+    offer.percentage = undefined;
+  }
   if (product !== undefined) offer.product = product;
   if (category !== undefined) offer.category = category;
   if (startDate !== undefined) offer.startDate = startDate;

@@ -26,7 +26,9 @@ const initialState = {
   cancellingItem: false,
   returningOrder: false,
   returningItem: false,
-  downloadingInvoice: false
+  downloadingInvoice: false,
+  currentPage: 1,
+  totalPages: 1,
 };
 
 // Create new order
@@ -71,12 +73,12 @@ export const getOrderDetails = createAsyncThunk(
   }
 );
 
-// Get user orders
+// Get user orders with pagination
 export const getMyOrders = createAsyncThunk(
   'order/getMyOrders',
-  async ({ keyword = '', status = '' } = {}, thunkAPI) => {
+  async ({ keyword = '', status = '', page = 1, limit = 10 } = {}, thunkAPI) => {
     try {
-      const response = await getMyOrdersService(keyword, status);
+      const response = await getMyOrdersService(keyword, status, page, limit);
       return response.data;
     } catch (error) {
       
@@ -285,6 +287,8 @@ export const orderSlice = createSlice({
       .addCase(getMyOrders.fulfilled, (state, action) => {
         state.fetchingOrders = false;
         state.orders = action.payload.orders;
+        state.currentPage = action.payload.currentPage;
+        state.totalPages = action.payload.totalPages;
         state.success = true;
       })
       .addCase(getMyOrders.rejected, (state, action) => {

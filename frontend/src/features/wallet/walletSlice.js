@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { fetchWalletApi } from './walletService';
 
-export const fetchWallet = createAsyncThunk('wallet/fetch', async (_, { rejectWithValue }) => {
+// Thunk now accepts {page,limit}
+export const fetchWallet = createAsyncThunk('wallet/fetch', async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
   try {
-    const { data } = await fetchWalletApi();
-    return data.wallet;
+    const { data } = await fetchWalletApi(page, limit);
+    return data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || err.message);
   }
@@ -15,6 +16,8 @@ const walletSlice = createSlice({
   initialState: {
     balance: 0,
     transactions: [],
+    currentPage: 1,
+    totalPages: 1,
     loading: false,
     error: null,
   },
@@ -28,6 +31,8 @@ const walletSlice = createSlice({
         state.loading = false;
         state.balance = action.payload.balance;
         state.transactions = action.payload.transactions;
+        state.currentPage = action.payload.currentPage;
+        state.totalPages = action.payload.totalPages;
       })
       .addCase(fetchWallet.rejected, (state, action) => {
         state.loading = false; state.error = action.payload;

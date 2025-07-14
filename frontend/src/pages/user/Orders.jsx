@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
+import ReactPaginate from 'react-paginate';
 import { 
   getMyOrders, 
   cancelOrder, 
@@ -29,7 +30,9 @@ const Orders = () => {
     cancellingOrder, 
     returningOrder,
     downloadingInvoice,
-    error 
+    error, 
+    currentPage,
+    totalPages 
   } = useSelector((state) => state.order);
 
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -44,9 +47,9 @@ const Orders = () => {
     if (!user) {
       navigate('/login');
     } else {
-      dispatch(getMyOrders({ keyword: '', status: 'all' }));
+      dispatch(getMyOrders({ keyword: '', status: 'all', page: currentPage }));
     }
-  }, [dispatch, navigate, user]);
+  }, [dispatch, navigate, user, currentPage]);
 
   // Separate useEffect for error handling to prevent infinite loop
   useEffect(() => {
@@ -57,7 +60,9 @@ const Orders = () => {
   }, [error, dispatch]);
 
   const handleSearch = () => {
-    dispatch(getMyOrders({ keyword: searchKeyword, status: statusFilter }));
+    dispatch(getMyOrders({ keyword: searchKeyword, status: statusFilter, page: 1 }));
+    // reset to first page on search/filter change
+    // currentPage managed by slice via fulfilled handler
   };
 
   const handleKeyPress = (e) => {
@@ -68,7 +73,7 @@ const Orders = () => {
 
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
-    dispatch(getMyOrders({ keyword: searchKeyword, status: e.target.value }));
+    dispatch(getMyOrders({ keyword: searchKeyword, status: e.target.value, page: 1 }));
   };
 
   const handleCancelOrder = (order) => {
@@ -299,6 +304,26 @@ const Orders = () => {
             Start Shopping
           </Link>
         </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <ReactPaginate
+          previousLabel="← Prev"
+          nextLabel="Next →"
+          pageCount={totalPages}
+          onPageChange={({ selected }) => dispatch(getMyOrders({ keyword: searchKeyword, status: statusFilter, page: selected + 1 }))}
+          containerClassName="flex items-center justify-center space-x-2 mt-6 font-medium"
+          pageClassName="flex items-center justify-center h-8 w-8 rounded-md text-sm border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+          activeClassName="bg-gray-800 text-white border-gray-800 hover:bg-gray-700"
+          previousClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+          nextClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+          disabledClassName="opacity-50 cursor-not-allowed"
+          breakClassName="px-2 py-1.5 text-gray-500"
+          marginPagesDisplayed={1}
+          pageRangeDisplayed={3}
+          forcePage={currentPage - 1}
+        />
       )}
 
       {/* Cancel Order Dialog */}

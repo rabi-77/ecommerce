@@ -48,11 +48,11 @@ export const getOrderDetails = async (orderId) => {
   }
 };
 
-// Get all user orders with optional search and filter
-export const getMyOrders = async (keyword = '', status = '') => {
+// Get all user orders with optional search, filter, and pagination
+export const getMyOrders = async (keyword = '', status = '', page = 1, limit = 10) => {
   try {
     
-    const response = await api.get(`/orders?keyword=${keyword}&status=${status}`);
+    const response = await api.get(`/orders?keyword=${keyword}&status=${status}&page=${page}&limit=${limit}`);
     return response;
   } catch (error) {
     

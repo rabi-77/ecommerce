@@ -343,7 +343,7 @@ const Cart = () => {
                               
                               <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto">
                                 <div className="text-right">
-                                  {item.product.effectivePrice && item.product.effectivePrice < item.product.price && (
+                                  {item.product.effectivePrice < item.product.price && (
                                     <span className="text-sm text-gray-500 line-through mr-2">
                                       ₹{item.product.price}
                                     </span>

@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchWallet } from '../../features/wallet/walletSlice';
+import ReactPaginate from 'react-paginate';
 
 const WalletPage = () => {
   const dispatch = useDispatch();
-  const { balance, transactions, loading, error } = useSelector(state => state.wallet);
+  const { balance, transactions, loading, error, currentPage, totalPages } = useSelector(state => state.wallet);
 
   useEffect(() => {
-    dispatch(fetchWallet());
-  }, [dispatch]);
+    dispatch(fetchWallet({ page: currentPage }));
+  }, [dispatch, currentPage]);
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
@@ -48,6 +49,25 @@ const WalletPage = () => {
                 </tbody>
               </table>
             </div>
+          )}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <ReactPaginate
+              previousLabel="← Prev"
+              nextLabel="Next →"
+              pageCount={totalPages}
+              onPageChange={({ selected }) => dispatch(fetchWallet({ page: selected + 1 }))}
+              containerClassName="flex items-center justify-center space-x-2 mt-6 font-medium"
+              pageClassName="flex items-center justify-center h-8 w-8 rounded-md text-sm border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+              activeClassName="bg-gray-800 text-white border-gray-800 hover:bg-gray-700"
+              previousClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+              nextClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+              disabledClassName="opacity-50 cursor-not-allowed"
+              breakClassName="px-2 py-1.5 text-gray-500"
+              marginPagesDisplayed={1}
+              pageRangeDisplayed={3}
+              forcePage={currentPage - 1}
+            />
           )}
         </>
       )}

@@ -65,8 +65,6 @@ const ProductDetails = () => {
   }, [product]);
 
   const handleQuantityChange = (change) => {
-
-
     if(selectedSize){
       const variant = product.variants.find((v) => v.size === selectedSize);
       if (!variant) return;
@@ -110,7 +108,7 @@ const ProductDetails = () => {
   };
 
   const renderPrice = () => {
-    if (newProduct && newProduct.effectivePrice && newProduct.appliedOffer) {
+    if (newProduct && newProduct.appliedOffer && newProduct.effectivePrice < newProduct.price) {
       return (
         <div className="flex items-center space-x-3">
           <span className="text-gray-500 line-through text-xl">

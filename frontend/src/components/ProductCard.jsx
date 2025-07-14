@@ -42,15 +42,14 @@ export const ProductCard = ({ product }) => {
             {product.brand?.name || 'Brand'}
           </Link>
         </div>
-     
-    
+   
    
 
 <div className="mt-auto pt-4 border-t border-[var(--border-light)]">
   {/* Always render price row with consistent spacing */}
   <div className="flex justify-between items-end mb-1 min-h-[24px]"> {/* Fixed min-height */}
     <div className="flex items-baseline gap-2">
-      {product.effectivePrice && product.effectivePrice < product.price ? (
+      {product.effectivePrice < product.price ? (
         <>
           
           <span className="text-lg font-bold text-[var(--primary)]">₹{product.effectivePrice}</span>
@@ -70,7 +69,7 @@ export const ProductCard = ({ product }) => {
 
   {/* Offer badge - always takes space but only visible when needed */}
   <div className="min-h-[24px] mt-1"> {/* Fixed min-height */}
-    {product.effectivePrice && product.effectivePrice < product.price && product.appliedOffer && (
+    {product.effectivePrice < product.price && product.appliedOffer && (
       <span className="inline-block text-xs font-medium text-white bg-[var(--primary)] px-2 py-1 rounded-md">
         {product.appliedOffer.percentage ? `${product.appliedOffer.percentage}% OFF` : `₹${product.appliedOffer.amount} OFF`}
       </span>

@@ -44,19 +44,32 @@ export const applyBestOffer = (productDoc, offerMaps) => {
   const withSavings = candidates.map(o => {
     const percentSave = o.percentage ? (productDoc.price * o.percentage) / 100 : 0;
     const amountSave = o.amount || 0;
-    
+
+    // choose whichever yields larger monetary saving
     return { offer: o, save: Math.max(percentSave, amountSave) };
   });
 
-  // pick the offer with max saving
+  // pick the offer with greatest monetary saving
   const best = withSavings.reduce((a, b) => (b.save > a.save ? b : a));
 
-  const appliedOffer = best.offer;
-  const discountAmount = best.save;
-  const effectivePrice = Number((productDoc.price - discountAmount).toFixed(2));
-  const discountPercent = appliedOffer.percentage || 0;
+  const rawDiscount = best.save;
 
-  
+  // Cap discount so that it never exceeds item price
+  const discountAmount = Math.min(rawDiscount, productDoc.price);
+
+  // Price after discount (never < 0)
+  const effectivePrice = Number((productDoc.price - discountAmount).toFixed(2));
+
+  // Percentage saving realised
+  const discountPercent = Number(((discountAmount / productDoc.price) * 100).toFixed(2));
+
+  // Return adjusted offer details for UI badges
+  const appliedOffer = {
+    _id: best.offer._id,
+    type: best.offer.type,
+    amount: discountAmount,
+    percentage: best.offer.percentage ? discountPercent : undefined,
+  };
 
   return { effectivePrice, appliedOffer, discountPercent, discountAmount };
 };
