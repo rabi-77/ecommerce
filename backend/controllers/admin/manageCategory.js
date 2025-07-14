@@ -1,7 +1,7 @@
 import categoryModel from "../../models/categoryModel.js";
 import { uploadImagesToCloudinary } from "../../utils/imageUpload.js";
-import Product from '../../models/productModel.js'
-import Offers from '../../models/offerModel.js'
+import Product from "../../models/productModel.js";
+import Offers from "../../models/offerModel.js";
 
 // const storage = multer.memoryStorage();
 // const uploadCategory = multer({
@@ -36,29 +36,34 @@ const getCategories = async (req, res) => {
   }
 };
 
-
 const addCategory = async (req, res) => {
   const { name, description } = req.body;
   const file = req.file;
   try {
-    if (!name || name.trim() === '') {
-      return res.status(400).json({ message: "Category name cannot be empty or contain only whitespace" });
+    if (!name || name.trim() === "") {
+      return res
+        .status(400)
+        .json({
+          message: "Category name cannot be empty or contain only whitespace",
+        });
     }
-    
+
     const trimmedName = name.trim();
-    
+
     if (!file) {
       return res
         .status(400)
         .json({ message: "An image is required for the category" });
     }
 
-    const existingCategory = await categoryModel.findOne({ 
-      name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
+    const existingCategory = await categoryModel.findOne({
+      name: { $regex: new RegExp(`^${trimmedName}$`, "i") },
     });
-    
+
     if (existingCategory) {
-      return res.status(400).json({ message: "Category already exists (case-insensitive match)" });
+      return res
+        .status(400)
+        .json({ message: "Category already exists (case-insensitive match)" });
     }
 
     if (!["image/jpeg", "image/png", "image/gif"].includes(file.mimetype)) {
@@ -70,17 +75,15 @@ const addCategory = async (req, res) => {
     const imageUrl = await uploadImagesToCloudinary([file], "categories");
     const newCategory = new categoryModel({
       name: trimmedName,
-      description: description ? description.trim() : '',
+      description: description ? description.trim() : "",
       imageUrl: imageUrl[0],
     });
 
     await newCategory.save();
-    res
-      .status(201)
-      .json({
-        message: "category created successfully",
-        category: newCategory,
-      });
+    res.status(201).json({
+      message: "category created successfully",
+      category: newCategory,
+    });
   } catch (err) {
     res.status(500).json({ message: "server error" });
   }
@@ -90,84 +93,89 @@ const editCategory = async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
   const file = req.file;
-  if (!name || name.trim() === '') {
-    return res.status(400).json({ message: "Category name cannot be empty or contain only whitespace" });
+  if (!name || name.trim() === "") {
+    return res
+      .status(400)
+      .json({
+        message: "Category name cannot be empty or contain only whitespace",
+      });
   }
-  
+
   const trimmedName = name.trim();
-  
+
   try {
-    const checking = await categoryModel.findOne({ 
-      name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
+    const checking = await categoryModel.findOne({
+      name: { $regex: new RegExp(`^${trimmedName}$`, "i") },
     });
     if (checking && checking._id.toString() !== id) {
       return res
         .status(400)
-        .json({ message: "Category with this name already exists (case-insensitive match)" });
+        .json({
+          message:
+            "Category with this name already exists (case-insensitive match)",
+        });
     }
 
-let imageUrl;
+    let imageUrl;
     if (file) {
       const uploadImage = await uploadImagesToCloudinary([file], "categories");
-      imageUrl = uploadImage[0]; 
+      imageUrl = uploadImage[0];
     }
 
     const editCategory = await categoryModel.findByIdAndUpdate(
       id,
-      { 
-        name: trimmedName, 
-        description: description ? description.trim() : '',
-        ...(imageUrl && { imageUrl })
+      {
+        name: trimmedName,
+        description: description ? description.trim() : "",
+        ...(imageUrl && { imageUrl }),
       },
       { new: true }
     );
-    
+
     if (!editCategory) {
       return res
         .status(500)
         .json({ message: "category with this id doesnt exist" });
     }
 
-    res.json({ message: "category updated successfully",category:editCategory });
+    res.json({
+      message: "category updated successfully",
+      category: editCategory,
+    });
   } catch (err) {
-    
     res.status(500).json({ message: "some internal server error" });
   }
 };
 
 
+//hard delete lol
 const softDeleteCategory = async (req, res) => {
   const { id } = req.params;
-  
+
   try {
-    const category = await categoryModel.findOne({_id:id});
+    const category = await categoryModel.findOne({ _id: id });
     if (!category) {
-        
       return res
         .status(404)
         .json({ message: "this category doesnt exist no more" });
     }
-    const softDelete = await categoryModel.findByIdAndDelete(
-      id,
-     
-    );
+    const softDelete = await categoryModel.findByIdAndDelete(id);
     if (!softDelete) {
       return res.status(500).json({ message: "couldnt found this category" });
     }
-    const offerExist= await Offers.find({category:id})
+    // const offerExist= await Offers.find({category:id})
 
-    if(!offerExist){
-      res.status().json({message:''})
-    }
+    // if(!offerExist){
+    //   res.status().json({message:''})
+    // }
 
-    const products= await Product.deleteMany({category:id,totalStock:{$lt:5}})
+    // const products= await Product.deleteMany({category:id,totalStock:{$lt:5}})
 
-
-
-    res.json({ message: "category deleted successfully",deletedId:softDelete._id });
-    
+    res.json({
+      message: "category deleted successfully",
+      deletedId: softDelete._id,
+    });
   } catch (err) {
-    
     res
       .status(500)
       .json({ message: "some internal error while deleting the category" });
@@ -179,17 +187,19 @@ const toggleCategoryListing = async (req, res) => {
 
   try {
     const category = await categoryModel.findById(categoryId);
-    
+
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
-    
+
     category.isListed = !category.isListed;
     await category.save();
-    
-    res.json({ 
-      message: `Category ${category.isListed ? 'listed' : 'unlisted'} successfully`, 
-      category 
+
+    res.json({
+      message: `Category ${
+        category.isListed ? "listed" : "unlisted"
+      } successfully`,
+      category,
     });
   } catch (err) {
     console.error(err);
@@ -197,4 +207,10 @@ const toggleCategoryListing = async (req, res) => {
   }
 };
 
-export { getCategories, editCategory, addCategory, softDeleteCategory, toggleCategoryListing };
+export {
+  getCategories,
+  editCategory,
+  addCategory,
+  softDeleteCategory,
+  toggleCategoryListing,
+};
