@@ -9,10 +9,15 @@ lerna-debug.log*
 
 .env.development
 .env
+.env.*
 node_modules
 dist
 dist-ssr
 *.local
+
+*.tar.gz
+*.zip
+
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +29,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.bak
+*.tmp
