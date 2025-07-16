@@ -116,7 +116,11 @@ export const fetchAvailableCoupons = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const res = await getAvailableCoupons();
-      return res.data.coupons || [];
+      // backend returns { coupons, cartSubtotal }
+      return {
+        coupons: res.data.coupons || [],
+        cartSubtotal: res.data.cartSubtotal ?? 0,
+      };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load coupons');
     }
@@ -154,6 +158,7 @@ const initialState = {
   availableCoupons: [],
   loadingCoupons: false,
   couponsError: null,
+  cartSubtotal: 0,
 };
 
 const cartSlice = createSlice({
@@ -379,7 +384,8 @@ const cartSlice = createSlice({
       })
       .addCase(fetchAvailableCoupons.fulfilled, (state, action) => {
         state.loadingCoupons = false;
-        state.availableCoupons = action.payload;
+        state.availableCoupons = action.payload.coupons;
+        state.cartSubtotal = action.payload.cartSubtotal;
       })
       .addCase(fetchAvailableCoupons.rejected, (state, action) => {
         state.loadingCoupons = false;

@@ -7,7 +7,6 @@ import api from '../../apis/user/api';
 
 const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
   const [couponCode, setCouponCode] = useState('');
-  const [activeCoupons, setActiveCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
@@ -17,7 +16,7 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
     loading: state.cart.loading,
   }));
 
-  const { availableCoupons, loading: loadingAvailableCoupons } = useSelector(state => state.cart);
+  const { availableCoupons, loading: loadingAvailableCoupons, summary } = useSelector(state => state.cart);
 
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
@@ -67,29 +66,19 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
     setCouponCode(e.target.value);
   };
 
-  const handleCouponClick = (code) => {
-    setCouponCode(code);
+  const handleCouponClick = (coupon) => {
+    if (!coupon.eligible) {
+      toast.info(`Minimum purchase of ₹${coupon.minPurchaseAmount} required for this coupon`);
+      return;
+    }
+    setCouponCode(coupon.code);
   };
 
   useEffect(() => {
-    const fetchActiveCoupons = async () => {
-      setLoadingCoupons(true);
-      try {
-        const res = await api.get('/coupons/active');
-        
-        setActiveCoupons(res.data.coupons || []);
-      } catch (err) {
-        console.error('Error fetching coupons', err);
-      } finally {
-        setLoadingCoupons(false);
-      }
-    };
-    if (availableCoupons.length === 0 && !loadingAvailableCoupons) {
+    if (!loadingAvailableCoupons) {
       dispatch(fetchAvailableCoupons());
-    } else {
-      setActiveCoupons(availableCoupons);
     }
-  }, [dispatch, availableCoupons.length, loadingAvailableCoupons]);
+  }, [dispatch, summary.subtotal]);
 
   if (appliedCoupon) {
     return (
@@ -154,7 +143,7 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
       {/* Active coupon list */}
       <div className="mt-4">
         <p className="text-sm font-medium mb-2">Available Coupons:</p>
-        {loadingAvailableCoupons ? (
+        {loadingAvailableCoupons || loadingCoupons ? (
           <p className="text-xs text-gray-500">Loading...</p>
         ) : availableCoupons.length === 0 ? (
           <p className="text-xs text-gray-500">No coupons available</p>
@@ -164,8 +153,18 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
               <button
                 key={c.code}
                 type="button"
-                onClick={() => handleCouponClick(c.code)}
-                className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded"
+                onClick={() => handleCouponClick(c)}
+                disabled={!c.eligible}
+                className={`px-2 py-1 text-xs rounded ${
+                  c.eligible
+                    ? 'bg-blue-100 hover:bg-blue-200 text-blue-800'
+                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                }`}
+                title={
+                  c.eligible
+                    ? `Apply ${c.code}`
+                    : `Spend ₹${c.minPurchaseAmount} to use this coupon`
+                }
               >
                 {c.code}
               </button>

@@ -799,28 +799,53 @@ export const validateCoupon = async (req, res) => {
 
 export const getAvailableCoupons = async (req, res) => {
   try {
-    ('hey');
+    const userId = req.user;
     
-    const userId =  req.user;
-    (userId,'hey');
-    
-    const userIdStr = userId.toString();
-    const userObjId = new mongoose.Types.ObjectId(userIdStr);
+    // Calculate current cart subtotal (after offers but before coupons)
+    const cart = await Cart.findOne({ user: userId }).populate({
+      path: 'items.product',
+      populate: ['category', 'brand'],
+    });
+
+    let subtotal = 0;
+    if (cart && cart.items.length) {
+      // Apply best offer pricing (re-using existing helper)
+      const prodIds = cart.items.map((it) => it.product._id);
+      const catIds = cart.items.map((it) => it.product.category?._id).filter(Boolean);
+      const offerMaps = await fetchActiveOffers(prodIds, catIds);
+
+      cart.items.forEach((it) => {
+        const { effectivePrice } = applyBestOffer(it.product, offerMaps);
+        subtotal += effectivePrice * it.quantity;
+      });
+    }
 
     const now = new Date();
 
-    const coupons = await Coupon.find({
+    const rawCoupons = await Coupon.find({
       isActive: true,
       startDate: { $lte: now },
       expiryDate: { $gte: now },
       $or: [
         { maxUses: { $exists: false } },
-        { $expr: { $gt: [ '$maxUses', '$usedCount' ] } }
+        { $expr: { $gt: ['$maxUses', '$usedCount'] } },
       ],
-      usedBy: { $nin: [userIdStr, userObjId] },
+      usedBy: { $nin: [userId] },
     }).select('code discountType discountValue minPurchaseAmount maxDiscountAmount expiryDate');
 
-    res.json({ success: true, coupons });
+    // Separate eligible vs ineligible based on minPurchaseAmount
+    const coupons = rawCoupons.map((c) => ({
+      _id: c._id,
+      code: c.code,
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      maxDiscountAmount: c.maxDiscountAmount,
+      minPurchaseAmount: c.minPurchaseAmount,
+      expiryDate: c.expiryDate,
+      eligible: subtotal >= c.minPurchaseAmount,
+    }));
+
+    res.json({ success: true, coupons, cartSubtotal: subtotal });
   } catch (error) {
     console.error('Error fetching available coupons:', error);
     res.status(500).json({ success: false, message: 'Server error while fetching coupons' });
