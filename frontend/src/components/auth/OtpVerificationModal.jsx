@@ -6,6 +6,7 @@ import { resendPasswordOtp, resetPasswordWithOtp, clearPasswordResetErrors } fro
 const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(60); 
+  const [resending, setResending] = useState(false);
   const dispatch = useDispatch();
   
   const { 
@@ -16,36 +17,45 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
     passwordResetMessage 
   } = useSelector((state) => state.auth);
   
+  // Countdown ticker
   useEffect(() => {
     let timer;
     if (isOpen && countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     }
-    
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [countdown, isOpen]);
-  
+
+  // Reset countdown ONLY when modal just opened
   useEffect(() => {
     if (isOpen) {
       setCountdown(60);
-      
-      if (passwordResetError) {
-        dispatch(clearPasswordResetErrors());
-      }
     }
-  }, [isOpen, passwordResetSuccess, passwordResetError, passwordResetEmail, dispatch]);
+  }, [isOpen]);
+
+  // Clear password reset errors when modal opens or email changes, but do NOT reset timer on error
+  useEffect(() => {
+    if (isOpen && passwordResetError) {
+      dispatch(clearPasswordResetErrors());
+    }
+  }, [isOpen, passwordResetError, dispatch]);
   
   useEffect(() => {
-    if (passwordResetMessage && isOpen && passwordResetSuccess && passwordResetMessage.includes("sent")) {
+    if (!isOpen) return;
+    
+    if (passwordResetMessage && passwordResetMessage.includes("sent")) {
       toast.success(passwordResetMessage);
-      setCountdown(60); 
+      setCountdown(60);
+      setResending(false);
     }
-  }, [passwordResetMessage, passwordResetSuccess, isOpen]);
+    if (passwordResetError) {
+      setResending(false);
+    }
+  }, [passwordResetMessage, passwordResetSuccess, passwordResetError, isOpen]);
   
   const handleResendOtp = () => {
     if (passwordResetEmail) {
+      setResending(true);
       dispatch(resendPasswordOtp(passwordResetEmail));
     } else {
       toast.error("Email is required");
@@ -120,9 +130,9 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify }) => {
               type="button"
               onClick={handleResendOtp}
               className="text-blue-500 text-sm"
-              disabled={passwordResetLoading || countdown > 50} // Prevent immediate resend
+              disabled={resending || countdown > 50}
             >
-              {passwordResetLoading ? "Sending..." : countdown > 50 ? `Resend in ${countdown - 50}s` : "Resend OTP"}
+              {resending ? "Sending..." : countdown > 50 ? `Resend in ${countdown - 50}s` : "Resend OTP"}
             </button>
             <div className="flex space-x-2">
               <button

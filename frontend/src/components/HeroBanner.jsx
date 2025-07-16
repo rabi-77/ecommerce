@@ -4,9 +4,15 @@ import { Link } from 'react-router-dom';
 
 const HeroBanner = () => {
   const [banner, setBanner] = useState(null);
+  console.log("bannernnn",banner);
 
   useEffect(() => {
-    api.get('/banners').then((res) => setBanner(res.data[0])).catch(() => {});
+    api.get('/banners').then((res) => {
+      console.log("banner",res.data[1]);
+      
+      setBanner(res.data[1]);
+    }).catch(() => {});
+    
   }, []);
 
   if (!banner) return null;

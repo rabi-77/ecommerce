@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 
 const FilterSidebar = ({
@@ -10,11 +10,38 @@ const FilterSidebar = ({
   isMobile = false,
   onClose = () => {}
 }) => {
-  const [openSection, setOpenSection] = React.useState({
+  const [openSection, setOpenSection] = useState({
     category: true,
     brand: true,
     price: true
   });
+
+  // Local state for price inputs to avoid re-render on every keystroke
+  const [priceInputs, setPriceInputs] = useState({
+    priceMin: filters.priceMin || '',
+    priceMax: filters.priceMax || ''
+  });
+
+  // Keep local state in sync if filters reset externally (e.g., Clear All)
+  useEffect(() => {
+    setPriceInputs({ priceMin: filters.priceMin || '', priceMax: filters.priceMax || '' });
+  }, [filters.priceMin, filters.priceMax]);
+
+  const handlePriceChange = (e) => {
+    const { name, value } = e.target;
+    // Allow only numbers
+    if (/^\d*$/.test(value)) {
+      setPriceInputs((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handlePriceBlur = (e) => {
+    const { name } = e.target;
+    // propagate change to parent only on blur
+    if (priceInputs[name] !== filters[name]) {
+      onFilterChange({ target: { name, value: priceInputs[name] } });
+    }
+  };
 
   const toggleSection = (section) => {
     setOpenSection(prev => ({
@@ -106,10 +133,11 @@ const FilterSidebar = ({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Min</label>
                   <input
-                    type="number"
+                    type="text"
                     name="priceMin"
-                    value={filters.priceMin}
-                    onChange={onFilterChange}
+                    value={priceInputs.priceMin}
+                    onChange={handlePriceChange}
+                    onBlur={handlePriceBlur}
                     placeholder="₹"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -117,10 +145,11 @@ const FilterSidebar = ({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max</label>
                   <input
-                    type="number"
+                    type="text"
                     name="priceMax"
-                    value={filters.priceMax}
-                    onChange={onFilterChange}
+                    value={priceInputs.priceMax}
+                    onChange={handlePriceChange}
+                    onBlur={handlePriceBlur}
                     placeholder="₹"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
