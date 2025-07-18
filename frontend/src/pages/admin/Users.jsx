@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import ReactPaginate from 'react-paginate';
+import Pagination from '../../components/common/Pagination';
+import DataTable from '../../components/common/DataTable';
 import { fetchUsersThunk, toggleUserBlockThunk } from '../../features/admin/adminUsers/userSlice';
+import Input from '../../components/common/Input';
+import Loader from '../../components/common/Loader';
+import { Loader2, LoaderCircle, LoaderPinwheel } from 'lucide-react';
 
 const Users = () => {
   const dispatch = useDispatch();
@@ -29,8 +33,8 @@ const Users = () => {
     dispatch(fetchUsersThunk({ page: 1, size, search: '' }));
   };
 
-  const handlePageChange = ({ selected }) => {
-    dispatch(fetchUsersThunk({ page: selected + 1, size, search }));
+  const handlePageChange = (newPage) => {
+    dispatch(fetchUsersThunk({ page: newPage, size, search }));
   };
 
   const handleToggleBlock = async (userId) => {
@@ -49,6 +53,28 @@ const Users = () => {
     }
   };
 
+  // Columns definition for DataTable
+  const columns = [
+    { header: 'Username', accessor: 'username' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Status', accessor: (u) => (
+        <span className={`px-2 py-1 rounded text-xs font-medium ${u.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+          {u.isBlocked ? 'Blocked' : 'Active'}
+        </span>
+      )
+    },
+    { header: 'Joined Date', accessor: (u) => new Date(u.createdAt).toLocaleDateString() },
+    { header: 'Actions', accessor: (u) => (
+        <button
+          onClick={() => handleToggleBlock(u._id)}
+          className={`px-3 py-1 rounded text-sm font-medium ${!u.isBlocked ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}`}
+        >
+          {!u.isBlocked ? 'Active' : 'Blocked'}
+        </button>
+      )
+    }
+  ];
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl sm:text-2xl font-bold">User Management</h2>
@@ -56,12 +82,11 @@ const Users = () => {
       {/* Search + controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <input
-            type="text"
+          <Input
             value={search}
             onChange={handleSearch}
             placeholder="Search users..."
-            className="p-2 border rounded-md w-full sm:w-64"
+            className="flex-grow max-w-xs"
           />
           <button
             onClick={clearSearch}
@@ -73,76 +98,20 @@ const Users = () => {
       </div>
 
       {loading ? (
-        <p>Loading...</p>
+        // <p>Loading...</p>
+        <Loader/>
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : (
         <>
-          <div className="w-full overflow-x-auto">
-            <table className="min-w-full border-collapse bg-white rounded-lg shadow text-sm">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="p-3 text-left">Username</th>
-                  <th className="p-3 text-left">Email</th>
-                  <th className="p-3 text-left">Status</th>
-                  <th className="p-3 text-left">Joined Date</th>
-                  <th className="p-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users && users.length > 0 ? (
-                  users.map((user) => (
-                    <tr key={user._id} className="border-b">
-                      <td className="p-3">{user.username}</td>
-                      <td className="p-3">{user.email}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${user.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                          {user.isBlocked ? 'Blocked' : 'Active'}
-                        </span>
-                      </td>
-                      <td className="p-3">{new Date(user.createdAt).toLocaleDateString()}</td>
-                      <td className="p-3">
-                        <button
-                          onClick={() => handleToggleBlock(user._id)}
-                          className={`px-3 py-1 rounded text-sm font-medium ${
-                            !user.isBlocked
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
-                        >
-                          {!user.isBlocked ? 'Active' : 'Blocked'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="p-3 text-center text-gray-500">
-                      No users found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
+          <DataTable columns={columns} data={users || []} />
           {total > size && (
-            <div className="flex justify-center mt-6 overflow-x-auto">
-              <ReactPaginate
-                previousLabel="Previous"
-                nextLabel="Next"
-                pageCount={Math.ceil(total / size)}
-                onPageChange={handlePageChange}
-                containerClassName="flex items-center justify-center gap-2"
-                pageClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
-                previousClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
-                nextClassName="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 transition-colors"
-                activeClassName="!bg-gray-800 text-white border-gray-800"
-                disabledClassName="opacity-50 cursor-not-allowed hover:bg-white"
-                breakClassName="px-3 py-2"
-                forcePage={page - 1}
-              />
-            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={Math.ceil(total / size)}
+              onPageChange={handlePageChange}
+              className="mt-6"
+            />
           )}
         </>
       )}

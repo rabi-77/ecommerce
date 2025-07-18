@@ -17,6 +17,8 @@ import CouponForm from '../../components/checkout/CouponForm';
 import { clearPaymentState } from '../../features/razorpay/paymentSlice';
 import { fetchWallet } from '../../features/wallet/walletSlice';
 import api from '../../apis/user/api';
+import Input from '../../components/common/Input';
+import Checkbox from '../../components/common/Checkbox';
 
 const steps = [
   { id: 'cart', name: 'Cart' },
@@ -147,9 +149,7 @@ const Checkout = () => {
   
   useEffect(() => {
     if (orderCreated && order) {
-      if (paymentMethod === 'RAZORPAY') {
-        return;
-      } else if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
+      if (paymentMethod === 'COD' || paymentMethod === 'WALLET') {
         const orderId = order?._id || order._id;
         navigate(`/order/success/${orderId}`);
         dispatch(resetOrderCreated());
@@ -489,11 +489,9 @@ const Checkout = () => {
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                         Full Name *
                       </label>
-                      <input
-                        type="text"
-                        id="name"
+                      <Input
                         name="name"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.name}
                         onChange={handleAddressFormChange}
                         required
@@ -504,11 +502,10 @@ const Checkout = () => {
                       <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
                         Phone Number *
                       </label>
-                      <input
+                      <Input
                         type="tel"
-                        id="phoneNumber"
                         name="phoneNumber"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.phoneNumber}
                         onChange={handleAddressFormChange}
                         required
@@ -519,11 +516,10 @@ const Checkout = () => {
                       <label htmlFor="alternativePhoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
                         Alternative Phone (Optional)
                       </label>
-                      <input
+                      <Input
                         type="tel"
-                        id="alternativePhoneNumber"
                         name="alternativePhoneNumber"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.alternativePhoneNumber}
                         onChange={handleAddressFormChange}
                       />
@@ -533,40 +529,34 @@ const Checkout = () => {
                       <label htmlFor="addressLine1" className="block text-sm font-medium text-gray-700 mb-1">
                         Address Line 1 *
                       </label>
-                      <textarea
-                        id="addressLine1"
+                      <Input
                         name="addressLine1"
-                        rows="2"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.addressLine1}
                         onChange={handleAddressFormChange}
                         required
-                      ></textarea>
+                      />
                     </div>
                     
                     <div className="md:col-span-2">
                       <label htmlFor="addressLine2" className="block text-sm font-medium text-gray-700 mb-1">
                         Address Line 2 (Optional)
                       </label>
-                      <textarea
-                        id="addressLine2"
+                      <Input
                         name="addressLine2"
-                        rows="2"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.addressLine2}
                         onChange={handleAddressFormChange}
-                      ></textarea>
+                      />
                     </div>
                     
                     <div>
                       <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
                         Postal Code *
                       </label>
-                      <input
-                        type="text"
-                        id="postalCode"
+                      <Input
                         name="postalCode"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.postalCode}
                         onChange={handleAddressFormChange}
                         required
@@ -577,11 +567,9 @@ const Checkout = () => {
                       <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                         City *
                       </label>
-                      <input
-                        type="text"
-                        id="city"
+                      <Input
                         name="city"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.city}
                         onChange={handleAddressFormChange}
                         required
@@ -592,11 +580,9 @@ const Checkout = () => {
                       <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
                         State *
                       </label>
-                      <input
-                        type="text"
-                        id="state"
+                      <Input
                         name="state"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.state}
                         onChange={handleAddressFormChange}
                         required
@@ -607,11 +593,9 @@ const Checkout = () => {
                       <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
                         Country *
                       </label>
-                      <input
-                        type="text"
-                        id="country"
+                      <Input
                         name="country"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="block w-full"
                         value={addressForm.country}
                         onChange={handleAddressFormChange}
                         required
@@ -619,19 +603,12 @@ const Checkout = () => {
                     </div>
                     
                     <div className="md:col-span-2">
-                      <div className="flex items-center">
-                        <input
-                          id="isDefault"
-                          name="isDefault"
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          checked={addressForm.isDefault}
-                          onChange={handleAddressFormChange}
-                        />
-                        <label htmlFor="isDefault" className="ml-2 block text-sm text-gray-900">
-                          Set as default address
-                        </label>
-                      </div>
+                      <Checkbox
+                        name="isDefault"
+                        checked={addressForm.isDefault}
+                        onChange={handleAddressFormChange}
+                        label="Set as default address"
+                      />
                     </div>
                   </div>
                   
@@ -1140,7 +1117,7 @@ const Checkout = () => {
                 
                 {summary?.productDiscount > 0 && (
                   <div className="flex justify-between text-base font-medium text-green-600 mt-2">
-                    <p>Offer Discouznt</p>
+                    <p>Offer Discount</p>
                     <p>-₹{parseFloat(summary.productDiscount).toFixed(2)}</p>
                   </div>
                 )}

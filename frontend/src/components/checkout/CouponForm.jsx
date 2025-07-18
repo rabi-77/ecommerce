@@ -4,6 +4,7 @@ import { FaTimes, FaCheck } from 'react-icons/fa';
 import { applyCoupon, removeCoupon, fetchAvailableCoupons } from '../../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import api from '../../apis/user/api';
+import Loader from '../common/Loader';
 
 const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
   const [couponCode, setCouponCode] = useState('');
@@ -144,7 +145,8 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
       <div className="mt-4">
         <p className="text-sm font-medium mb-2">Available Coupons:</p>
         {loadingAvailableCoupons || loadingCoupons ? (
-          <p className="text-xs text-gray-500">Loading...</p>
+          // <p className="text-xs text-gray-500">Loading...</p>
+          <Loader/>
         ) : availableCoupons.length === 0 ? (
           <p className="text-xs text-gray-500">No coupons available</p>
         ) : (

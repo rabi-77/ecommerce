@@ -7,6 +7,7 @@ import { fetchWishlist, removeFromWishlist, clearWishlist } from '../../features
 import Loader from '../../components/common/Loader';
 import AddToCartButton from '../../components/AddToCartButton';
 import Modal from '../../components/common/Modal';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 
 const Wishlist = () => {
   const dispatch = useDispatch();
@@ -15,6 +16,7 @@ const Wishlist = () => {
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState('');
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
   
   const { user } = useSelector((state) => state.auth);
   
@@ -57,18 +59,19 @@ const Wishlist = () => {
     }
   };
 
-  const handleClearWishlist = async () => {
-    if (items.length === 0) return;
-    
-    if (!window.confirm('Are you sure you want to clear your wishlist?')) return;
-    
+  const handleClearWishlist = () => {
+    if(items.length===0) return;
+    setClearDialogOpen(true);
+  };
+
+  const confirmClearWishlist = async () => {
     try {
       await dispatch(clearWishlist()).unwrap();
       toast.success('Wishlist cleared');
     } catch (error) {
-      console.error('Error clearing wishlist:', error);
       toast.error('Failed to clear wishlist');
     }
+    setClearDialogOpen(false);
   };
 
   const handleSizeRequired = (product) => {
@@ -226,6 +229,14 @@ const Wishlist = () => {
           ))}
         </div>
       )}
+      <ConfirmationDialog
+        open={clearDialogOpen}
+        title="Clear Wishlist"
+        message="Are you sure you want to clear your wishlist?"
+        confirmLabel="Clear"
+        onConfirm={confirmClearWishlist}
+        onCancel={()=>setClearDialogOpen(false)}
+      />
     </div>
   );
 };

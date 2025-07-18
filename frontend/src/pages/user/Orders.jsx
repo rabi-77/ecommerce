@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import ReactPaginate from 'react-paginate';
 import { 
   getMyOrders, 
   cancelOrder, 
@@ -18,6 +17,10 @@ import {
   RotateCcw, 
   Eye 
 } from 'lucide-react';
+import Pagination from '../../components/common/Pagination';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import Input from '../../components/common/Input';
+import Select from '../../components/common/Select';
 
 const Orders = () => {
   const dispatch = useDispatch();
@@ -168,11 +171,10 @@ const Orders = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           <div className="md:col-span-5">
             <div className="relative">
-              <input
-                type="text"
-                placeholder="Search by Order Number or Address Name"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <Input
+                placeholder="Search orders..."
                 value={searchKeyword}
+                className="w-full pl-10 pr-10"
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 onKeyPress={handleKeyPress}
               />
@@ -186,10 +188,10 @@ const Orders = () => {
           </div>
           <div className="md:col-span-4">
             <div className="relative">
-              <select
+              <Select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 appearance-none bg-white"
               >
                 <option value="all">All Orders</option>
                 <option value="pending">Pending</option>
@@ -198,7 +200,7 @@ const Orders = () => {
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="returned">Returned</option>
-              </select>
+              </Select>
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
                 <Filter size={20} />
               </div>
@@ -308,105 +310,59 @@ const Orders = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <ReactPaginate
-          previousLabel="← Prev"
-          nextLabel="Next →"
-          pageCount={totalPages}
-          onPageChange={({ selected }) => dispatch(getMyOrders({ keyword: searchKeyword, status: statusFilter, page: selected + 1 }))}
-          containerClassName="flex items-center justify-center space-x-2 mt-6 font-medium"
-          pageClassName="flex items-center justify-center h-8 w-8 rounded-md text-sm border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-          activeClassName="bg-gray-800 text-white border-gray-800 hover:bg-gray-700"
-          previousClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-          nextClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-          disabledClassName="opacity-50 cursor-not-allowed"
-          breakClassName="px-2 py-1.5 text-gray-500"
-          marginPagesDisplayed={1}
-          pageRangeDisplayed={3}
-          forcePage={currentPage - 1}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => dispatch(getMyOrders({ keyword: searchKeyword, status: statusFilter, page }))}
+          className="mt-6"
         />
       )}
 
       {/* Cancel Order Dialog */}
-      {openCancelDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-semibold mb-4">Cancel Order</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to cancel this order? Please provide a reason for cancellation.
-            </p>
-            <textarea
-              autoFocus
-              placeholder="Reason for Cancellation"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              required
-              rows={3}
-            />
-            <div className="flex justify-end space-x-3">
-              <button 
-                onClick={() => setOpenCancelDialog(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmCancelOrder} 
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                disabled={cancellingOrder}
-              >
-                {cancellingOrder ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                    Processing...
-                  </>
-                ) : 'Confirm Cancellation'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationDialog
+        open={openCancelDialog}
+        title="Cancel Order"
+        confirmLabel={cancellingOrder ? 'Processing...' : 'Confirm Cancellation'}
+        loading={cancellingOrder}
+        onConfirm={confirmCancelOrder}
+        onCancel={() => setOpenCancelDialog(false)}
+      >
+        <p className="text-gray-600 mb-4">
+          Are you sure you want to cancel this order? Please provide a reason for cancellation.
+        </p>
+        <textarea
+          autoFocus
+          placeholder="Reason for Cancellation"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          required
+          rows={3}
+        />
+      </ConfirmationDialog>
 
       {/* Return Order Dialog */}
-      {openReturnDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-semibold mb-4">Return Order</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to return this order? Please provide a reason for the return.
-            </p>
-            <textarea
-              autoFocus
-              placeholder="Reason for Return"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-              value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-              required
-              rows={3}
-            />
-            <div className="flex justify-end space-x-3">
-              <button 
-                onClick={() => setOpenReturnDialog(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmReturnOrder} 
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                disabled={returningOrder}
-              >
-                {returningOrder ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                    Processing...
-                  </>
-                ) : 'Confirm Return'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationDialog
+        open={openReturnDialog}
+        title="Return Order"
+        confirmLabel={returningOrder ? 'Processing...' : 'Confirm Return'}
+        loading={returningOrder}
+        onConfirm={confirmReturnOrder}
+        onCancel={() => setOpenReturnDialog(false)}
+      >
+        <p className="text-gray-600 mb-4">
+          Are you sure you want to return this order? Please provide a reason for the return.
+        </p>
+        <textarea
+          autoFocus
+          placeholder="Reason for Return"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={returnReason}
+          onChange={(e) => setReturnReason(e.target.value)}
+          required
+          rows={3}
+        />
+      </ConfirmationDialog>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ChevronRight, AlertTriangle } from 'lucide-react';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
 import { fetchCart, updateCartItem, removeFromCart, clearCart, clearCartError } from '../../features/cart/cartSlice';
 import CouponForm from '../../components/checkout/CouponForm';
 import Loader from '../../components/common/Loader';
@@ -30,6 +31,7 @@ const Cart = () => {
 
   const [validItems, setValidItems] = useState([]);
   const [hasInvalidItems, setHasInvalidItems] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -151,15 +153,18 @@ const Cart = () => {
   };
 
   const handleClearCart = () => {
-    if (window.confirm('Are you sure you want to clear your cart?')) {
-      dispatch(clearCart())
-        .unwrap()
-        .then(() => {
-          toast.success('Cart cleared');
-        })
-        .catch((error) => {
-        });
-    }
+    if (items.length === 0) return;
+    setClearDialogOpen(true);
+  };
+
+  const confirmClearCart = () => {
+    dispatch(clearCart())
+      .unwrap()
+      .then(() => {
+        toast.success('Cart cleared');
+      })
+      .catch(() => {})
+      .finally(() => setClearDialogOpen(false));
   };
 
   const handleCheckout = () => {
@@ -480,6 +485,14 @@ const Cart = () => {
           </div>
         )}
       </div>
+      <ConfirmationDialog
+        open={clearDialogOpen}
+        title="Clear Cart"
+        message="Are you sure you want to clear your cart?"
+        confirmLabel="Clear"
+        onConfirm={confirmClearCart}
+        onCancel={() => setClearDialogOpen(false)}
+      />
     </div>
   );
 };

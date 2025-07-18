@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaEye, FaSpinner } from 'react-icons/fa';
 import { getAllOrders, resetAdminOrderState } from '../../features/admin/adminOrders/adminOrderSlice';
-import ReactPaginate from 'react-paginate';
+import Pagination from '../../components/common/Pagination';
+import DataTable from '../../components/common/DataTable';
 
 const OrderList = () => {
   const dispatch = useDispatch();
@@ -101,6 +102,22 @@ const OrderList = () => {
     }
   };
 
+  // DataTable columns
+  const columns = [
+    { header: 'Order #', accessor: 'orderNumber' },
+    { header: 'Date', accessor: (o) => formatDate(o.createdAt) },
+    { header: 'Customer', accessor: (o) => o.shippingAddress?.name || 'N/A' },
+    { header: 'Total', accessor: (o) => `₹${o.totalPrice?.toFixed(2)}` },
+    { header: 'Status', accessor: (o) => (
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(o.status)}`}>{o.status}</span>
+      )
+    },
+    { header: 'Actions', accessor: (o) => (
+        <Link to={`/adm/orders/${o._id}`} className="text-indigo-600 hover:text-indigo-900" title="View"><FaEye /></Link>
+      )
+    }
+  ];
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Order Management</h1>
@@ -191,92 +208,16 @@ const OrderList = () => {
               )}
             </p>
           </div>
-          <div className="overflow-x-auto bg-white rounded-lg shadow">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orders.length > 0 ? (
-                  orders.map((order) => (
-                    <tr key={order._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {order.orderNumber}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(order.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.shippingAddress?.name || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ₹{order.totalPrice?.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link 
-                          to={`/adm/orders/${order._id}`} 
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No orders found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={columns} data={orders} />
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <ReactPaginate
-                previousLabel="Previous"
-                nextLabel="Next"
-                breakLabel="..."
-                pageCount={totalPages}
-                marginPagesDisplayed={2}
-                pageRangeDisplayed={3}
-                onPageChange={({ selected }) => setCurrentPage(selected + 1)}
-                forcePage={currentPage - 1}
-                containerClassName="flex items-center gap-2"
-                pageClassName="px-3 py-2 border rounded hover:bg-gray-100"
-                activeClassName="bg-blue-600 text-white"
-                previousClassName="px-3 py-2 border rounded hover:bg-gray-100"
-                nextClassName="px-3 py-2 border rounded hover:bg-gray-100"
-                disabledClassName="opacity-50 cursor-not-allowed"
-              />
-            </div>
+          {totalPages >= 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setCurrentPage(page)}
+              className="mt-6"
+            />
           )}
         </>
       )}

@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { fetchProductsThunk, fetchCategoriesThunk } from '../../features/userHomeSlice';
 import { ChevronRight } from 'lucide-react';
 import ProductCard from '../../components/ProductCard';
+import Pagination from '../../components/common/Pagination';
 
 const CategoryPage = () => {
   const dispatch = useDispatch();
@@ -65,28 +66,6 @@ const CategoryPage = () => {
     }
   };
 
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-
-    return (
-      <div className="flex justify-center mt-8 space-x-2">
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-          <button
-            key={pageNum}
-            onClick={() => handlePageChange(pageNum)}
-            className={`px-4 py-2 rounded-md ${
-              pageNum === currentPage 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {pageNum}
-          </button>
-        ))}
-      </div>
-    );
-  };
-
   if (loading || isNavigating) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -132,7 +111,7 @@ const CategoryPage = () => {
                 <ProductCard key={product._id} product={product} />
               ))}
             </div>
-            {renderPagination()}
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={handlePageChange} />
           </>
         )}
       </div>

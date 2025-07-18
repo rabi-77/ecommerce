@@ -8,6 +8,7 @@ import ForgotPasswordModal from "../../components/auth/ForgotPasswordModal";
 import OtpVerificationModal from "../../components/auth/OtpVerificationModal";
 import ResetPasswordModal from "../../components/auth/ResetPasswordModal";
 import { API_URL } from "../../config";
+import Input from "../../components/common/Input";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -151,26 +152,24 @@ const Login = () => {
       <form onSubmit={handleSubmit} className="mb-4">
         <div className="mb-4">
           <label htmlFor="email" className="block mb-2">Email</label>
-          <input
+          <Input
             type="email"
-            id="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full p-2 border rounded"
+            className="w-full"
             required
           />
         </div>
         
         <div className="mb-4">
           <label htmlFor="password" className="block mb-2">Password</label>
-          <input
+          <Input
             type="password"
-            id="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full p-2 border rounded"
+            className="w-full"
             required
           />
         </div>

@@ -4,6 +4,7 @@ import { getSalesReportThunk, setFilters } from '../../features/admin/salesRepor
 import { downloadSalesReport } from '../../services/admin/salesReportService';
 import { toast } from 'react-toastify';
 import { FaFilePdf, FaFileExcel, FaDownload, FaCalendarAlt } from 'react-icons/fa';
+import DataTable from '../../components/common/DataTable';
 
 const StatCard = ({ title, value, className = '' }) => (
   <div className={`bg-white p-5 rounded-2xl shadow-md border-2 border-transparent hover:shadow-lg transition-all ${className}`}>
@@ -182,44 +183,27 @@ const SalesReport = () => {
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
             <h3 className="text-md font-semibold text-gray-700 mb-4">Paid Orders</h3>
             {data?.orders && data.orders.length > 0 ? (
-              <div className="overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="px-4 py-2 text-left">Order ID</th>
-                      <th className="px-4 py-2 text-left">Subtotal</th>
-                      <th className="px-4 py-2 text-left">Product Discount</th>
-                      <th className="px-4 py-2 text-left">Coupon Discount</th>
-                      <th className="px-4 py-2 text-left">Offer Discount</th>
-                      <th className="px-4 py-2 text-left">Tax</th>
-                      <th className="px-4 py-2 text-left">Shipping</th>
-                      <th className="px-4 py-2 text-left">Total</th>
-                      <th className="px-4 py-2 text-left">Payment</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.orders.map((o) => (
-                      <tr key={o.orderNumber} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-2 whitespace-nowrap">{o.orderNumber}</td>
-                        <td className="px-4 py-2">₹{o.itemsPrice.toFixed(2)}</td>
-                        <td className="px-4 py-2">₹{o.discountAmount.toFixed(2)}</td>
-                        <td className="px-4 py-2">₹{o.couponDiscount.toFixed(2)}</td>
-                        <td className="px-4 py-2">₹{o.offerDiscount.toFixed(2)}</td>
-                        <td className="px-4 py-2">₹{o.taxPrice.toFixed(2)}</td>
-                        <td className="px-4 py-2">₹{o.shippingPrice.toFixed(2)}</td>
-                        <td className="px-4 py-2">₹{o.totalPrice.toFixed(2)}</td>
-                        <td className="px-4 py-2">{o.paymentMethod}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  { header: 'Order ID', accessor: 'orderNumber' },
+                  { header: 'Subtotal', accessor: (o) => `₹${o.itemsPrice.toFixed(2)}` },
+                  { header: 'Product Discount', accessor: (o) => `₹${o.discountAmount.toFixed(2)}` },
+                  { header: 'Coupon Discount', accessor: (o) => `₹${o.couponDiscount.toFixed(2)}` },
+                  { header: 'Offer Discount', accessor: (o) => `₹${o.offerDiscount.toFixed(2)}` },
+                  { header: 'Tax', accessor: (o) => `₹${o.taxPrice.toFixed(2)}` },
+                  { header: 'Shipping', accessor: (o) => `₹${o.shippingPrice.toFixed(2)}` },
+                  { header: 'Total', accessor: (o) => `₹${o.totalPrice.toFixed(2)}` },
+                  { header: 'Payment', accessor: 'paymentMethod' },
+                ]}
+                data={data.orders}
+                className="text-sm"
+              />
             ) : (
               <p className="text-gray-500 text-center py-4">No orders found</p>
             )}
           </div>
         )}
-
+        
         {/* Summary Section */}
         {!loading && data?.summary && (
           <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border border-gray-100 max-w-md">

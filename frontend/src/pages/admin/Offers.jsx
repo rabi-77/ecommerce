@@ -4,6 +4,12 @@ import { Link } from 'react-router-dom';
 import { FaPlus, FaSearch, FaToggleOn, FaToggleOff, FaTrash, FaEdit } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { getOffers, deleteOffer, toggleStatus, resetOfferState } from '../../features/admin/adminOffers/offerSlice';
+import Pagination from '../../components/common/Pagination';
+import DataTable from '../../components/common/DataTable';
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import Input from '../../components/common/Input';
+import Select from '../../components/common/Select';
+import Loader from '../../components/common/Loader';
 
 const Offers = () => {
   const dispatch = useDispatch();
@@ -11,6 +17,7 @@ const Offers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteId, setDeleteId] = useState(null);
   const limit = 10;
 
   useEffect(() => {
@@ -27,10 +34,13 @@ const Offers = () => {
     toast.success('Status updated');
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Delete this offer?')) {
-      await dispatch(deleteOffer(id));
+  const handleDelete = (id) => setDeleteId(id);
+
+  const confirmDelete = async () => {
+    if (deleteId) {
+      await dispatch(deleteOffer(deleteId));
       toast.success('Offer deleted');
+      setDeleteId(null);
     }
   };
 
@@ -50,6 +60,32 @@ const Offers = () => {
     );
   });
 
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // DataTable columns
+  const columns = [
+    { header: 'Type', accessor: 'type' },
+    { header: 'Target', accessor: (o) => (o.type === 'PRODUCT' ? o.product?.name : o.category?.name) },
+    { header: 'Discount', accessor: (o) => formatDiscount(o) },
+    { header: 'Start', accessor: (o) => new Date(o.startDate).toLocaleDateString() },
+    { header: 'End', accessor: (o) => new Date(o.endDate).toLocaleDateString() },
+    { header: 'Status', accessor: (o) => (
+        <button onClick={() => handleToggleStatus(o._id)}>
+          {o.isActive ? <FaToggleOn className="text-green-500" size={20} /> : <FaToggleOff className="text-gray-400" size={20} />}
+        </button>
+      )
+    },
+    { header: 'Actions', accessor: (o) => (
+        <div className="flex space-x-2 justify-end">
+          <Link to={`/adm/offers/edit/${o._id}`} className="text-blue-600 hover:text-blue-900" title="Edit"><FaEdit /></Link>
+          <button onClick={() => handleDelete(o._id)} className="text-red-600 hover:text-red-900" title="Delete"><FaTrash /></button>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 w-full gap-4">
@@ -60,25 +96,24 @@ const Offers = () => {
           {/* Search */}
           <div className="relative w-full sm:w-64">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search offers..."
+            <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Search offers..."
+              className="w-full sm:w-64"
             />
           </div>
 
           {/* Type filter */}
-          <select
+          <Select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="border-gray-300 rounded-md text-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+            className="w-full sm:w-40"
           >
             <option value="ALL">All Types</option>
             <option value="PRODUCT">Product</option>
             <option value="CATEGORY">Category</option>
-          </select>
+          </Select>
 
           {/* Add button */}
           <Link
@@ -93,76 +128,32 @@ const Offers = () => {
 
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         {loading ? (
-          <div className="flex justify-center items-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            <span className="ml-2">Loading...</span>
-          </div>
+          <Loader/>
         ) : filteredOffers.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No offers found</p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOffers.map((offer) => (
-                <tr key={offer._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{offer.type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {offer.type === 'PRODUCT' ? offer.product?.name : offer.category?.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDiscount(offer)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(offer.startDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(offer.endDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleToggleStatus(offer._id)}>
-                      {offer.isActive ? <FaToggleOn className="text-green-500" size={20} /> : <FaToggleOff className="text-gray-400" size={20} />}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <Link to={`/adm/offers/edit/${offer._id}`} className="text-blue-600 hover:text-blue-900 mr-3 inline-block">
-                      <FaEdit />
-                    </Link>
-                    <button onClick={() => handleDelete(offer._id)} className="text-red-600 hover:text-red-900">
-                      <FaTrash />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable columns={columns} data={filteredOffers} />
         )}
-         {pagination && pagination.pages > 1 && (
-            <div className="flex justify-center mt-6">
-              <ReactPaginate
-                previousLabel="Previous"
-                nextLabel="Next"
-                breakLabel="..."
-                pageCount={pagination.pages}
-                marginPagesDisplayed={2}
-                pageRangeDisplayed={3}
-                onPageChange={handlePageChange}
-                forcePage={currentPage - 1}
-                containerClassName="flex items-center gap-2"
-                pageClassName="px-3 py-2 border rounded hover:bg-gray-100"
-                activeClassName="bg-blue-600 text-white"
-                previousClassName="px-3 py-2 border rounded hover:bg-gray-100"
-                nextClassName="px-3 py-2 border rounded hover:bg-gray-100"
-                disabledClassName="opacity-50 cursor-not-allowed"
-              />
-           </div>
-         )}
+        {pagination && pagination.pages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={(page) => handlePageChange(page)}
+            className="mt-6"
+          />
+        )}
       </div>
+      <ConfirmationDialog
+        open={Boolean(deleteId)}
+        title="Delete Offer"
+        message="Are you sure you want to delete this offer?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+      
     </div>
   );
 };

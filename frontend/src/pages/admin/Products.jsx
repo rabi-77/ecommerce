@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import ReactPaginate from "react-paginate";
 import { toast } from "react-toastify";
 import {
   getProductsThunk,
@@ -11,6 +10,10 @@ import {
   categoryThunk,
 } from "../../features/admin/adminProducts/productSlice";
 import ProductModal from "../../components/ProductModal";
+import Pagination from "../../components/common/Pagination";
+import ConfirmationDialog from '../../components/common/ConfirmationDialog';
+import Input from '../../components/common/Input';
+import Loader from '../../components/common/Loader';
 
 const Products = () => {
   const dispatch = useDispatch();
@@ -23,6 +26,7 @@ const Products = () => {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
+  const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => {
 
@@ -55,15 +59,12 @@ const Products = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (id, name) => {
-    if (
-      window.confirm(
-        `Permanently delete product ${name}? This action cannot be undone.`
-      )
-    ) {
-      dispatch(deleteProductThunk(id)).then(() =>
-        toast.success("Product permanently deleted")
-      );
+  const handleDelete = (id) => setDeleteId(id);
+
+  const confirmDelete = () => {
+    if(deleteId){
+      dispatch(deleteProductThunk(deleteId)).then(()=>toast.success('Product permanently deleted'));
+      setDeleteId(null);
     }
   };
 
@@ -81,8 +82,8 @@ const Products = () => {
     });
   };
 
-  const handlePageChange = ({ selected }) => {
-    dispatch(getProductsThunk({ page: selected + 1, size, search }));
+  const handlePageChange = (newPage) => {
+    dispatch(getProductsThunk({ page: newPage, size, search }));
   };
 
   const toggleRow = (id) => {
@@ -102,12 +103,11 @@ const Products = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <input
-            type="text"
+          <Input
             value={search}
             onChange={handleSearch}
             placeholder="Search products..."
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors text-sm font-medium"
+            className="flex-grow max-w-xs"
           />
           {search && (
             <button
@@ -134,9 +134,7 @@ const Products = () => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-700"></div>
-        </div>
+        <Loader/>
       ) : (
         <>
           {/* Enable horizontal scrolling on small screens */}
@@ -227,14 +225,8 @@ const Products = () => {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(product._id, product.name)}
-                            className="p-2 bg-red-500 text-white rounded-md text-sm font-medium shadow-sm hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 flex items-center justify-center"
-                            title="Delete"
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                            onClick={() => handleDelete(product._id)}
+                            className="p-2 bg-red-200 rounded" title="Delete">🗑</button>
                         </div>
                       </td>
                       <td className="px-4 py-3.5 text-center">
@@ -290,21 +282,11 @@ const Products = () => {
             </table>
             </div>
           </div>
-          <ReactPaginate
-            previousLabel="← Prev"
-            nextLabel="Next →"
-            pageCount={Math.ceil(total / size)}
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(total / size)}
             onPageChange={handlePageChange}
-            containerClassName="flex items-center justify-center space-x-2 mt-6 font-medium"
-            pageClassName="flex items-center justify-center h-8 w-8 rounded-md text-sm border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-            activeClassName="bg-gray-800 text-white border-gray-800 hover:bg-gray-700"
-            previousClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-            nextClassName="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-            disabledClassName="opacity-50 cursor-not-allowed"
-            breakClassName="px-2 py-1.5 text-gray-500"
-            marginPagesDisplayed={1}
-            pageRangeDisplayed={3}
-            forcePage={page - 1}
+            className="mt-6"
           />
         </>
       )}
@@ -314,6 +296,14 @@ const Products = () => {
           onClose={() => setShowModal(false)}
         />
       )}
+      <ConfirmationDialog
+        open={Boolean(deleteId)}
+        title="Delete Product"
+        message="Are you sure you want to permanently delete this product? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={()=>setDeleteId(null)}
+      />
     </div>
   );
 };

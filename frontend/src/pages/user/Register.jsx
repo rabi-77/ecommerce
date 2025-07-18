@@ -9,6 +9,7 @@ import { register, verifyOtp, resend, resetAuthState, setShowOtpModal, clearErro
 import { registerSchema, verifyOtpSchema } from '../../../../shared/validation';
 // import { API_URL } from '../../../../config';
 import { API_URL } from '../../config'
+import Input from '../../components/common/Input';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -135,38 +136,39 @@ const Register = () => {
       <h2 className="text-2xl font-bold mb-4">Register</h2>
       <form onSubmit={handleRegisterSubmit(onRegisterSubmit)} className="space-y-4">
         <div>
-          <input
+          <Input
             {...formRegister('username')}
             placeholder="Username"
-            className="w-full p-2 border rounded"
+            className="w-full"
             disabled={loading}
           />
           {registerErrors.username && <p className="text-red-500 text-sm">{registerErrors.username.message}</p>}
         </div>
         <div>
-          <input
+          <Input
+            type="email"
             {...formRegister('email')}
             placeholder="Email"
-            className="w-full p-2 border rounded"
+            className="w-full"
             disabled={loading}
           />
           {registerErrors.email && <p className="text-red-500 text-sm">{registerErrors.email.message}</p>}
         </div>
         <div>
-          <input
+          <Input
             type="password"
             {...formRegister('password')}
             placeholder="Password"
-            className="w-full p-2 border rounded"
+            className="w-full"
             disabled={loading}
           />
           {registerErrors.password && <p className="text-red-500 text-sm">{registerErrors.password.message}</p>}
         </div>
         <div>
-          <input
+          <Input
             {...formRegister('referralCode')}
             placeholder="Referral code (optional)"
-            className="w-full p-2 border rounded"
+            className="w-full"
             disabled={loading}
           />
         </div>
@@ -205,10 +207,10 @@ const Register = () => {
             <p className="mb-4">Time remaining: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</p>
             <form onSubmit={handleOtpSubmit(onOtpSubmit)} className="space-y-4">
               <div>
-                <input
+                <Input
                   {...otpRegister('otp')}
                   placeholder="Enter 6-digit OTP"
-                  className="w-full p-2 border rounded"
+                  className="w-full"
                   maxLength="6"
                   disabled={verifyLoading || resendLoading}
                 />

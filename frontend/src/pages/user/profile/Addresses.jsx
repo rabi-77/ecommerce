@@ -4,7 +4,9 @@ import { FaPlus, FaEdit, FaTrash, FaCheck } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { fetchUserProfile } from '../../../features/userprofile/profileSlice';
 import { addAddressThunk, deleteAddressThunk, getAllAddressesThunk, updateAddressThunk, setDefaultAddressThunk } from '../../../features/userAddress/addressSlice';
-
+import ConfirmationDialog from '../../../components/common/ConfirmationDialog';
+import Input from '../../../components/common/Input';
+import Checkbox from '../../../components/common/Checkbox';
 
 const Addresses = () => {
   const dispatch = useDispatch();
@@ -32,6 +34,8 @@ const Addresses = () => {
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [pincodeError, setPincodeError] = useState(null);
   
+  const [deleteId, setDeleteId] = useState(null);
+
   useEffect(() => {
     dispatch(getAllAddressesThunk());
     
@@ -189,20 +193,21 @@ const Addresses = () => {
     }
   };
   
-  const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm('Are you sure you want to delete this address?')) {
-      return;
-    }
-    
-    try {
-      await dispatch(deleteAddressThunk(addressId)).unwrap();
-      toast.success('Address deleted successfully');
-      
-      dispatch(getAllAddressesThunk());
-    } catch (err) {
+  const handleDeleteAddress = (addressId) => {
+    setDeleteId(addressId);
+  };
+
+  const confirmDeleteAddress = async () => {
+    if (deleteId) {
+      try {
+        await dispatch(deleteAddressThunk(deleteId)).unwrap();
+        toast.success('Address deleted successfully');
+        dispatch(getAllAddressesThunk());
+      } catch (err) {}
+      setDeleteId(null);
     }
   };
-  
+
   const handleSetDefaultAddress = async (addressId) => {
     try {
       
@@ -252,13 +257,11 @@ const Addresses = () => {
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name*
                 </label>
-                <input
-                  type="text"
-                  id="name"
+                <Input
                   name="name"
                   value={addressForm.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full"
                   required
                 />
               </div>
@@ -267,13 +270,12 @@ const Addresses = () => {
                 <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number*
                 </label>
-                <input
+                <Input
                   type="tel"
-                  id="phoneNumber"
                   name="phoneNumber"
                   value={addressForm.phoneNumber}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full"
                   required
                 />
               </div>
@@ -282,13 +284,12 @@ const Addresses = () => {
                 <label htmlFor="alternativePhoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
                   Alternative Phone Number
                 </label>
-                <input
+                <Input
                   type="tel"
-                  id="alternativePhoneNumber"
                   name="alternativePhoneNumber"
                   value={addressForm.alternativePhoneNumber}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full"
                 />
               </div>
               
@@ -296,12 +297,11 @@ const Addresses = () => {
                 <label htmlFor="addressLine1" className="block text-sm font-medium text-gray-700 mb-1">
                   Address Line 1*
                 </label>
-                <textarea
-                  id="addressLine1"
+                <Input
                   name="addressLine1"
                   value={addressForm.addressLine1}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                  className="w-full"
                   required
                 />
               </div>
@@ -310,12 +310,11 @@ const Addresses = () => {
                 <label htmlFor="addressLine2" className="block text-sm font-medium text-gray-700 mb-1">
                   Address Line 2
                 </label>
-                <textarea
-                  id="addressLine2"
+                <Input
                   name="addressLine2"
                   value={addressForm.addressLine2}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                  className="w-full"
                 />
               </div>
               
@@ -324,13 +323,11 @@ const Addresses = () => {
                   <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                     City*
                   </label>
-                  <input
-                    id="city"
+                  <Input
                     name="city"
                     value={addressForm.city}
                     onChange={handleChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="City"
+                    className="w-full"
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">Auto-filled based on pincode</p>
@@ -340,13 +337,11 @@ const Addresses = () => {
                   <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
                     State/Province*
                   </label>
-                  <input
-                    id="state"
+                  <Input
                     name="state"
                     value={addressForm.state}
                     onChange={handleChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="State"
+                    className="w-full"
                     required
                   />
                 </div>
@@ -356,13 +351,11 @@ const Addresses = () => {
                     Postal Code*
                   </label>
                   <div className="relative">
-                    <input
-                      id="postalCode"
+                    <Input
                       name="postalCode"
                       value={addressForm.postalCode}
                       onChange={handleChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="Postal Code"
+                      className="w-full"
                       required
                     />
                     {pincodeLoading && (
@@ -381,39 +374,22 @@ const Addresses = () => {
                 <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
                   Country*
                 </label>
-                <select
-                  id="country"
+                <Input
                   name="country"
                   value={addressForm.country}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full"
                   required
-                >
-                  <option value="India">India</option>
-                  {/* <option value="United States">United States</option>
-                  <option value="Canada">Canada</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Australia">Australia</option>
-                  <option value="Singapore">Singapore</option>
-                  <option value="UAE">UAE</option>
-                  <option value="Other">Other</option> */}
-                </select>
+                />
               </div>
               
               <div className="md:col-span-2">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isDefault"
-                    name="isDefault"
-                    checked={addressForm.isDefault}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isDefault" className="ml-2 block text-sm text-gray-700">
-                    Set as default address
-                  </label>
-                </div>
+                <Checkbox
+                  name="isDefault"
+                  checked={addressForm.isDefault}
+                  onChange={handleChange}
+                  label="Set as default address"
+                />
               </div>
             </div>
             
@@ -512,6 +488,14 @@ const Addresses = () => {
           </button>
         </div>
       )}
+      <ConfirmationDialog
+        open={Boolean(deleteId)}
+        title="Delete Address"
+        message="Are you sure you want to delete this address?"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteAddress}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 };

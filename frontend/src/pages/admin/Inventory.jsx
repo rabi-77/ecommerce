@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import ReactPaginate from 'react-paginate';
 import { FaEdit, FaHistory, FaExclamationTriangle } from 'react-icons/fa';
 import { 
   getInventory, 
@@ -10,6 +9,7 @@ import {
   getLowStockProducts,
   resetInventoryState 
 } from '../../features/admin/adminInventory/adminInventorySlice';
+import Pagination from '../../components/common/Pagination';
 
 const Inventory = () => {
   const dispatch = useDispatch();
@@ -77,8 +77,8 @@ const Inventory = () => {
     dispatch(getInventory({ page, size, search, sort: e.target.value }));
   };
 
-  const handlePageChange = ({ selected }) => {
-    dispatch(getInventory({ page: selected + 1, size, search, sort: sortOption }));
+  const handlePageChange = (newPage) => {
+    dispatch(getInventory({ page: newPage, size, search, sort: sortOption }));
   };
 
   const handleEdit = (product) => {
@@ -324,30 +324,12 @@ const Inventory = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-6 flex justify-center">
-              <ReactPaginate
-                previousLabel={'Previous'}
-                nextLabel={'Next'}
-                breakLabel={'...'}
-                pageCount={totalPages}
-                marginPagesDisplayed={2}
-                pageRangeDisplayed={5}
-                onPageChange={handlePageChange}
-                forcePage={page - 1}
-                containerClassName={'pagination flex'}
-                pageClassName={'mx-1'}
-                pageLinkClassName={'px-3 py-2 border rounded hover:bg-gray-100'}
-                activeClassName={'active'}
-                activeLinkClassName={'bg-blue-500 text-white border-blue-500'}
-                previousClassName={'mx-1'}
-                nextClassName={'mx-1'}
-                previousLinkClassName={'px-3 py-2 border rounded hover:bg-gray-100'}
-                nextLinkClassName={'px-3 py-2 border rounded hover:bg-gray-100'}
-                breakClassName={'mx-1'}
-                breakLinkClassName={'px-3 py-2 border rounded hover:bg-gray-100'}
-                disabledClassName={'opacity-50 cursor-not-allowed'}
-              />
-            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              className="mt-6"
+            />
           )}
         </>
       )}
