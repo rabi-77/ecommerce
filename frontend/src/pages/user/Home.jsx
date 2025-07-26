@@ -83,7 +83,7 @@ const Home = () => {
   };
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
+    // if (totalPages <= 1) return null;
 
     const pageNumbers = [];
     const maxPageButtons = 5;

@@ -20,6 +20,17 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
     min: 1,
     default: 1
+  },
+  // Offer-related fields for validation
+  appliedOffer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Offer',
+    default: null
+  },
+  
+  offerPrice: {
+    type: Number,
+    default: null
   }
 });
 

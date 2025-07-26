@@ -122,10 +122,17 @@ const Coupons = () => {
   const columns = [
     { header: 'Code', accessor: 'code' },
     { header: 'Description', accessor: (c) => c.description || 'No description' },
-    { header: 'Discount', accessor: (c) => (
+    { header: 'Min Purchase', accessor: (c) => `₹${(c.minPurchaseAmount || 0).toFixed(2)}` },
+    { header: 'Coupon Amount', accessor: (c) => (
         c.discountType === 'percentage'
-          ? `${c.discountValue || 0}%${c.maxDiscountAmount ? ` (max ₹${c.maxDiscountAmount})` : ''}`
+          ? `${c.discountValue || 0}%`
           : `₹${(c.discountValue || 0).toFixed(2)}`
+      )
+    },
+    { header: 'Max Discount', accessor: (c) => (
+        c.discountType === 'percentage' && c.maxDiscountAmount
+          ? `₹${c.maxDiscountAmount.toFixed(2)}`
+          : c.discountType === 'fixed' ? 'N/A' : 'No Limit'
       )
     },
     { header: 'Validity', accessor: (c) => `${formatDate(c.startDate)} - ${formatDate(c.expiryDate)}` },

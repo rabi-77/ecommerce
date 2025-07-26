@@ -10,6 +10,7 @@ import { creditWallet, debitWallet } from "../services/walletService.js";
 import { fetchActiveOffers, applyBestOffer } from "../services/offerService.js";
 import { TAX_RATE, FREE_SHIPPING_THRESHOLD, SHIPPING_FEE } from '../config/pricing.js';
 import mongoose from 'mongoose';
+import { calculateCartTotals } from './userCartController.js';
 
 const createOrder = asyncHandler(async (req, res) => {
   console.log('hi');
@@ -46,6 +47,101 @@ const createOrder = asyncHandler(async (req, res) => {
   const categoryIdsForOffer = cart.items.map(ci => ci.product.category?._id).filter(Boolean);
   const offerMaps = await fetchActiveOffers(productIdsForOffer, categoryIdsForOffer);
 
+
+  // Validate that all applied offers are still active
+  // let hasInactiveOffers = false;
+  // for (const cartItem of cart.items) {
+  //   const product = cartItem.product;
+  //   const { appliedOffer } = applyBestOffer(product, offerMaps);
+    
+  //   // If the product had an offer in cart but no active offer now, it means the offer was deactivated
+  //   if (!appliedOffer && (product.price > cartItem.unitPrice)) {
+  //     hasInactiveOffers = true;
+  //     break;
+  //   }
+  // }
+
+  // if (hasInactiveOffers) {
+  //   return res.status(400).json({
+  //     success: false,
+  //     message: 'Some offers applied to your cart are no longer active. Please review your order and place it again.',
+  //     requiresReview: true
+  //   });
+  // }
+
+
+  // Validate that stored offers in cart items are still active
+  // let hasInactiveOffers = false;
+  // const offerIds = cart.items
+  //   .map(item => item.appliedOffer)
+  //   .filter(Boolean); // Remove null/undefined values
+  
+  // if (offerIds.length > 0) {
+  //   // Check if any of the stored offers are inactive
+  //   const activeOffers = await mongoose.model('Offer').find({
+  //     _id: { $in: offerIds },
+  //     isActive: true,
+  //     startDate: { $lte: new Date() },
+  //     endDate: { $gte: new Date() }
+  //   });
+    
+  //   const activeOfferIds = activeOffers.map(offer => offer._id.toString());
+    
+  //   // Check if any cart item has an inactive offer
+  //   for (const item of cart.items) {
+  //     if (item.appliedOffer && !activeOfferIds.includes(item.appliedOffer.toString())) {
+  //       hasInactiveOffers = true;
+  //       break;
+  //     }
+  //   }
+  // }
+  
+  // if (hasInactiveOffers) {
+  //   return res.status(400).json({
+  //     success: false,
+  //     message: 'Some offers applied to your cart are no longer active. Please review your cart and place the order again.',
+  //     requiresReview: true
+  //   });
+  // }
+
+
+  let hasOfferChanges = false;
+  
+  // Check each cart item's stored offer against current best offer
+  for (const cartItem of cart.items) {
+    const product = cartItem.product;
+    const { effectivePrice, appliedOffer } = applyBestOffer(product, offerMaps);
+    
+    const storedOfferId = cartItem.appliedOffer?.toString();
+    const currentOfferId = appliedOffer?._id?.toString();
+    const storedPrice = cartItem.offerPrice;
+    
+    // Check if stored offer differs from current best offer
+    if (storedOfferId !== currentOfferId || Math.abs(storedPrice - effectivePrice) > 0.01) {
+      hasOfferChanges = true;
+      // Update cart item with current offer
+      cartItem.appliedOffer = appliedOffer?._id || null;
+      cartItem.offerPrice = effectivePrice;
+    }
+  }
+  
+  if (hasOfferChanges) {
+    // Recalculate cart totals with updated offers
+    const totals = await calculateCartTotals(cart);
+    cart.discount = totals.couponDiscount;
+    cart.tax = totals.tax;
+    cart.shipping = totals.shipping;
+    cart.total = totals.total;
+    await cart.save();
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Some offers in your cart have changed.either you can click the order button again with updated price or review your cart and place the order again.',
+      requiresReview: true
+    });
+  }
+
+
   let itemsPrice = 0;
   let offerDiscountTotal = 0; // accumulate product/category offer savings
   let discountAmount = 0; // will become offerDiscountTotal + couponDiscount
@@ -76,9 +172,23 @@ const createOrder = asyncHandler(async (req, res) => {
     }
 
     const { effectivePrice, appliedOffer, discountPercent } = (() => {
+      console.log('offerMaps',offerMaps);
+      
       const res = applyBestOffer(product, offerMaps);
+
+      console.log("res",res);
       return { effectivePrice: res.effectivePrice, appliedOffer: res.appliedOffer, discountPercent: res.discountPercent };
     })();
+    console.log("appliedOffer",appliedOffer);
+    
+    // if(!appliedOffer.isActive){
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'The offer applied to your cart is no longer active. Please review your order and place it again.',
+    //     requiresReview: true
+    //   });
+    // }
+    
     const price = product.price;
     const discount = discountPercent;
     const discountedPrice = effectivePrice; // price after offer (per unit)
@@ -144,9 +254,23 @@ const createOrder = asyncHandler(async (req, res) => {
       !couponDoc.usedBy.some(id => id.toString() === userId.toString());
 
     if (!stillValid) {
+      // Clear the invalid coupon from cart to maintain consistency
+      await Cart.updateOne(
+        { user: userId },
+        { $unset: { coupon: 1 } }
+      );
+      const updatedCart = await Cart.findOne({ user: userId }).populate('items.product');
+      if(updatedCart){
+        const totals= await calculateCartTotals(updatedCart);
+        await Cart.updateOne(
+          { user: userId },
+          {discount: totals.couponDiscount + totals.productDiscount, total: totals.total}
+        );
+      }
       return res.status(400).json({
         success: false,
-        message: 'The coupon applied to your cart is no longer available. Please review your order before placing it.'
+        message: 'The coupon apmplied to your cart is no longer available. Please review your order before placing it.',
+        requiresReview: true
       });
     }
 
@@ -154,9 +278,17 @@ const createOrder = asyncHandler(async (req, res) => {
     // Calculate current subtotal AFTER product-level discounts but BEFORE coupon.
     const currentSubtotal = itemsPrice - discountAmount; // discountAmount currently has only product-level discounts
     if (currentSubtotal < couponDoc.minPurchaseAmount) {
+      // Clear the coupon from cart since minimum purchase requirement is not met
+      await Cart.updateOne(
+        { user: userId },
+        { $unset: { coupon: 1 } }
+      );
+  
+      
       return res.status(400).json({
         success: false,
-        message: `Cart total must be at least ${couponDoc.minPurchaseAmount} to use this coupon. Please adjust your cart and try again.`
+        message: `Cart total must be at least ₹${couponDoc.minPurchaseAmount} to use this coupon. Please adjust your cart and try again.`,
+        requiresReview: true
       });
     }
 
@@ -175,26 +307,53 @@ const createOrder = asyncHandler(async (req, res) => {
   const netAmount = itemsPrice - discountAmount; // after product + coupon discounts, before tax / shipping
 
   // ---- Allocate couponShare & taxShare per item ----
-  if (itemsPrice > 0) {
+  if (itemsPrice > 0 && couponDiscount > 0) {
+    // First, calculate total eligible amount for coupon (items with positive price after offers)
+    let eligibleAmountForCoupon = 0;
     orderItems.forEach((itm) => {
-      const lineOriginal = itm.price * itm.quantity; // before any discount
-      const couponShare = parseFloat(((lineOriginal / itemsPrice) * couponDiscount).toFixed(2));
-      const priceAfterDiscounts = (itm.totalPrice * itm.quantity) - couponShare;
-      const taxShare = parseFloat((priceAfterDiscounts * TAX_RATE).toFixed(2));
+      const itemTotalAfterOffer = itm.totalPrice * itm.quantity;
+      if (itemTotalAfterOffer > 0) {
+        eligibleAmountForCoupon += itemTotalAfterOffer;
+      }
+    });
 
-      itm.couponShare = couponShare;
-      itm.taxShare = taxShare;
+    // Only distribute coupon if there's eligible amount
+    if (eligibleAmountForCoupon > 0) {
+      orderItems.forEach((itm) => {
+        const itemTotalAfterOffer = itm.totalPrice * itm.quantity;
+        
+        // Only apply coupon share to items with positive price after offers
+        let couponShare = 0;
+        if (itemTotalAfterOffer > 0) {
+          couponShare = parseFloat(((itemTotalAfterOffer / eligibleAmountForCoupon) * couponDiscount).toFixed(2));
+        }
+        
+        const priceAfterDiscounts = (itm.totalPrice * itm.quantity) - couponShare;
+        // Ensure price after discounts is never negative
+        const finalPriceAfterDiscounts = Math.max(0, priceAfterDiscounts);
+        const taxShare = parseFloat((finalPriceAfterDiscounts * TAX_RATE).toFixed(2));
 
-      // ---- Compute finalUnitPrice per unit (price after offer + coupon) ----
-      const totalAfterAllDiscounts = (itm.totalPrice * itm.quantity) - couponShare; // total after offer + coupon, before tax
-      const finalUnit = parseFloat((totalAfterAllDiscounts / itm.quantity).toFixed(2));
-      itm.finalUnitPrice = finalUnit;
-      console.log(itm.finalUnitPrice,'finalUnitPrice');
-      
+        itm.couponShare = couponShare;
+        itm.taxShare = taxShare;
+
+        // ---- Compute finalUnitPrice per unit (price after offer + coupon) ----
+        const totalAfterAllDiscounts = Math.max(0, (itm.totalPrice * itm.quantity) - couponShare); // total after offer + coupon, before tax
+        const finalUnit = parseFloat((totalAfterAllDiscounts / itm.quantity).toFixed(2));
+        itm.finalUnitPrice = finalUnit;
+        console.log(itm.finalUnitPrice,'finalUnitPrice');
+        
+      });
+    }
+  } else {
+    // No coupon applied, set couponShare to 0 and calculate tax on item total
+    orderItems.forEach((itm) => {
+      itm.couponShare = 0;
+      const itemTotalAfterOffer = itm.totalPrice * itm.quantity;
+      itm.taxShare = parseFloat((itemTotalAfterOffer * TAX_RATE).toFixed(2));
+      itm.finalUnitPrice = itm.totalPrice;
     });
   }
 
- 
   // After coupon share loop, recalc offerDiscountTotal in case of rounding adjustments
   orderItems.forEach(itm => {
     // ensure aggregate stays precise to 2 decimals

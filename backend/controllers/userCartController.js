@@ -8,8 +8,7 @@ import mongoose from 'mongoose';
 
 const MAX_QUANTITY_PER_PRODUCT = 10;
 
-
-const calculateCartTotals = async (cart) => {
+export const calculateCartTotals = async (cart) => {
   let subtotal = 0;
   let productDiscount = 0;
   let couponDiscount = 0;
@@ -19,16 +18,36 @@ const calculateCartTotals = async (cart) => {
   let shipping = 0;
   let grandTotal = 0;
 
-  cart.items.forEach(item => {
+  // Fetch current active offers for all products in cart
+  const productIds = cart.items.map(item => item.product._id);
+  const categoryIds = cart.items.map(item => item.product.category?._id).filter(Boolean);
+  const offerMaps = await fetchActiveOffers(productIds, categoryIds);
+
+  cart.items.forEach((item, index) => {
     const itemPrice = item.product.price;
     const itemDisc = item.product.discount || 0;
     const discountedPrice = itemPrice * (1 - itemDisc / 100);
+    
+    // Update offer fields for this cart item
+    const { effectivePrice, appliedOffer } = applyBestOffer(item.product, offerMaps);
+    console.log('so applieng here right');
+    
+    item.appliedOffer = appliedOffer?._id || null;
+
+    console.log('appliedOffer', appliedOffer);
+    console.log('item.appliedOffer',item.appliedOffer);
+    
+    item.offerPrice = effectivePrice;
+    
+    // Mark the item as modified for Mongoose
+    cart.markModified(`items.${index}.appliedOffer`);
+    cart.markModified(`items.${index}.offerPrice`);
     
     subtotal += itemPrice * item.quantity;
     productDiscount += (itemPrice - discountedPrice) * item.quantity;
     totalAfterProductDisc += discountedPrice * item.quantity;
   });
-
+await cart.save();
   if (cart.coupon) {
     const coupon = await Coupon.findById(cart.coupon);
     if (coupon) {
@@ -128,8 +147,16 @@ export const addToCart = async (req, res) => {
         });
       }
       
+      // Calculate current offer for the existing item
+      const offerMaps = await fetchActiveOffers([productId], [product.category?._id].filter(Boolean));
+      const { effectivePrice, appliedOffer, discountAmount } = applyBestOffer(product, offerMaps);
+      console.log('appliedOffer', appliedOffer);
+      
       cart.items[existingItemIndex].quantity = newVariantQuantity;
       cart.items[existingItemIndex].variant.stock = variant.stock; // Update stock info
+      cart.items[existingItemIndex].appliedOffer = appliedOffer?._id || null;
+      cart.items[existingItemIndex].offerPrice = effectivePrice;
+      cart.items[existingItemIndex].offerDiscount = discountAmount || 0;
     } else {
       if (totalProductQuantity + quantity > MAX_QUANTITY_PER_PRODUCT) {
         return res.status(400).json({ 
@@ -137,13 +164,21 @@ export const addToCart = async (req, res) => {
         });
       }
       
+      // Calculate current offer for the new item
+      const offerMaps = await fetchActiveOffers([productId], [product.category?._id].filter(Boolean));
+      const { effectivePrice, appliedOffer, discountAmount } = applyBestOffer(product, offerMaps);
+      console.log('appliedOffer', appliedOffer);
+      
       cart.items.push({
         product: productId,
         variant: {
           size: size,
           stock: variant.stock
         },
-        quantity
+        quantity,
+        appliedOffer: appliedOffer?._id || null,
+        offerPrice: effectivePrice,
+        // offerDiscount: discountAmount || 0
       });
     }
 
@@ -457,7 +492,8 @@ export const getCart = async (req, res) => {
     shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
 
     grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
-
+    calculateCartTotals(cart);
+    // applyCoupon();
     res.json({
       cartItems: availableCartItems,
       count: availableCartItems.length,
@@ -831,7 +867,7 @@ export const getAvailableCoupons = async (req, res) => {
         { $expr: { $gt: ['$maxUses', '$usedCount'] } },
       ],
       usedBy: { $nin: [userId] },
-    }).select('code discountType discountValue minPurchaseAmount maxDiscountAmount expiryDate');
+    }).select('code discountType discountValue minPurchaseAmount maxDiscountAmount description expiryDate');
 
     // Separate eligible vs ineligible based on minPurchaseAmount
     const coupons = rawCoupons.map((c) => ({
@@ -841,6 +877,7 @@ export const getAvailableCoupons = async (req, res) => {
       discountValue: c.discountValue,
       maxDiscountAmount: c.maxDiscountAmount,
       minPurchaseAmount: c.minPurchaseAmount,
+      description: c.description || 'coupon says',
       expiryDate: c.expiryDate,
       eligible: subtotal >= c.minPurchaseAmount,
     }));

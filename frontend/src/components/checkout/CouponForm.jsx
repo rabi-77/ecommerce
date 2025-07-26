@@ -150,26 +150,59 @@ const CouponForm = ({ onApplyCoupon, onRemoveCoupon, appliedCoupon }) => {
         ) : availableCoupons.length === 0 ? (
           <p className="text-xs text-gray-500">No coupons available</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {availableCoupons.map((c) => (
-              <button
+              <div
                 key={c.code}
-                type="button"
-                onClick={() => handleCouponClick(c)}
-                disabled={!c.eligible}
-                className={`px-2 py-1 text-xs rounded ${
+                className={`p-3 rounded-lg border ${
                   c.eligible
-                    ? 'bg-blue-100 hover:bg-blue-200 text-blue-800'
-                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    ? 'border-blue-200 bg-blue-50'
+                    : 'border-gray-200 bg-gray-50'
                 }`}
-                title={
-                  c.eligible
-                    ? `Apply ${c.code}`
-                    : `Spend ₹${c.minPurchaseAmount} to use this coupon`
-                }
               >
-                {c.code}
-              </button>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`font-semibold text-sm ${
+                        c.eligible ? 'text-blue-800' : 'text-gray-600'
+                      }`}>
+                        {c.code}
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        c.discountType === 'percentage'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {c.discountType === 'percentage'
+                          ? `${c.discountValue}% OFF`
+                          : `₹${c.discountValue} OFF`
+                        }
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-1">
+                      {c.description || 'No description available'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Min. purchase: ₹{c.minPurchaseAmount}
+                      {c.discountType === 'percentage' && c.maxDiscountAmount && 
+                        ` • Max discount: ₹${c.maxDiscountAmount}`
+                      }
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCouponClick(c)}
+                    disabled={!c.eligible}
+                    className={`ml-3 px-3 py-1 text-xs font-medium rounded ${
+                      c.eligible
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {c.eligible ? 'Apply' : 'Not Eligible'}
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}

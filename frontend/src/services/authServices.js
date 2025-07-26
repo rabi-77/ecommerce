@@ -150,7 +150,7 @@ export const refreshAccessToken = async () => {
   } catch (err) {
     console.error('Error refreshing token:', err);
     throw new Error(
-      err.response?.data?.message || "Failed to refresh access token"
+      err.response?.data?.message 
     );
   }
 };

@@ -129,6 +129,7 @@ const Checkout = () => {
   useEffect(() => {
     
     if (!user) {
+      toast.error('not authorized to go there unless you are logged in and ready to order');
       navigate('/login');
       return;
     }

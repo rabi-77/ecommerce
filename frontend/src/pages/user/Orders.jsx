@@ -48,6 +48,7 @@ const Orders = () => {
 
   useEffect(() => {
     if (!user) {
+      toast.error('Please login to view your orders');
       navigate('/login');
     } else {
       dispatch(getMyOrders({ keyword: '', status: 'all', page: currentPage }));
@@ -214,7 +215,7 @@ const Orders = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : orders && orders.length > 0 ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>

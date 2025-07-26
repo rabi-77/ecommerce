@@ -20,9 +20,9 @@ const HeroBanner = () => {
     link: '/products',
   };
 
-  useEffect(() => {
-    api
-      .get('/banners')
+  useEffect( () => {
+    const fetchBanners = async () => {
+    await api.get('/banners')
       .then((res) => {
         const active = getTopPriorityBanners(res.data || []);
         setBanners(active.length ? active : [DEFAULT_BANNER]);
@@ -30,6 +30,8 @@ const HeroBanner = () => {
       .catch(() => {
         setBanners([DEFAULT_BANNER]);
       });
+    };
+    fetchBanners();
   }, []);
 
   if (!banners.length) return null;

@@ -35,7 +35,7 @@ export const refreshTokenThunk = createAsyncThunk(
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       return rejectWithValue(
-        err.response?.data.messsage || "error while making new access"
+        err.response?.data.messsage 
       );
     }
   }

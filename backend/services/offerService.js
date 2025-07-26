@@ -29,6 +29,10 @@ export const fetchActiveOffers = async (productIds = [], categoryIds = []) => {
 // Determine best offer and effective price for a single product doc
 export const applyBestOffer = (productDoc, offerMaps) => {
   const { productOfferMap, categoryOfferMap } = offerMaps;
+  console.log('offerMaps',offerMaps);
+  console.log('prductOfferMap',productOfferMap);
+  console.log('categoryOfferMap',categoryOfferMap);
+  
   const prodId = productDoc._id.toString();
   const catId = productDoc.category?._id?.toString();
   const candidates = [];
@@ -69,6 +73,8 @@ export const applyBestOffer = (productDoc, offerMaps) => {
     type: best.offer.type,
     amount: discountAmount,
     percentage: best.offer.percentage ? discountPercent : undefined,
+    // isActive:best.offer.isActive,
+    
   };
 
   return { effectivePrice, appliedOffer, discountPercent, discountAmount };

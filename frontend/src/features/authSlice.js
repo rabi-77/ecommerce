@@ -132,7 +132,7 @@ export const refreshAccessTokenThunk = createAsyncThunk(
         localStorage.removeItem('tokenRefresh');
         localStorage.removeItem('user');
       }
-      return rejectWithValue(err.message || "refresh access token failed");
+      return rejectWithValue(err.message);
     }
   }
 )
