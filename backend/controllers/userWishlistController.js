@@ -1,6 +1,9 @@
 import wishlistModel from "../models/wishlistModel.js";
 import productModel from "../models/productModel.js";
 
+// Assuming fetchActiveOffers and applyBestOffer functions are defined elsewhere
+import { fetchActiveOffers, applyBestOffer } from "../services/offerService.js";
+
 export const addToWishlist = async (req, res) => {
   try {
     const { productId } = req.body;
@@ -74,6 +77,34 @@ export const getWishlist = async (req, res) => {
     const validWishlistItems = wishlistItems.filter(item => 
       item.product && item.product.isListed === true
     );
+
+    // ---------------------------------------------------------
+    // NEW: Attach dynamic offer pricing to each wishlist product
+    // ---------------------------------------------------------
+    if (validWishlistItems.length) {
+      // Gather ids for offer lookup
+      const productIds   = validWishlistItems.map(it => it.product._id);
+      const categoryIds  = validWishlistItems.map(it => it.product.category?._id).filter(Boolean);
+
+      const offerMaps = await fetchActiveOffers(productIds, categoryIds);
+
+      // Mutate each item to embed pricing meta used by the UI
+      validWishlistItems.forEach(it => {
+        const { effectivePrice, appliedOffer } = applyBestOffer(it.product, offerMaps);
+
+        // Attach non-persisted fields for response
+        it.product = {
+          ...it.product.toObject?.() || it.product,
+          effectivePrice,
+          appliedOffer: appliedOffer ? {
+            _id: appliedOffer._id,
+            percentage: appliedOffer.percentage,
+            amount: appliedOffer.amount,
+            type: appliedOffer.type,
+          } : null,
+        };
+      });
+    }
 
     return res.status(200).json({
       count: validWishlistItems.length,

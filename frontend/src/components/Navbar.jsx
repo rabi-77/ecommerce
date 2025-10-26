@@ -103,7 +103,8 @@ export default function Navbar() {
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-3'}`}>
+    <>
+    <header className={`fixed top-0 left-0 right-0 z-100 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-3'}`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 relative">
         {/* Mobile menu button - only visible on small screens */}
         <button 
@@ -279,8 +280,14 @@ export default function Navbar() {
       </div>
       
       {/* Mobile Menu - Slide in from left */}
-      <div className={`fixed inset-0 z-40 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:hidden`}>
-        <div className="relative flex flex-col w-full max-w-xs h-full bg-white shadow-xl overflow-y-auto">
+      <div className={`fixed inset-0 bg-black/50 z-[150] ${mobileMenuOpen ? 'block' : 'hidden'}`} onClick={() => setMobileMenuOpen(false)}></div>
+      
+    
+      
+
+    </header>
+              <div className={`fixed top-0 left-0 bottom-0 z-[200] transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:hidden`} style={{ width: '280px', maxWidth: '80%' }}>
+        <div className="flex flex-col w-full h-full bg-white shadow-xl overflow-hidden">
           {/* Close button */}
           <div className="flex items-center justify-between px-4 pt-5 pb-2 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-900 font-heading">Menu</h2>
@@ -292,8 +299,9 @@ export default function Navbar() {
             </button>
           </div>
           
-          {/* Mobile navigation links */}
-          <nav className="flex-1 px-2 pt-2 pb-4 space-y-1 font-alt">
+          {/* Mobile navigation links - positioned immediately after header */}
+          <div className="overflow-y-auto flex-1" style={{ height: 'calc(100% - 60px)' }}>
+            <nav className="px-2 pt-2 pb-4 space-y-1 font-alt">
             <Link 
               to="/" 
               className="flex items-center px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-md"
@@ -350,7 +358,8 @@ export default function Navbar() {
               <WalletIcon size={18} className="mr-3" />
               My Wallet
             </Link>
-          </nav>
+            </nav>
+          </div>
           
           {/* User section in mobile menu */}
           {user ? (
@@ -442,8 +451,6 @@ export default function Navbar() {
           )}
         </div>
       </div>
-      
-
-    </header>
+    </>
   );
 }

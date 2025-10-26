@@ -6,11 +6,13 @@ import {
   fetchProductsThunk,
   fetchRelatedProductsThunk,
 } from "../../features/userHomeSlice";
-import { Star } from "lucide-react";
+import { Star, ChevronRight, Heart, Share2, TruckIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import WishlistButton from "../../components/user/WishlistButton";
 import AddToCartButton from "../../components/AddToCartButton";
 import ProductCard from "../../components/ProductCard";
+import ProductDetailsBanner from "../../components/ProductDetailsBanner";
+import { motion } from "framer-motion";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -426,36 +428,72 @@ const ProductDetails = () => {
     );
   };
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <ProductDetailsBanner />
+      <div className="container mx-auto px-4 py-4">
         {renderProductDetails()}
 
         {relatedProducts && relatedProducts.length > 0 && (
-          <div className="mt-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-16"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Related Products
+              </h2>
+              <Link to="/products" className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium">
+                View All
+                <ChevronRight size={16} className="ml-1" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {relatedProducts.map((relatedProduct, index) => {
+                let ad = products.find((p) => p._id === relatedProduct._id);
+                const productshow = ad || relatedProduct;
+                
+                return (
+                  <motion.div
+                    key={relatedProduct._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 * index }}
+                  >
+                    <ProductCard product={productshow} />
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+        
+        {relatedProducts && relatedProducts.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mt-16"
+          >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Related Products
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => {
-                let ad = products.find((p) => p._id === relatedProduct._id);
-                
-                const productshow = ad || relatedProduct;
-                
-               return <ProductCard key={relatedProduct._id} product={productshow} />;
-              })}
+            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+              <div className="text-gray-500 mb-4 text-5xl">🔍</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Related Products Found</h3>
+              <p className="text-gray-500">We couldn't find any related products at this time.</p>
+              <Link to="/products" className="mt-4 inline-block px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                Browse All Products
+              </Link>
             </div>
-          </div>
-        )}
-             {relatedProducts && relatedProducts.length === 0 && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-               Related Products
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <p>couldnt find any related products</p>
-            </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

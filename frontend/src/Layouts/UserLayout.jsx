@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingBag, User, Heart } from 'lucide-react';
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
+import AnnouncementBanner from "../components/AnnouncementBanner";
 import { checkUserStatus } from '../services/authServices';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
@@ -84,8 +85,11 @@ const UserLayout = () => {
 
   return (
     <div className="flex flex-col font-serif min-h-screen">
+      <div className="pt-16"> {/* This div creates space for the fixed navbar */}
+        <AnnouncementBanner />
+      </div>
       <Navbar />
-      <main className="flex-grow">
+      <main className="flex-grow"> 
         <Outlet />
       </main>
       <Footer />

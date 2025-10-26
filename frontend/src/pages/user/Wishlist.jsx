@@ -210,7 +210,28 @@ const Wishlist = () => {
                   <span className="mx-2">•</span>
                   <span>{item.product.category.name}</span>
                 </div>
-                <div className="font-bold text-lg mb-3">₹{item.product.price.toFixed(2)}</div>
+                {/* Price with offer handling */}
+                <div className="font-bold text-lg mb-3 flex items-center gap-2">
+                  {item.product.effectivePrice && item.product.effectivePrice < item.product.price ? (
+                    <>
+                      <span className="text-gray-500 line-through text-base">
+                        ₹{item.product.price.toFixed(2)}
+                      </span>
+                      <span>
+                        ₹{item.product.effectivePrice.toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <span>₹{item.product.price.toFixed(2)}</span>
+                  )}
+                  {item.product.appliedOffer && (
+                    <span className="ml-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      {item.product.appliedOffer.percentage
+                        ? `${item.product.appliedOffer.percentage}% OFF`
+                        : `-₹${item.product.appliedOffer.amount}`}
+                    </span>
+                  )}
+                </div>
                 <AddToCartButton
                   productId={item.product._id}
                   product={item.product}

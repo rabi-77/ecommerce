@@ -5,7 +5,7 @@ import WishlistButton from './user/WishlistButton';
 
 export const ProductCard = ({ product }) => {
   return (
-    <div className="product-card hover-lift">
+    <div className="product-card hover-lift bg-white" style={{ position: 'relative', zIndex: 10 }}>
       <div className="relative">
         <Link to={`/products/${product._id}`}>
           <img
@@ -19,7 +19,7 @@ export const ProductCard = ({ product }) => {
           />
         </Link>
         {product.isFeatured && (
-          <div className="absolute top-0 left-0 bg-gradient-to-r from-[var(--secondary)] to-[var(--secondary-light)] text-[var(--text-dark)] px-3 py-1 rounded-br-lg shadow-md flex items-center">
+          <div className="absolute top-0 left-0 bg-gradient-to-r from-[var(--secondary)] to-[var(--secondary-light)] text-[var(--text-dark)] px-3 py-1 rounded-br-lg shadow-md flex items-center z-20">
             <Award className="w-4 h-4 mr-1" />
             <span className="text-xs font-medium">Featured</span>
           </div>

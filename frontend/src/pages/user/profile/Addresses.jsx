@@ -35,6 +35,74 @@ const Addresses = () => {
   const [pincodeError, setPincodeError] = useState(null);
   
   const [deleteId, setDeleteId] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Validation helper functions
+  const validatePhoneNumber = (phone) => {
+    const phoneRegex = /^[6-9]\d{9}$/;
+    return phoneRegex.test(phone);
+  };
+
+  const validatePostalCode = (code) => {
+    const postalRegex = /^[1-9][0-9]{5}$/;
+    return postalRegex.test(code);
+  };
+
+  const validateForm = () => {
+    const errors = {};
+
+    // Required field validations
+    if (!addressForm.name.trim()) {
+      errors.name = 'Name is required';
+    } else if (addressForm.name.trim().length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+
+    if (!addressForm.phoneNumber.trim()) {
+      errors.phoneNumber = 'Phone number is required';
+    } else if (!validatePhoneNumber(addressForm.phoneNumber.trim())) {
+      errors.phoneNumber = 'Please enter a valid 10-digit phone number';
+    }
+
+    if (addressForm.alternativePhoneNumber.trim() && !validatePhoneNumber(addressForm.alternativePhoneNumber.trim())) {
+      errors.alternativePhoneNumber = 'Please enter a valid 10-digit phone number';
+    }
+
+    if (!addressForm.addressLine1.trim()) {
+      errors.addressLine1 = 'Address line 1 is required';
+    } else if (addressForm.addressLine1.trim().length < 5) {
+      errors.addressLine1 = 'Address must be at least 5 characters';
+    }
+
+    if (!addressForm.city.trim()) {
+      errors.city = 'City is required';
+    } else if (addressForm.city.trim().length < 2) {
+      errors.city = 'City name must be at least 2 characters';
+    } else if (!/^[a-zA-Z\s]+$/.test(addressForm.city.trim())) {
+      errors.city = 'City name can only contain letters and spaces';
+    }
+
+    if (!addressForm.state.trim()) {
+      errors.state = 'State is required';
+    } else if (addressForm.state.trim().length < 2) {
+      errors.state = 'State name must be at least 2 characters';
+    } else if (!/^[a-zA-Z\s]+$/.test(addressForm.state.trim())) {
+      errors.state = 'State name can only contain letters and spaces';
+    }
+
+    if (!addressForm.postalCode.trim()) {
+      errors.postalCode = 'Postal code is required';
+    } else if (!validatePostalCode(addressForm.postalCode.trim())) {
+      errors.postalCode = 'Please enter a valid 6-digit postal code';
+    }
+
+    if (!addressForm.country.trim()) {
+      errors.country = 'Country is required';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   useEffect(() => {
     dispatch(getAllAddressesThunk());
@@ -73,6 +141,15 @@ const Addresses = () => {
   
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    
     setAddressForm({
       ...addressForm,
       [name]: type === 'checkbox' ? checked : value
@@ -145,6 +222,12 @@ const Addresses = () => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fix the validation errors');
+      return;
+    }
+    
     setFormLoading(true);
     
     try {
@@ -170,9 +253,9 @@ const Addresses = () => {
       }
       
       if (editingAddressId) {
-        await dispatch(updateAddressThunk({
-          addressId: editingAddressId,
-          address: addressForm
+        await dispatch(updateAddressThunk({ 
+          addressId: editingAddressId, 
+          addressData: addressForm 
         })).unwrap();
         toast.success('Address updated successfully');
       } else {
@@ -185,9 +268,10 @@ const Addresses = () => {
       setIsAddingAddress(false);
       setEditingAddressId(null);
       resetForm();
-      
-    } catch (err) {
-//handling in useefect
+      setValidationErrors({});
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast.error(error || 'Failed to save address');
     } finally {
       setFormLoading(false);
     }
@@ -253,135 +337,96 @@ const Addresses = () => {
           
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name*
-                </label>
-                <Input
-                  name="name"
-                  value={addressForm.name}
-                  onChange={handleChange}
-                  className="w-full"
-                  required
-                />
-              </div>
+              <Input
+                label="Full Name"
+                name="name"
+                value={addressForm.name}
+                onChange={handleChange}
+                required
+                error={validationErrors.name}
+              />
               
-              <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number*
-                </label>
-                <Input
-                  type="tel"
-                  name="phoneNumber"
-                  value={addressForm.phoneNumber}
-                  onChange={handleChange}
-                  className="w-full"
-                  required
-                />
-              </div>
+              <Input
+                label="Phone Number"
+                name="phoneNumber"
+                type="tel"
+                value={addressForm.phoneNumber}
+                onChange={handleChange}
+                placeholder="10-digit mobile number"
+                required
+                error={validationErrors.phoneNumber}
+              />
               
-              <div>
-                <label htmlFor="alternativePhoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Alternative Phone Number
-                </label>
-                <Input
-                  type="tel"
-                  name="alternativePhoneNumber"
-                  value={addressForm.alternativePhoneNumber}
-                  onChange={handleChange}
-                  className="w-full"
-                />
-              </div>
+              <Input
+                label="Alternative Phone Number"
+                name="alternativePhoneNumber"
+                type="tel"
+                value={addressForm.alternativePhoneNumber}
+                onChange={handleChange}
+                placeholder="10-digit mobile number (optional)"
+                error={validationErrors.alternativePhoneNumber}
+              />
               
-              <div className="md:col-span-1">
-                <label htmlFor="addressLine1" className="block text-sm font-medium text-gray-700 mb-1">
-                  Address Line 1*
-                </label>
-                <Input
-                  name="addressLine1"
-                  value={addressForm.addressLine1}
-                  onChange={handleChange}
-                  className="w-full"
-                  required
-                />
-              </div>
+              <Input
+                label="Address Line 1"
+                name="addressLine1"
+                value={addressForm.addressLine1}
+                onChange={handleChange}
+                placeholder="House/Flat number, Building name, Street"
+                required
+                error={validationErrors.addressLine1}
+              />
               
-              <div className="md:col-span-1">
-                <label htmlFor="addressLine2" className="block text-sm font-medium text-gray-700 mb-1">
-                  Address Line 2
-                </label>
-                <Input
-                  name="addressLine2"
-                  value={addressForm.addressLine2}
-                  onChange={handleChange}
-                  className="w-full"
-                />
-              </div>
+              <Input
+                label="Address Line 2"
+                name="addressLine2"
+                value={addressForm.addressLine2}
+                onChange={handleChange}
+                placeholder="Area, Landmark (optional)"
+                error={validationErrors.addressLine2}
+              />
               
               <div className="md:col-span-2 grid grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    City*
-                  </label>
-                  <Input
-                    name="city"
-                    value={addressForm.city}
-                    onChange={handleChange}
-                    className="w-full"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Auto-filled based on pincode</p>
-                </div>
-                
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                    State/Province*
-                  </label>
-                  <Input
-                    name="state"
-                    value={addressForm.state}
-                    onChange={handleChange}
-                    className="w-full"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
-                    Postal Code*
-                  </label>
-                  <div className="relative">
-                    <Input
-                      name="postalCode"
-                      value={addressForm.postalCode}
-                      onChange={handleChange}
-                      className="w-full"
-                      required
-                    />
-                    {pincodeLoading && (
-                      <div className="absolute right-2 top-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
-                      </div>
-                    )}
-                  </div>
-                  {pincodeError && (
-                    <p className="text-red-500 text-sm mt-1">{pincodeError}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                  Country*
-                </label>
                 <Input
-                  name="country"
-                  value={addressForm.country}
+                  label="City"
+                  name="city"
+                  value={addressForm.city}
                   onChange={handleChange}
-                  className="w-full"
                   required
+                  error={validationErrors.city}
+                  disabled={pincodeLoading}
+                />
+                
+                <Input
+                  label="State"
+                  name="state"
+                  value={addressForm.state}
+                  onChange={handleChange}
+                  required
+                  error={validationErrors.state}
+                  disabled={pincodeLoading}
+                />
+                
+                <Input
+                  label="Postal Code"
+                  name="postalCode"
+                  value={addressForm.postalCode}
+                  onChange={handleChange}
+                  placeholder="6-digit postal code"
+                  required
+                  error={validationErrors.postalCode}
+                  disabled={pincodeLoading}
                 />
               </div>
+              
+              <Input
+                label="Country"
+                name="country"
+                value={addressForm.country}
+                onChange={handleChange}
+                required
+                error={validationErrors.country}
+              />
               
               <div className="md:col-span-2">
                 <Checkbox

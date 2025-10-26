@@ -419,44 +419,40 @@ export const getCart = async (req, res) => {
       });
     }
 
-    const availableCartItems = cart.items.filter(item => {
+    const allCartItems = cart.items; // keep reference to full list for UI
+
+    const validCartItems = cart.items.filter(item => {
       const product = item.product;
-      if (!product) return false; 
+      if (!product) return false;
       
       const category = product.category;
       const brand = product.brand;
       const variant = product.variants.find(v => v.size === item.variant.size);
 
-      return product.isListed && 
-             !product.isDeleted && 
-             category && 
-             category.isListed && 
-             !category.isDeleted&&
-             brand &&
-             brand.isListed &&
-             !brand.isDeleted &&
-             variant && 
-             variant.stock >= item.quantity;
+      return (
+        product.isListed &&
+        !product.isDeleted &&
+        category &&
+        category.isListed &&
+        !category.isDeleted &&
+        brand &&
+        brand.isListed &&
+        !brand.isDeleted &&
+        variant &&
+        variant.stock >= item.quantity
+      );
     });
 
-    const productIds = availableCartItems.map(it => it.product._id);
-    const categoryIds = availableCartItems
-      .map(it => it.product.category?._id)
-      .filter(Boolean);
+    // Fetch offers only for products that have a valid product document
+    const productIds = allCartItems.map(it => it.product?._id).filter(Boolean);
+    const categoryIds = allCartItems.map(it => it.product?.category?._id).filter(Boolean);
     const offerMaps = await fetchActiveOffers(productIds, categoryIds);
 
-    let subtotal = 0;
-    let productDiscount = 0;
-    let totalAfterProductDisc = 0;
-    let totalAfterCoupon = 0; // before tax & shipping
-    let tax = 0;
-    let shipping = 0;
-    let grandTotal = 0;
-
-    availableCartItems.forEach(item => {
+    // Attach effectivePrice & appliedOffer to every item for UI
+    allCartItems.forEach(item => {
+      if (!item.product) return; // product deleted
       const productDoc = item.product;
       const { effectivePrice, appliedOffer } = applyBestOffer(productDoc, offerMaps);
-
       item.product = {
         ...productDoc.toObject(),
         effectivePrice,
@@ -469,17 +465,26 @@ export const getCart = async (req, res) => {
             }
           : null,
       };
+    });
 
-      subtotal += productDoc.price * item.quantity;
-      productDiscount += (productDoc.price - effectivePrice) * item.quantity;
-      totalAfterProductDisc += effectivePrice * item.quantity;
+    // ----- Totals (use only valid items) -----
+    let subtotal = 0;
+    let productDiscount = 0;
+    let totalAfterProductDisc = 0;
+    validCartItems.forEach(item => {
+      const price = item.product.effectivePrice ?? item.product.price;
+      subtotal += item.product.price * item.quantity;
+      productDiscount += (item.product.price - price) * item.quantity;
+      totalAfterProductDisc += price * item.quantity;
     });
 
     await cart.populate({
       path: 'coupon',
-      select: 'code discountType discountValue maxDiscountAmount'
+      select: 'code discountType discountValue maxDiscountAmount',
     });
+
     let couponDiscount = 0;
+    let totalAfterCoupon = 0;
     if (cart.coupon) {
       couponDiscount = cart.discount || 0;
       totalAfterCoupon = Math.max(0, totalAfterProductDisc - couponDiscount);
@@ -487,30 +492,30 @@ export const getCart = async (req, res) => {
       totalAfterCoupon = totalAfterProductDisc;
     }
 
-    tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
+    const tax = parseFloat((totalAfterCoupon * TAX_RATE).toFixed(2));
+    const shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+    const grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
 
-    shipping = totalAfterProductDisc >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-
-    grandTotal = parseFloat((totalAfterCoupon + tax + shipping).toFixed(2));
-    calculateCartTotals(cart);
-    // applyCoupon();
-    res.json({
-      cartItems: availableCartItems,
-      count: availableCartItems.length,
+    // --- Response ---
+    return res.json({
+      cartItems: allCartItems,
+      count: allCartItems.length,
       summary: {
         subtotal: parseFloat(subtotal.toFixed(2)),
         productDiscount: parseFloat(productDiscount.toFixed(2)),
         couponDiscount: parseFloat(couponDiscount.toFixed(2)),
         tax,
         shipping,
-        total: grandTotal
+        total: grandTotal,
       },
-      coupon: cart.coupon ? {
-        code: cart.coupon.code,
-        discountType: cart.coupon.discountType,
-        discountValue: cart.coupon.discountValue,
-        maxDiscountAmount: cart.coupon.maxDiscountAmount
-      } : null
+      coupon: cart.coupon
+        ? {
+            code: cart.coupon.code,
+            discountType: cart.coupon.discountType,
+            discountValue: cart.coupon.discountValue,
+            maxDiscountAmount: cart.coupon.maxDiscountAmount,
+          }
+        : null,
     });
   } catch (err) {
     console.error('Error fetching cart:', err.message);
@@ -621,11 +626,11 @@ export const applyCoupon = async (req, res) => {
     let shipping = 0;
     let grandTotal = 0;
 
-    cart.items.forEach(item => {
-      const { effectivePrice } = applyBestOffer(item.product, offerMaps);
-      subtotal += item.product.price * item.quantity;
-      productDiscount += (item.product.price - effectivePrice) * item.quantity;
-      totalAfterProductDisc += effectivePrice * item.quantity;
+    cart.items.forEach(it => {
+      const { effectivePrice } = applyBestOffer(it.product, offerMaps);
+      subtotal += it.product.price * it.quantity;
+      productDiscount += (it.product.price - effectivePrice) * it.quantity;
+      totalAfterProductDisc += effectivePrice * it.quantity;
     });
 
     if (subtotal < coupon.minPurchaseAmount) {

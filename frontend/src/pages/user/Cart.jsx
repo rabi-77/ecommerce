@@ -28,11 +28,12 @@ const Cart = () => {
     clearingCart, 
     coupon 
   } = useSelector((state) => state.cart);
-
+  console.log("items is zero", items);
   const [validItems, setValidItems] = useState([]);
+  const [invalidItems, setInvalidItems] = useState([]);
   const [hasInvalidItems, setHasInvalidItems] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
-
+console.log("items is zero", validItems);
   useEffect(() => {
     if (!user) {
       toast.error(
@@ -92,12 +93,14 @@ const Cart = () => {
                variant && 
                variant.stock >= item.quantity;
       });
-      
+      console.log("validItems srsrs", valid);
       setValidItems(valid);
       setHasInvalidItems(valid.length < items.length);
+      setInvalidItems(items.filter(it => !valid.includes(it)));
     } else {
       setValidItems([]);
       setHasInvalidItems(false);
+      setInvalidItems([]);
     }
   }, [items]);
 
@@ -168,12 +171,23 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
+    if (hasInvalidItems) {
+      toast.error('Some items in your cart are unavailable. Please remove or update them before checkout.');
+      return;
+    }
     if (validItems.length === 0) {
       toast.error('No valid items in cart for checkout');
       return;
     }
-    
     navigate('/checkout');
+  };
+
+  const handleRemoveInvalidItems = () => {
+    if (invalidItems.length === 0) return;
+    invalidItems.forEach(item => {
+      dispatch(removeFromCart(item._id)).catch(()=>{});
+    });
+    toast.info('Unavailable items removed from cart');
   };
 
   const getEffectivePrice = (product) => {
@@ -190,6 +204,9 @@ const Cart = () => {
            product.category && 
            product.category.isListed && 
            !product.category.isDeleted &&
+           product.brand &&
+           product.brand.isListed &&
+           !product.brand.isDeleted &&
            variant && 
            variant.stock >= item.quantity;
   };
@@ -211,6 +228,8 @@ const Cart = () => {
     );
   }
 
+  const checkoutDisabled = hasInvalidItems || validItems.length === 0;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -223,7 +242,22 @@ const Cart = () => {
 
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
-        {items.length === 0 ? (
+        { items.length > 0 && hasInvalidItems && (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center mb-6">
+            <div className="flex justify-center mb-4">
+              <AlertTriangle size={64} className="text-yellow-500" />
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-700 mb-2">Some items are unavailable</h2>
+            <p className="text-gray-500 mb-6">One or more items in your cart are out of stock or no longer available. Please remove them to proceed to checkout.</p>
+            <button
+              onClick={handleRemoveInvalidItems}
+              className="inline-block bg-red-600 text-white px-6 py-3 rounded-md font-medium hover:bg-red-700 transition duration-200"
+            >
+              Remove Unavailable Items
+            </button>
+          </div>
+        )}
+        { items.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <div className="flex justify-center mb-4">
               <ShoppingCart size={64} className="text-gray-400" />
@@ -449,22 +483,14 @@ const Cart = () => {
                   </div>
                 </div>
                 
-                {validItems.length > 0 ? (
-                  <button 
-                    onClick={handleCheckout}
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 transition duration-200 flex items-center justify-center"
-                  >
-                    Proceed to Checkout
-                    <ArrowRight size={18} className="ml-2" />
-                  </button>
-                ) : (
-                  <button 
-                    disabled
-                    className="w-full bg-gray-400 text-white py-3 px-4 rounded-md font-medium cursor-not-allowed flex items-center justify-center"
-                  >
-                    No Items Available for Checkout
-                  </button>
-                )}
+                <button 
+                  onClick={handleCheckout}
+                  disabled={checkoutDisabled}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 transition duration-200 flex items-center justify-center"
+                >
+                  Proceed to Checkout
+                  <ArrowRight size={18} className="ml-2" />
+                </button>
                 
                 {hasInvalidItems && validItems.length > 0 && (
                   <p className="mt-3 text-sm text-yellow-600">

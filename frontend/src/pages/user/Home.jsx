@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { 
   fetchProductsThunk, 
   fetchCategoriesThunk, 
@@ -11,10 +11,14 @@ import {
   X, 
   ChevronLeft, 
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Filter,
+  ShoppingBag
 } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
 import FilterSidebar from "../../components/FilterSidebar";
+import { motion } from "framer-motion";
+import ProductDetailsBanner from "../../components/ProductDetailsBanner";
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -40,6 +44,27 @@ const Home = () => {
   
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [page, setPage] = useState(1);
+  
+  // Animation variants
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+  
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     dispatch(fetchCategoriesThunk());
@@ -213,104 +238,154 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ProductDetailsBanner />
       {/* Mobile Filter Sidebar */}
       {showMobileFilters && <MobileFilterSidebar />}
       
       <div className="container mx-auto px-4 py-6">
         {/* Header with search and filter */}
-        <div className="mb-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Our Products</h1>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 md:max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  {/* <Search className="h-5 w-5 text-gray-400" /> */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <motion.h1 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="text-3xl font-bold text-gray-900 flex items-center"
+              >
+                <ShoppingBag className="mr-2 text-blue-600" />
+                Our Products
+              </motion.h1>
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 md:max-w-md">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    name="search"
+                    value={filters.search}
+                    onChange={handleSearchChange}
+                    placeholder="Search products..."
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                  {filters.search && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      <X className="h-4 w-4 text-gray-400 hover:text-gray-500" />
+                    </motion.button>
+                  )}
                 </div>
-                <input
-                  type="text"
-                  name="search"
-                  value={filters.search}
-                  onChange={handleSearchChange}
-                  placeholder="Search products..."
-                  className="block w-full pl-12 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                {filters.search && (
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    <X className="h-4 w-4 text-gray-400 hover:text-gray-500" />
-                  </button>
-                )}
-              </div>
-              <MobileFilterButton />
-              <div className="hidden lg:block">
-                <select
-                  name="sort"
-                  value={filters.sort}
-                  onChange={handleFilterChange}
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                >
-                  <option value="newest">Newest</option>
-                  <option value="featured">Featured</option>
-                  <option value="price-low-to-high">Price: Low to High</option>
-                  <option value="price-high-to-low">Price: High to Low</option>
-                  <option value="a-z">Name: A to Z</option>
-                  <option value="z-a">Name: Z to A</option>
-                </select>
+                <MobileFilterButton />
+                <div className="hidden lg:block">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Filter className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <select
+                      name="sort"
+                      value={filters.sort}
+                      onChange={handleFilterChange}
+                      className="block w-full pl-9 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md appearance-none"
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="featured">Featured</option>
+                      <option value="price-low-to-high">Price: Low to High</option>
+                      <option value="price-high-to-low">Price: High to Low</option>
+                      <option value="a-z">Name: A to Z</option>
+                      <option value="z-a">Name: Z to A</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <ChevronRight className="h-4 w-4 text-gray-400 transform rotate-90" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
           
           {/* Active filters */}
           {(filters.category || filters.brand || filters.priceMin || filters.priceMax) && (
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="text-sm text-gray-500">Filters:</span>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-wrap items-center gap-2 mb-4"
+            >
+              <span className="text-sm text-gray-500 font-medium">Active Filters:</span>
               {filters.category && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <motion.span 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 shadow-sm"
+                >
                   {categories.find(c => c._id === filters.category)?.name}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setFilters(prev => ({ ...prev, category: '' }))}
                     className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-blue-200 text-blue-600 hover:bg-blue-300"
                   >
                     <span className="sr-only">Remove filter</span>
                     <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
+                  </motion.button>
+                </motion.span>
               )}
               {filters.brand && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <motion.span 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 shadow-sm"
+                >
                   {brands.find(b => b._id === filters.brand)?.name}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setFilters(prev => ({ ...prev, brand: '' }))}
                     className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-green-200 text-green-600 hover:bg-green-300"
                   >
                     <span className="sr-only">Remove filter</span>
                     <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
+                  </motion.button>
+                </motion.span>
               )}
               {(filters.priceMin || filters.priceMax) && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <motion.span 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 shadow-sm"
+                >
                   ₹{filters.priceMin || '0'} - ₹{filters.priceMax || '∞'}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setFilters(prev => ({ ...prev, priceMin: '', priceMax: '' }))}
                     className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-200 text-yellow-600 hover:bg-yellow-300"
                   >
                     <span className="sr-only">Remove filter</span>
                     <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
+                  </motion.button>
+                </motion.span>
               )}
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={clearFilters}
-                className="ml-2 text-sm font-medium text-blue-600 hover:text-blue-500"
+                className="ml-2 text-sm font-medium text-blue-600 hover:text-blue-500 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors"
               >
                 Clear all
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           )}
-        </div>
+          </div>
+        </motion.div>
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Desktop Filters */}
@@ -327,24 +402,47 @@ const Home = () => {
           {/* Product Grid */}
           <div className="flex-1">
             {products.length === 0 ? (
-              <div className="text-center py-12">
+              <motion.div 
+                initial="hidden"
+                animate="visible"
+                variants={fadeIn}
+                className="text-center py-12 bg-white rounded-lg shadow-md"
+              >
+                <div className="text-gray-500 mb-4 text-5xl">🔍</div>
                 <h3 className="text-lg font-medium text-gray-900">No products found</h3>
                 <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you're looking for.</p>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={clearFilters}
                   className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Clear all filters
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {products.map((product) => (
-                    <ProductCard key={product._id} product={product} />
+                  {products.map((product, index) => (
+                    <motion.div
+                      key={product._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index % 4 * 0.1 }}
+                      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                      className="transform transition-all duration-300 hover:shadow-lg"
+                    >
+                      <ProductCard product={product} />
+                    </motion.div>
                   ))}
                 </div>
-                {renderPagination()}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  {renderPagination()}
+                </motion.div>
               </>
             )}
           </div>

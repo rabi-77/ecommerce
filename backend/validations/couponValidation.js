@@ -33,7 +33,14 @@ export const couponCreateValidationRules = [
 
   body('minPurchaseAmount')
     .isFloat({ min: 0 })
-    .withMessage('Minimum purchase amount must be 0 or greater'),
+    .withMessage('Minimum purchase amount must be 0 or greater')
+    .custom((value, { req }) => {
+      // For fixed discount coupons, minimum purchase should be greater than discount value
+      if (req.body.discountType === 'fixed' && parseFloat(value) <= parseFloat(req.body.discountValue)) {
+        throw new Error('Minimum purchase amount must be greater than the coupon discount value');
+      }
+      return true;
+    }),
 
   body('maxDiscountAmount')
     .optional()
@@ -79,7 +86,16 @@ export const couponUpdateValidationRules = [
   body('description').optional().trim().isLength({ max: 500 }),
   body('discountType').optional().isIn(['percentage', 'fixed']),
   body('discountValue').optional().isFloat({ gt: 0 }),
-  body('minPurchaseAmount').optional().isFloat({ min: 0 }),
+  body('minPurchaseAmount')
+    .optional()
+    .isFloat({ min: 0 })
+    .custom((value, { req }) => {
+      // For fixed discount coupons, minimum purchase should be greater than discount value
+      if (req.body.discountType === 'fixed' && value && req.body.discountValue && parseFloat(value) <= parseFloat(req.body.discountValue)) {
+        throw new Error('Minimum purchase amount must be greater than the coupon discount value');
+      }
+      return true;
+    }),
   body('maxDiscountAmount').optional().isFloat({ min: 0 }),
   body('startDate')
     .optional()
